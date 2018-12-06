@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28010.2048
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Wake-T", "Wake-T\Wake-T.pyproj", "{BF4CE4A0-D2C2-4A97-8D27-C56EF8214CB6}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Wake-T", "Wake-T.pyproj", "{BF4CE4A0-D2C2-4A97-8D27-C56EF8214CB6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
