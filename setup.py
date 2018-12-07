@@ -14,7 +14,7 @@ def read_requirements():
 # Main setup command
 setup(
     name='Wake-T',
-    version=aptools.__version__,
+    version=wake_t.__version__,
     author='Angel Ferran Pousa',
     author_email="angel.ferran.pousa@desy.de",
     description=('A fast particle tracking code for plasma wakefield '
