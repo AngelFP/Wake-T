@@ -34,8 +34,8 @@ class LaserPulse():
         """
         self.xi_c = xi_c
         self.l_0 = l_0
-        self.x_c = x_c
-        self.y_c = y_c
+        #self.x_c = x_c
+        #self.y_c = y_c
         self.a_0 = a_0
         self.s_z = s_z
         self.w_0 = w_0
