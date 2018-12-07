@@ -261,3 +261,8 @@ __pycache__/
 *.pyc
 *.pyproj
 *.sln
+
+# Python stuff
+*.egg-info
+/build
+/dist
