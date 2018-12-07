@@ -10,16 +10,16 @@ class Wakefield():
     def __init__(self):
         pass
 
-    def Wx(self, x, y, xi, t):
+    def Wx(self, x, y, xi, px, py, pz, gamma, t):
         raise NotImplementedError
 
-    def Wy(self, x, y, xi, t):
+    def Wy(self, x, y, xi, px, py, pz, gamma, t):
         raise NotImplementedError
 
-    def Ez(self, x, y, xi, t):
+    def Wz(self, x, y, xi, px, py, pz, gamma, t):
         raise NotImplementedError
 
-    def Kx(self, x, y, xi, t):
+    def Kx(self, x, y, xi, px, py, pz, gamma, t):
         raise NotImplementedError
 
 
@@ -43,14 +43,54 @@ class CustomBlowoutWakefield(Wakefield):
         self.l_c = self.driver.xi_c
         self.b_w = self.driver.get_group_velocity(self.n_p*1e-6)
 
-    def Wx(self, x, y, xi, t):
+    def Wx(self, x, y, xi, px, py, pz, gamma, t):
         return ct.c*self.g_x*x
 
-    def Wy(self, x, y, xi, t):
+    def Wy(self, x, y, xi, px, py, pz, gamma, t):
         return ct.c*self.g_x*y
 
-    def Ez(self, x, y, xi, t):
+    def Wz(self, x, y, xi, px, py, pz, gamma, t):
         return self.E_z_0 + self.E_z_p*(xi-self.xi_c + (1-self.b_w)*ct.c*t)
 
-    def Kx(self, x, y, xi, t):
+    def Kx(self, x, y, xi, px, py, pz, gamma, t):
         return self.g_x*np.ones_like(x)
+
+
+class PlasmaUprampBlowoutField(Wakefield):
+    def __init__(self, ramp_length, initial_dens, final_dens, initial_dens_pos=0):
+        self.ramp_duration = ramp_length/ct.c
+        self.initial_dens = initial_dens
+        self.initial_dens_pos = initial_dens_pos/ct.c
+        self.final_dens = final_dens
+        self.current_time = None
+        self.current_kx = None
+
+    def Wx(self, x, y, xi, px, py, pz, gamma, t):
+        self.calculate_current_focusing(xi, t)
+        return ct.c*self.current_kx*x
+
+    def Wy(self, x, y, xi, px, py, pz, gamma, t):
+        self.calculate_current_focusing(xi, t)
+        return ct.c*self.current_kx*y
+
+    def Wz(self, x, y, xi, px, py, pz, gamma, t):
+        return np.zeros(len(x))
+
+    def Kx(self, x, y, xi, px, py, pz, gamma, t):
+        self.calculate_current_focusing(xi, t)
+        return np.ones(len(x))*self.current_kx
+
+    def calculate_current_focusing(self, xi, t):
+        #if t != self.current_time:
+        # self.current_time = t
+        t = t + xi/ct.c # particles with different xi have a different t
+        # linear
+        # n_p = (self.initial_dens
+        #     + (self.final_dens - self.initial_dens)/self.ramp_duration*t)
+        # exponential
+        b = np.log(self.final_dens/self.initial_dens)/(self.ramp_duration-self.initial_dens_pos)
+        a = self.initial_dens*np.exp(-self.initial_dens_pos*b)
+        n_p = a*np.exp(b*t)
+        w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
+        self.current_kx = (ct.m_e/(2*ct.e*ct.c))*w_p**2
+

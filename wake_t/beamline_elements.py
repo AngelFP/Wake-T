@@ -221,12 +221,146 @@ class PlasmaStage(object):
     
     def _get_optimized_dt(self, beam, WF):
         """ Get optimized time step """ 
-        Kx = WF.Kx(beam.x, beam.y, beam.xi, 0)
-        mean_Kx = np.average(Kx, weights=beam.q)
         gamma = self._gamma(beam.px, beam.py, beam.pz)
+        Kx = WF.Kx(
+            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, gamma, 0)
+        mean_Kx = np.average(Kx, weights=beam.q)
         mean_gamma = np.average(gamma, weights=beam.q)
         w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
         T_x = 1/w_x
         dt = 0.1*T_x
         return dt
 
+
+class PlasmaUpramp(object):
+
+    """Defines a plasma upramp."""
+
+    def __init__(self, length, initial_dens, final_dens, initial_dens_pos=0):
+        """
+        Initialize plasma ramp.
+
+        Parameters:
+        -----------
+        length : float
+            Length of the plasma stage in cm.
+            
+        initial_dens : float
+            Plasma density at the position 'initial_dens_pos' in units of
+            cm^{-3}.
+
+        final_dens : float
+            Plasma density at the end of the ramp in units of cm^{-3}.
+
+        initial_dens_pos : float
+            Position where the plasma density will be equal to 'initial_dens'.
+            If 0, this corresponds to the start of the ramp.
+
+        """
+        self.length = length
+        self.initial_dens = initial_dens
+        self.initial_dens_pos = initial_dens_pos
+        self.final_dens = final_dens
+        
+    def track_beam_numerically_RK_parallel(self, beam, steps, non_rel=False, 
+                                           n_proc=None):
+        """
+        Track the beam through the plasma using a 4th order Runge-Kutta method.
+        
+        Parameters:
+        -----------
+        beam : ParticleBunch
+            Particle bunch to track.
+
+        steps : int
+            Number of steps in which output should be given.
+
+        non_rel : bool
+            If True, the relativistic assumplion is not used for the equations
+            of motion.
+
+        n_proc : int
+            Number of processes to run in parallel. If None, this will equal
+            the number of physical cores.
+
+        Returns:
+        --------
+        A list of size 'steps' containing the beam distribution at each step.
+
+        """
+        if non_rel:
+            raise NotImplementedError()
+        else:
+            field = PlasmaUprampBlowoutField(self.length, self.initial_dens,
+                                             self.final_dens,
+                                             self.initial_dens_pos)
+        # Main beam quantities
+        mat = beam.get_6D_matrix()
+        # Plasma length in time
+        t_final = self.length/ct.c
+        t_step = t_final/steps
+        dt = self._get_optimized_dt(beam, field)
+        iterations = int(t_final/dt)
+        # force at least 1 iteration per step
+        it_per_step = max(int(iterations/steps), 1)
+        iterations = it_per_step*steps
+        dt_adjusted = t_final/iterations
+        beam_list = list()
+
+        start = time.time()
+        if n_proc is None:
+            num_proc = cpu_count()
+        else:
+            num_proc = n_proc
+        num_part = mat.shape[1]
+        part_per_proc = int(np.ceil(num_part/num_proc))
+        process_pool = Pool(num_proc)
+        t_s = 0
+        matrix_list = list()
+        try:
+            for p in np.arange(num_proc):
+                matrix_list.append(mat[:,p*part_per_proc:(p+1)*part_per_proc])
+
+            for s in np.arange(steps):
+                print(s)
+                partial_solver = partial(
+                    runge_kutta_4, WF=field, dt=dt_adjusted,
+                    iterations=it_per_step, t0=s*t_step)
+                matrix_list = process_pool.map(partial_solver, matrix_list)
+                beam_matrix = np.concatenate(matrix_list, axis=1)
+                x, px, y, py, xi, pz = beam_matrix
+                new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
+                beam_list.append(
+                    ParticleBunch(beam.q, x, y, xi, px, py, pz,
+                                  prop_distance=new_prop_dist)
+                    )
+        finally:
+            process_pool.close()
+            process_pool.join()
+
+        end = time.time()
+        print("Done ({} seconds)".format(end-start))
+
+        # update beam data
+        last_beam = beam_list[-1]
+        beam.set_phase_space(last_beam.x, last_beam.y, last_beam.xi,
+                             last_beam.px, last_beam.py, last_beam.pz)
+        beam.increase_prop_distance(self.length)
+
+        return beam_list
+    
+    def _get_optimized_dt(self, beam, WF):
+        gamma = self._gamma(beam.px, beam.py, beam.pz)
+        mean_gamma = np.average(gamma, weights=beam.q)
+        # calculate focusing at the end of ramp, where n_p is higher.
+        Kx = WF.Kx(beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, gamma,
+                   self.length/ct.c)
+        mean_Kx = np.average(Kx, weights=beam.q)
+        w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
+        T_x = 1/w_x
+        dt = 0.1*T_x
+        return dt
+
+    def _gamma(self, px, py, pz):
+        return np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
+    
