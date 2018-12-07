@@ -168,7 +168,7 @@ def get_matched_bunch(en_x, en_y, ene, ene_sp, x_c, y_c, xi_c, s_t,
     A ParticleBunch object.
 
     """
-    b_m = ge.matched_plasma_beta_function(ene/0.511, n_p, k_x)
+    b_m = ge.matched_plasma_beta_function(ene, n_p, k_x)
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_m, b_m, ene, 
                                          ene_sp, x_c, y_c, xi_c, s_t, q_tot,
                                          n_part)

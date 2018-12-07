@@ -61,7 +61,7 @@ class LaserPulse():
         """
         n_p_SI = n_p*1e6
         w_p = np.sqrt(n_p_SI*ct.e**2/(ct.m_e*ct.epsilon_0))
-        k = 2*np.pi/self.l0
+        k = 2*np.pi/self.l_0
         w = np.sqrt(w_p**2+k**2*ct.c**2)
         v_g = k*ct.c**2/np.sqrt(w_p**2+k**2*ct.c**2)/ct.c
         return v_g

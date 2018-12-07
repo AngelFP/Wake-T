@@ -1,10 +1,16 @@
 """ This module contains the classes for all beamline elements. """
 
+import time
+from multiprocessing import Pool, cpu_count
+from functools import partial
+
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particle_tracking import runge_kutta_4
+from wake_t.wakefields import *
+from wake_t.driver_witness import ParticleBunch
 
 
 class PlasmaStage(object):
@@ -197,8 +203,8 @@ class PlasmaStage(object):
                 x, px, y, py, xi, pz = beam_matrix
                 new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
                 beam_list.append(
-                    Beam(beam.q, x, y, xi, px, py, pz,
-                         prop_distance=new_prop_dist)
+                    ParticleBunch(beam.q, x, y, xi, px, py, pz,
+                                  prop_distance=new_prop_dist)
                     )
         finally:
             process_pool.close()
