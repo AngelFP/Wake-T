@@ -57,13 +57,15 @@ class CustomBlowoutWakefield(Wakefield):
 
 
 class PlasmaUprampBlowoutField(Wakefield):
-    def __init__(self, ramp_length, initial_dens, final_dens, initial_dens_pos=0):
+    def __init__(self, ramp_length, initial_dens, final_dens,
+                 initial_dens_pos=0, profile='exponential'):
         self.ramp_duration = ramp_length/ct.c
         self.initial_dens = initial_dens
         self.initial_dens_pos = initial_dens_pos/ct.c
         self.final_dens = final_dens
         self.current_time = None
         self.current_kx = None
+        self.profile = profile
 
     def Wx(self, x, y, xi, px, py, pz, gamma, t):
         self.calculate_current_focusing(xi, t)
@@ -81,16 +83,27 @@ class PlasmaUprampBlowoutField(Wakefield):
         return np.ones(len(x))*self.current_kx
 
     def calculate_current_focusing(self, xi, t):
-        #if t != self.current_time:
-        # self.current_time = t
         t = t + xi/ct.c # particles with different xi have a different t
-        # linear
-        # n_p = (self.initial_dens
-        #     + (self.final_dens - self.initial_dens)/self.ramp_duration*t)
-        # exponential
-        b = np.log(self.final_dens/self.initial_dens)/(self.ramp_duration-self.initial_dens_pos)
-        a = self.initial_dens*np.exp(-self.initial_dens_pos*b)
-        n_p = a*np.exp(b*t)
+        n_p = self.calculate_denstity(t)
         w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
         self.current_kx = (ct.m_e/(2*ct.e*ct.c))*w_p**2
+
+    def calculate_denstity(self, t):
+        if self.profile == 'exponential':
+            b = (np.log(self.final_dens / self.initial_dens)
+                 /(self.ramp_duration - self.initial_dens_pos))
+            a = self.initial_dens*np.exp(-self.initial_dens_pos*b)
+            n_p = a*np.exp(b*t)
+        elif self.profile == 'linear':
+            b = ((self.final_dens - self.initial_dens)
+                 /(self.ramp_duration - self.initial_dens_pos))
+            a = self.initial_dens - b*self.initial_dens_pos
+            n_p = a + b*t
+            # make negative densities 0
+            n_p[n_p<0] = 0
+        elif self.profile == 'inverse square':
+            a = np.sqrt(self.final_dens/self.initial_dens) - 1
+            b = (self.ramp_duration - self.initial_dens_pos)/a
+            n_p = self.final_dens/np.square(1+(self.ramp_duration-t)/b)
+        return n_p
 
