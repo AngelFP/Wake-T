@@ -4,6 +4,7 @@ import numpy as np
 import scipy.constants as ct
 from scipy.stats import truncnorm
 import aptools.plasma_accel.general_equations as ge
+import aptools.data_handling.reading as dr
 
 from wake_t.driver_witness import ParticleBunch
 
@@ -172,3 +173,8 @@ def get_matched_bunch(en_x, en_y, ene, ene_sp, x_c, y_c, xi_c, s_t,
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_m, b_m, ene, 
                                          ene_sp, x_c, y_c, xi_c, s_t, q_tot,
                                          n_part)
+
+def get_from_file(file_path, code_name, species_name=None):
+    x, y, z, px, py, pz, q = dr.read_beam(code_name, file_path, species_name)
+    xi = z - np.average(z, weights=q)
+    return ParticleBunch(q, x, y, xi, px, py, pz)
