@@ -231,12 +231,176 @@ class PlasmaStage(object):
         dt = 0.1*T_x
         return dt
 
+    def track_beam_analytically(self, laser, beam, mode, steps,
+                                    simulation_path=None, time_step=None,
+                                    laser_pos_in_osiris=None, lon_field=None,
+                                    lon_field_slope=None, foc_strength=None,
+                                    foc_strength_slope=None):
+        """Tracks the beam through the plasma and returns the final phase space"""
+        # Main laser quantities
+        l_c = laser.xi_c
+        v_w = laser.get_group_velocity(self.n_p)*ct.c
+        w_0_l = laser.w_0
 
-class PlasmaUpramp(object):
+        # Main beam quantities [SI units]
+        x_0 = beam.x
+        y_0 = beam.y
+        xi_0 = beam.xi
+        px_0 = beam.px * ct.m_e * ct.c
+        py_0 = beam.py * ct.m_e * ct.c
+        pz_0 = beam.pz * ct.m_e * ct.c
 
-    """Defines a plasma upramp."""
+        # Distance between laser and beam particle
+        dist_l_b = -(l_c-xi_0)
 
-    def __init__(self, length, initial_dens, final_dens, initial_dens_pos=0):
+        # Plasma length in time
+        t_final = self.length/ct.c
+
+        # Fields
+        if mode == "Blowout":
+            """Bubble center is assumed at lambda/2"""
+            w_p = np.sqrt(self.n_p*1e6*ct.e**2/(ct.m_e*ct.epsilon_0))
+            l_p = 2*np.pi*ct.c/w_p
+            E_p = -w_p**2/(2*ct.c)
+            K = w_p**2/2
+            E = E_p*(l_p/2+dist_l_b)
+
+        elif mode == "CustomBlowout":
+            E_p = -lon_field_slope*ct.e/(ct.m_e*ct.c)
+            K = foc_strength*ct.c*ct.e/ct.m_e
+            E = -lon_field*ct.e/(ct.m_e*ct.c) + E_p*(xi_0 - np.mean(xi_0))
+
+        elif mode == "Linear":
+            a0 = laser.a_0
+            n_p_SI = self.n_p*1e6
+            w_p = np.sqrt(n_p_SI*ct.e**2/(ct.m_e*ct.epsilon_0))
+            k_p = w_p/ct.c
+            E0 = ct.m_e*ct.c*w_p/ct.e
+            K = (8*np.pi/np.e)**(1/4)*a0/(k_p*w_0_l)
+
+            E_z = E0*np.sqrt(np.pi/(2*np.e))*a0**2*np.cos(k_p*(dist_l_b))
+            E_z_p = -E0*np.sqrt(np.pi/(2*np.e))*a0**2*k_p*np.sin(k_p*(dist_l_b))
+            g_x = -E0*K**2*k_p*np.sin(k_p*dist_l_b)/ct.c
+            g_x_slope = -E0*K**2*k_p**2*np.cos(k_p*dist_l_b)/ct.c
+
+            E = -ct.e/(ct.m_e*ct.c)*E_z
+            E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
+            K = g_x*ct.c*ct.e/ct.m_e
+
+        elif mode == "LinearAlberto":
+            a0 = laser.a_0
+            n_p_SI = self.n_p*1e6
+            w_p = np.sqrt(n_p_SI*ct.e**2/(ct.m_e*ct.epsilon_0))
+            k_p = w_p/ct.c
+            E0 = ct.m_e*ct.c*w_p/ct.e
+
+            nb0 = a0**2/2
+            L  = np.sqrt(2)
+            sz = L/np.sqrt(2)
+            sx = w_0_l/2
+
+            E_z = E0 * nb0 * np.sqrt(2*np.pi) * sz * np.exp(-(sz)**2/2) * np.cos(k_p*dist_l_b)
+            E_z_p = - E0 * nb0 * np.sqrt(2*np.pi) * sz * np.exp(-(sz)**2/2) *k_p*np.sin(k_p*(dist_l_b)) # [V/m^2]
+            g_x = -nb0 * np.sqrt(2*np.pi) * sz * np.exp(-(sz)**2/2) * ( 1/ (k_p*sx)**2) * np.sin(k_p*(dist_l_b)) * k_p*E0/ct.c
+
+            E = -ct.e/(ct.m_e*ct.c)*E_z
+            E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
+            K = g_x*ct.c*ct.e/ct.m_e
+
+        elif mode == "FromOsiris2D":
+            (E_z, E_z_p, g_x) = self.get_fields_from_osiris_2D(simulation_path, time_step, laser, laser_pos_in_osiris, dist_l_b)
+            E = -ct.e/(ct.m_e*ct.c)*E_z
+            E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
+            K = g_x*ct.c*ct.e/ct.m_e
+
+        elif mode == "FromOsiris3D":
+            (E_z, E_z_p, g_x) = self.get_fields_from_osiris_3D(simulation_path, time_step, laser, laser_pos_in_osiris, dist_l_b)
+            E = -ct.e/(ct.m_e*ct.c)*E_z
+            E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
+            K = g_x*ct.c*ct.e/ct.m_e
+        
+
+        # Some initial values
+        p_0 = np.sqrt(np.square(px_0) + np.square(py_0) + np.square(pz_0))
+        g_0 = np.sqrt(np.square(p_0*ct.c) + (0.511*1e6*ct.e)**2)/(0.511*1e6*ct.e) # gamma rel.
+        w_0 = np.sqrt(K/g_0)
+
+        # Initial velocities
+        v_x_0 = px_0/(ct.m_e*g_0)
+        v_y_0 = py_0/(ct.m_e*g_0)
+
+        # calculate oscillation amplitude
+        A_x = np.sqrt(x_0**2+v_x_0**2/w_0**2)
+        A_y = np.sqrt(y_0**2+v_y_0**2/w_0**2)
+
+        # initial phase (x)
+        sn_x = -v_x_0/(A_x*w_0)
+        cs_x = x_0/A_x
+        phi_x_0 = np.arctan2(sn_x, cs_x)
+
+        # initial phase (y)
+        sn_y = -v_y_0/(A_y*w_0)
+        cs_y = y_0/A_y
+        phi_y_0 = np.arctan2(sn_y, cs_y)
+
+        # track beam in steps
+        #print("Tracking plasma stage in {} steps...   ".format(steps))
+        start = time.time()
+        p = Pool(cpu_count())
+        t = t_final/steps*(np.arange(steps)+1)
+        part = partial(self._get_beam_at_specified_time_step_from_paper_final, beam=beam, g_0=g_0, w_0=w_0, xi_0=xi_0, A_x=A_x, A_y=A_y, phi_x_0=phi_x_0, phi_y_0=phi_y_0, E=E, E_p=E_p, v_w=v_w, K=K)
+        beam_steps_list = p.map(part, t)
+        end = time.time()
+        print("Done ({} seconds)".format(end-start))
+
+        # update beam data
+        last_beam = beam_steps_list[-1]
+        beam.set_phase_space(last_beam.x, last_beam.y, last_beam.xi, last_beam.px, last_beam.py, last_beam.pz)
+        beam.increase_prop_distance(self.length)
+
+        # update laser data
+        laser.increase_prop_distance(self.length)
+        laser.xi_c = laser.xi_c + (v_w-ct.c)*t_final
+
+        # return steps
+        return beam_steps_list
+
+    def _get_beam_at_specified_time_step_from_paper_final(self, t, beam, g_0, w_0, xi_0, A_x, A_y, phi_x_0, phi_y_0, E, E_p, v_w, K):
+        # Start calculation
+        # print(np.mean(g_0))
+        G = 1 + E/g_0*t
+        phi = 2*np.sqrt(K*g_0)/E*(G**(1/2) - 1)
+        A_0 = np.sqrt(A_x**2 + A_y**2)
+
+        x = A_x*G**(-1/4)*np.cos(phi + phi_x_0)
+        v_x = -w_0*A_x*G**(-3/4)*np.sin(phi + phi_x_0)
+        p_x = G*g_0*v_x/ct.c # [m_e *c]
+
+        y = A_y*G**(-1/4)*np.cos(phi + phi_y_0)
+        v_y = -w_0*A_y*G**(-3/4)*np.sin(phi + phi_y_0)
+        p_y = G*g_0*v_y/ct.c # [m_e *c]
+
+        delta_xi = ct.c/(2*E*g_0)*(G**(-1)- 1) + A_0**2*K/(2*ct.c*E)*(G**(-1/2) - 1)
+        xi = xi_0 + delta_xi
+
+        delta_xi_max = -1/(2*E)*(ct.c/g_0 + A_0**2*K/ct.c)
+        
+        g = g_0 + E*t + E_p*delta_xi_max*t +E_p/2*(ct.c-v_w)*t**2 + ct.c*E_p/(2*E**2)*np.log(G) +E_p*A_0**2*K*g_0/(ct.c*E**2)*(G**(1/2) - 1)
+        p_z = np.sqrt(g**2-p_x**2-p_y**2) # [m_e *c]
+
+        beam_step = ParticleBunch(beam.q, x, y, xi, p_x, p_y, p_z, prop_distance=beam.prop_distance+t*ct.c)
+
+        return beam_step
+
+
+
+class PlasmaRamp(object):
+
+    """Defines a plasma ramp."""
+
+    def __init__(self, length, plasma_dens_down, plasma_dens_top,
+                 position_down=0, ramp_type='upramp',
+                 profile='inverse square'):
         """
         Initialize plasma ramp.
 
@@ -245,22 +409,26 @@ class PlasmaUpramp(object):
         length : float
             Length of the plasma stage in cm.
             
-        initial_dens : float
-            Plasma density at the position 'initial_dens_pos' in units of
+        plasma_dens_down : float
+            Plasma density at the position 'position_down' in units of
             cm^{-3}.
 
-        final_dens : float
-            Plasma density at the end of the ramp in units of cm^{-3}.
+        plasma_dens_top : float
+            Plasma density at the beginning (end) of the downramp (upramp) in
+            units of cm^{-3}.
 
-        initial_dens_pos : float
-            Position where the plasma density will be equal to 'initial_dens'.
-            If 0, this corresponds to the start of the ramp.
+        position_down : float
+            Position where the plasma density will be equal to 
+            'plasma_dens_down' measured from the beginning (end) of the 
+            downramp (upramp).
 
         """
         self.length = length
-        self.initial_dens = initial_dens
-        self.initial_dens_pos = initial_dens_pos
-        self.final_dens = final_dens
+        self.plasma_dens_down = plasma_dens_down
+        self.position_down = position_down
+        self.plasma_dens_top = plasma_dens_top
+        self.ramp_type = ramp_type
+        self.profile = profile
         
     def track_beam_numerically_RK_parallel(self, beam, steps, non_rel=False, 
                                            n_proc=None):
@@ -291,9 +459,12 @@ class PlasmaUpramp(object):
         if non_rel:
             raise NotImplementedError()
         else:
-            field = PlasmaUprampBlowoutField(self.length, self.initial_dens,
-                                             self.final_dens,
-                                             self.initial_dens_pos)
+            field = PlasmaUprampBlowoutField(self.length,
+                                             self.plasma_dens_down,
+                                             self.plasma_dens_top,
+                                             self.position_down,
+                                             ramp_type = self.ramp_type,
+                                             profile=self.profile)
         # Main beam quantities
         mat = beam.get_6D_matrix()
         # Plasma length in time
@@ -363,4 +534,3 @@ class PlasmaUpramp(object):
 
     def _gamma(self, px, py, pz):
         return np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
-    
