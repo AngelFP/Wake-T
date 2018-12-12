@@ -13,7 +13,7 @@ from wake_t.wakefields import *
 from wake_t.driver_witness import ParticleBunch
 
 
-class PlasmaStage(object):
+class PlasmaStage():
 
     """ Defines a plasma stage. """
 
@@ -393,8 +393,7 @@ class PlasmaStage(object):
         return beam_step
 
 
-
-class PlasmaRamp(object):
+class PlasmaRamp():
 
     """Defines a plasma ramp."""
 
@@ -537,3 +536,52 @@ class PlasmaRamp(object):
 
     def _gamma(self, px, py, pz):
         return np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
+
+
+class Drift(object):
+
+    """Defines a drift space"""
+
+    def __init__(self, length):
+        self.length = length
+
+    def track_bunch(self, bunch, steps, backtrack=False):
+        print("Tracking drift in {} step(s)...   ".format(steps))
+        l_step = self.length/steps
+        bunch_list = list()
+        for i in np.arange(0, steps):
+            l = (i+1)*l_step
+            (x, y, xi, px, py, pz) = self._track_step(bunch, l,
+                                                      backtrack=backtrack)
+            new_prop_dist = bunch.prop_distance + l
+            bunch_list.append(ParticleBunch(bunch.q, x, y, xi, px, py, pz,
+                                            prop_distance=new_prop_dist))
+        # update bunch data
+        last_bunch = bunch_list[-1]
+        bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
+                              last_bunch.px, last_bunch.py, last_bunch.pz)
+        bunch.increase_prop_distance(self.length)
+        print("Done.")
+        return bunch_list
+
+    def _track_step(self, bunch, length=None, backtrack=False):
+        x_0 = bunch.x
+        y_0 = bunch.y
+        xi_0 = bunch.xi
+        px_0 = bunch.px
+        py_0 = bunch.py
+        pz_0 = bunch.pz
+        if length is None:
+            t = self.length/ct.c
+        else:
+            t = length/ct.c
+        if backtrack:
+            t = -t
+        g = np.sqrt(bunch.px**2 + bunch.py**2 + bunch.pz**2)
+        vx = px_0*ct.c/g
+        vy = py_0*ct.c/g
+        vz = pz_0*ct.c/g
+        x = x_0 + vx*t
+        y = y_0 + vy*t
+        xi = xi_0 + (vz-ct.c)*t
+        return (x, y, xi, px_0, py_0, pz_0)
