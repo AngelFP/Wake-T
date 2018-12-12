@@ -399,7 +399,7 @@ class PlasmaRamp(object):
     """Defines a plasma ramp."""
 
     def __init__(self, length, plasma_dens_down, plasma_dens_top,
-                 position_down=0, ramp_type='upramp',
+                 position_down=None, ramp_type='upramp',
                  profile='inverse square'):
         """
         Initialize plasma ramp.
@@ -425,7 +425,10 @@ class PlasmaRamp(object):
         """
         self.length = length
         self.plasma_dens_down = plasma_dens_down
-        self.position_down = position_down
+        if position_down is None:
+            self.position_down = length
+        else:
+            self.position_down = position_down
         self.plasma_dens_top = plasma_dens_top
         self.ramp_type = ramp_type
         self.profile = profile
@@ -459,7 +462,7 @@ class PlasmaRamp(object):
         if non_rel:
             raise NotImplementedError()
         else:
-            field = PlasmaUprampBlowoutField(self.length,
+            field = PlasmaRampBlowoutField(self.length,
                                              self.plasma_dens_down,
                                              self.plasma_dens_top,
                                              self.position_down,
@@ -520,16 +523,16 @@ class PlasmaRamp(object):
 
         return beam_list
     
-    def _get_optimized_dt(self, beam, WF):
+    def _get_optimized_dt(self, beam, wakefield):
         gamma = self._gamma(beam.px, beam.py, beam.pz)
         mean_gamma = np.average(gamma, weights=beam.q)
-        # calculate focusing at the end of ramp, where n_p is higher.
-        Kx = WF.Kx(beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, gamma,
-                   self.length/ct.c)
-        mean_Kx = np.average(Kx, weights=beam.q)
-        w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
-        T_x = 1/w_x
-        dt = 0.1*T_x
+        # calculate maximum focusing on ramp.
+        t = np.linspace(0, self.length, 100)/ct.c
+        kx = wakefield.calculate_focusing(0, t)
+        max_kx = max(kx)
+        w_x = np.sqrt(ct.e*ct.c/ct.m_e * max_kx/mean_gamma)
+        period_x = 1/w_x
+        dt = 0.1*period_x
         return dt
 
     def _gamma(self, px, py, pz):

@@ -65,28 +65,27 @@ class PlasmaRampBlowoutField(Wakefield):
         self.plasma_dens_top = plasma_dens_top
         self.ramp_type = ramp_type
         self.profile = profile
-        self.current_kx = None
 
     def Wx(self, x, y, xi, px, py, pz, gamma, t):
-        self.calculate_current_focusing(xi, t)
-        return ct.c*self.current_kx*x
+        kx = self.calculate_focusing(xi, t)
+        return ct.c*kx*x
 
     def Wy(self, x, y, xi, px, py, pz, gamma, t):
-        self.calculate_current_focusing(xi, t)
-        return ct.c*self.current_kx*y
+        kx = self.calculate_focusing(xi, t)
+        return ct.c*kx*y
 
     def Wz(self, x, y, xi, px, py, pz, gamma, t):
-        return np.zeros(len(x))
+        return np.zeros(len(xi))
 
     def Kx(self, x, y, xi, px, py, pz, gamma, t):
-        self.calculate_current_focusing(xi, t)
-        return np.ones(len(x))*self.current_kx
+        kx = self.calculate_focusing(xi, t)
+        return np.ones(len(xi))*kx
 
-    def calculate_current_focusing(self, xi, t):
+    def calculate_focusing(self, xi, t):
         t = t + xi/ct.c # particles with different xi have a different t
         n_p = self.calculate_denstity(t)
         w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
-        self.current_kx = (ct.m_e/(2*ct.e*ct.c))*w_p**2
+        return (ct.m_e/(2*ct.e*ct.c))*w_p**2
 
     def calculate_denstity(self, t):
         if self.ramp_type == 'upramp':
