@@ -105,6 +105,6 @@ class PlasmaRampBlowoutField(Wakefield):
             b = (np.log(self.plasma_dens_top / self.plasma_dens_down)
                  /self.position_down)
             a = self.plasma_dens_top
-            n_p = a*np.exp(b*t)
+            n_p = a*np.exp(-b*t)
         return n_p
 
