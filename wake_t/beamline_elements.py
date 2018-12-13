@@ -576,7 +576,7 @@ class Drift(object):
         last_bunch = bunch_list[-1]
         bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
                               last_bunch.px, last_bunch.py, last_bunch.pz)
-        bunch.increase_prop_distance(self.length)
+        bunch.prop_distance += (1-2*backtrack) * self.length
         print("Done.")
         return bunch_list
 
