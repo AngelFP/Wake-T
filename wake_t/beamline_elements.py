@@ -461,12 +461,7 @@ class PlasmaRamp():
         if non_rel:
             raise NotImplementedError()
         else:
-            field = PlasmaRampBlowoutField(self.length,
-                                             self.plasma_dens_down,
-                                             self.plasma_dens_top,
-                                             self.position_down,
-                                             ramp_type = self.ramp_type,
-                                             profile=self.profile)
+            field = PlasmaRampBlowoutField(self.calculate_density)
         # Main beam quantities
         mat = beam.get_6D_matrix()
         # Plasma length in time
@@ -536,6 +531,27 @@ class PlasmaRamp():
 
     def _gamma(self, px, py, pz):
         return np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
+
+    def calculate_density(self, z):
+        if self.ramp_type == 'upramp':
+            z = self.length - z
+        if self.profile == 'linear':
+            b = -((self.plasma_dens_top - self.plasma_dens_down)
+                 /self.position_down)
+            a = self.plasma_dens_top
+            n_p = a + b*z
+            # make negative densities 0
+            n_p[n_p<0] = 0
+        elif self.profile == 'inverse square':
+            a = np.sqrt(self.plasma_dens_top/self.plasma_dens_down) - 1
+            b = self.position_down/a
+            n_p = self.plasma_dens_top/np.square(1+z/b)
+        elif self.profile == 'exponential':
+            b = (np.log(self.plasma_dens_top / self.plasma_dens_down)
+                 /self.position_down)
+            a = self.plasma_dens_top
+            n_p = a*np.exp(-b*z)
+        return n_p
 
 
 class Drift(object):
