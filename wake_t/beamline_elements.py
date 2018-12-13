@@ -73,7 +73,7 @@ class PlasmaStage():
                 a_0=laser.a_0, w_0=laser.w_0)
 
     def _gamma(self, px, py, pz):
-        return np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
+        return np.sqrt(1 + px**2 + py**2 + pz**2)
     
     def track_beam_numerically_RK_parallel(
             self, laser, beam, mode, steps, simulation_code=None,
@@ -530,7 +530,7 @@ class PlasmaRamp():
         return dt
 
     def _gamma(self, px, py, pz):
-        return np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
+        return np.sqrt(1 + px**2 + py**2 + pz**2)
 
     def calculate_density(self, z):
         if self.ramp_type == 'upramp':
@@ -593,7 +593,7 @@ class Drift(object):
             t = length/ct.c
         if backtrack:
             t = -t
-        g = np.sqrt(bunch.px**2 + bunch.py**2 + bunch.pz**2)
+        g = np.sqrt(1 + px_0**2 + py_0**2 + pz_0**2)
         vx = px_0*ct.c/g
         vy = py_0*ct.c/g
         vz = pz_0*ct.c/g
