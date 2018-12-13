@@ -601,3 +601,70 @@ class Drift(object):
         y = y_0 + vy*t
         xi = xi_0 + (vz-ct.c)*t
         return (x, y, xi, px_0, py_0, pz_0)
+
+
+class Quadrupole(object):
+
+    """Defines a quadrupole."""
+
+    def __init__(self, length, k, foc_plane='x'):
+        self.length = length
+        self.k = k
+        self.foc_plane = foc_plane
+
+    def track_bunch(self, bunch, steps, backtrack=False):
+        print("Tracking quadrupole in {} step(s)...   ".format(steps))
+        l_step = self.length/steps
+        bunch_list = list()
+        for i in np.arange(0, steps):
+            l = (i+1)*l_step
+            (x, y, xi, px, py, pz) = self._track_step(bunch, l,
+                                                      backtrack=backtrack)
+            new_prop_dist = bunch.prop_distance + l
+            bunch_list.append(ParticleBunch(bunch.q, x, y, xi, px, py, pz,
+                                            prop_distance=new_prop_dist))
+        # update bunch data
+        last_bunch = bunch_list[-1]
+        bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
+                              last_bunch.px, last_bunch.py, last_bunch.pz)
+        bunch.prop_distance += (1-2*backtrack) * self.length
+        print("Done.")
+        return bunch_list
+
+    def _track_step(self, bunch, length=None, backtrack=False):
+        x_0 = bunch.x
+        y_0 = bunch.y
+        xi_0 = bunch.xi
+        xp_0 = bunch.px/bunch.pz
+        yp_0 = bunch.py/bunch.pz
+        px_0 = bunch.px
+        py_0 = bunch.py
+        pz_0 = bunch.pz
+        if length is None:
+            l = self.length
+        else:
+            l = length
+        if backtrack:
+            l = -l
+        g = np.sqrt(1 + px_0**2 + py_0**2 + pz_0**2)
+        vz = pz_0*ct.c/g
+        if self.foc_plane == 'x':
+            x, xp, y, yp = self._transfer_matrix(x_0, xp_0, y_0, yp_0, l)
+        elif self.foc_plane =='y':
+            y, yp, x, xp = self._transfer_matrix(y_0, yp_0, x_0, xp_0, l)
+        px = xp*pz_0
+        py = yp*pz_0
+        xi = xi_0 + (vz/ct.c-1)*l
+        return (x, y, xi, px, py, pz_0)
+
+    def _transfer_matrix(self, x_0, xp_0, y_0, yp_0, l):
+        """ focuses x, defocuses y """
+        x = (x_0*np.cos(np.sqrt(self.k)*l)
+             + xp_0*np.sin(np.sqrt(self.k)*l)/np.sqrt(self.k))
+        xp = (-x_0*np.sqrt(self.k)*np.sin(np.sqrt(self.k)*l)
+              + xp_0*np.cos(np.sqrt(self.k)*l))
+        y = (y_0*np.cosh(np.sqrt(self.k)*l)
+             + yp_0*np.sinh(np.sqrt(self.k)*l)/np.sqrt(self.k))
+        yp = (y_0*np.sqrt(self.k)*np.sinh(np.sqrt(self.k)*l)
+              + yp_0*np.cosh(np.sqrt(self.k)*l))
+        return x, xp, y, yp
