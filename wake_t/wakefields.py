@@ -80,3 +80,40 @@ class PlasmaRampBlowoutField(Wakefield):
         n_p = self.density_function(z)
         w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
         return (ct.m_e/(2*ct.e*ct.c))*w_p**2
+
+
+class PlasmaLensField(Wakefield):
+    def __init__(self, dB_r):
+        self.dB_r = dB_r #[T/m]
+
+    def Wx(self, x, y, xi, px, py, pz, gamma, t):
+        #By = -x*self.dB_r
+        return - pz*ct.c/gamma * (-x*self.dB_r)
+
+    def Wy(self, x, y, xi, px, py, pz, gamma, t):
+        #Bx = y*self.dB_r
+        return pz*ct.c/gamma * y*self.dB_r
+
+    def Wz(self, x, y, xi, px, py, pz, gamma, t):
+        return (px*(-x*self.dB_r) - py*y*self.dB_r )*ct.c/gamma
+
+    def Kx(self, x, y, xi, px, py, pz, gamma, t):
+        # not really important
+        return np.ones(len(x))*self.dB_r
+
+
+class PlasmaLensFieldRelativistic(Wakefield):
+    def __init__(self, k_x):
+        self.k_x = k_x #[T/m]
+
+    def Wx(self, x, y, xi, px, py, pz, gamma, t):
+        return ct.c*self.k_x*x
+
+    def Wy(self, x, y, xi, px, py, pz, gamma, t):
+        return ct.c*self.k_x*y
+
+    def Wz(self, x, y, xi, px, py, pz, gamma, t):
+        return np.zeros(len(x))
+
+    def Kx(self, x, y, xi, px, py, pz, gamma, t):
+        return np.ones(len(x))*self.k_x
