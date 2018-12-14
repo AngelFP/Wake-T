@@ -647,10 +647,12 @@ class Quadrupole(object):
         if backtrack:
             l = -l
         g = np.sqrt(1 + px_0**2 + py_0**2 + pz_0**2)
+        g_avg = np.average(g, weights=bunch.q)
+        g_rel = g/g_avg
         if self.foc_plane == 'x':
-            x, xp, y, yp = self._transfer_matrix(x_0, xp_0, y_0, yp_0, l)
+            x, xp, y, yp = self._transfer_matrix(x_0, xp_0, y_0, yp_0, l, g_rel)
         elif self.foc_plane =='y':
-            y, yp, x, xp = self._transfer_matrix(y_0, yp_0, x_0, xp_0, l)
+            y, yp, x, xp = self._transfer_matrix(y_0, yp_0, x_0, xp_0, l, g_rel)
         px = xp*pz_0
         py = yp*pz_0
         pz = np.sqrt(g**2 - px**2 - py**2 - 1)
@@ -658,14 +660,15 @@ class Quadrupole(object):
         xi = xi_0 + (vz/ct.c-1)*l
         return (x, y, xi, px, py, pz_0)
 
-    def _transfer_matrix(self, x_0, xp_0, y_0, yp_0, l):
+    def _transfer_matrix(self, x_0, xp_0, y_0, yp_0, l, g_rel):
         """ focuses x, defocuses y """
-        x = (x_0*np.cos(np.sqrt(self.k)*l)
-             + xp_0*np.sin(np.sqrt(self.k)*l)/np.sqrt(self.k))
-        xp = (-x_0*np.sqrt(self.k)*np.sin(np.sqrt(self.k)*l)
-              + xp_0*np.cos(np.sqrt(self.k)*l))
-        y = (y_0*np.cosh(np.sqrt(self.k)*l)
-             + yp_0*np.sinh(np.sqrt(self.k)*l)/np.sqrt(self.k))
-        yp = (y_0*np.sqrt(self.k)*np.sinh(np.sqrt(self.k)*l)
-              + yp_0*np.cosh(np.sqrt(self.k)*l))
+        k = self.k / g_rel
+        x = (x_0*np.cos(np.sqrt(k)*l)
+             + xp_0*np.sin(np.sqrt(k)*l)/np.sqrt(k))
+        xp = (-x_0*np.sqrt(k)*np.sin(np.sqrt(k)*l)
+              + xp_0*np.cos(np.sqrt(k)*l))
+        y = (y_0*np.cosh(np.sqrt(k)*l)
+             + yp_0*np.sinh(np.sqrt(k)*l)/np.sqrt(k))
+        yp = (y_0*np.sqrt(k)*np.sinh(np.sqrt(k)*l)
+              + yp_0*np.cosh(np.sqrt(k)*l))
         return x, xp, y, yp
