@@ -647,13 +647,14 @@ class Quadrupole(object):
         if backtrack:
             l = -l
         g = np.sqrt(1 + px_0**2 + py_0**2 + pz_0**2)
-        vz = pz_0*ct.c/g
         if self.foc_plane == 'x':
             x, xp, y, yp = self._transfer_matrix(x_0, xp_0, y_0, yp_0, l)
         elif self.foc_plane =='y':
             y, yp, x, xp = self._transfer_matrix(y_0, yp_0, x_0, xp_0, l)
         px = xp*pz_0
         py = yp*pz_0
+        pz = np.sqrt(g**2 - px**2 - py**2 - 1)
+        vz = pz*ct.c/g
         xi = xi_0 + (vz/ct.c-1)*l
         return (x, y, xi, px, py, pz_0)
 
