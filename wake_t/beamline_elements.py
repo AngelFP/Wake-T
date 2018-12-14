@@ -650,9 +650,11 @@ class Quadrupole(object):
         g_avg = np.average(g, weights=bunch.q)
         g_rel = g/g_avg
         if self.foc_plane == 'x':
-            x, xp, y, yp = self._transfer_matrix(x_0, xp_0, y_0, yp_0, l, g_rel)
+            x, xp, y, yp = self._transfer_matrix(x_0, xp_0, y_0, yp_0, l,
+                                                 g_rel)
         elif self.foc_plane =='y':
-            y, yp, x, xp = self._transfer_matrix(y_0, yp_0, x_0, xp_0, l, g_rel)
+            y, yp, x, xp = self._transfer_matrix(y_0, yp_0, x_0, xp_0, l,
+                                                 g_rel)
         px = xp*pz_0
         py = yp*pz_0
         pz = np.sqrt(g**2 - px**2 - py**2 - 1)
