@@ -73,7 +73,7 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
     R = first_order_matrix(z, L, theta, k1, gamma_ref)
     new_beam_matrix = np.dot(R, beam_matrix)
     if order == 2:
-        T = second_order_matrix(z, theta, k1, k2, gamma_ref)
+        T = second_order_matrix(z, L, theta, k1, k2, gamma_ref)
         x, xp, y, yp, xi, dp = (beam_matrix[0], beam_matrix[1], beam_matrix[2],
                                 beam_matrix[3], beam_matrix[4], beam_matrix[5])
         # pre-calculate products
@@ -167,11 +167,11 @@ def first_order_matrix(z, L, theta, k1, gamma_ref):
                          [-kx2*sx, cx, 0., 0., 0., sx*hx/beta],
                          [0., 0., cy, sy, 0., 0.],
                          [0., 0., -ky2*sy, cy, 0., 0.],
-                         [hx*sx/beta, dx/beta, 0., 0., 1., r56],
+                         [-hx*sx/beta, -dx/beta, 0., 0., 1., -r56],
                          [0., 0., 0., 0., 0., 1.]])
     return u_matrix
 
-def second_order_matrix(L, h, k1, k2, gamma_ref):
+def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     """
     Calculate the second order matrix for the transfer map.
     This function is an adaptation of the one found in the particle tracking
@@ -211,7 +211,6 @@ def second_order_matrix(L, h, k1, k2, gamma_ref):
         calculated.
 
     """
-    # todo: determine what L and h stand for in this function.
     igamma2 = 0.
     if gamma_ref != 0:
         gamma = gamma_ref
@@ -219,6 +218,7 @@ def second_order_matrix(L, h, k1, k2, gamma_ref):
         igamma2 = 1./gamma2
 
     beta = np.sqrt(1. - igamma2)
+    h = theta/L
     h2 = h*h
     h3 = h2*h
     kx2 = (k1 + h*h)
