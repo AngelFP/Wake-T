@@ -1,5 +1,5 @@
 """ This module contains the classes for all beamline elements. """
-
+# TODO: implement di, quad and sextupoles as children of same superclass.
 import time
 from multiprocessing import Pool, cpu_count
 from functools import partial
@@ -786,4 +786,3 @@ class PlasmaLens(object):
 
     def _gamma(self, px, py, pz):
         return np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
- 
