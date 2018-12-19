@@ -554,7 +554,7 @@ class PlasmaRamp():
         return n_p
 
 
-class Drift(object):
+class Drift():
 
     """Defines a drift space"""
 
@@ -600,7 +600,7 @@ class Drift(object):
         return (x, y, xi, px_0, py_0, pz_0)
 
 
-class Dipole(object):
+class Dipole():
 
     """Defines a dipole."""
 
@@ -632,7 +632,8 @@ class Dipole(object):
         print("Done.")
         return bunch_list
 
-class Quadrupole(object):
+
+class Quadrupole():
 
     """Defines a quadrupole."""
 
@@ -665,9 +666,10 @@ class Quadrupole(object):
         print("Done.")
         return bunch_list
 
-class Sextupole(object):
 
-    """Defines a sentupole."""
+class Sextupole():
+
+    """Defines a sextupole."""
 
     def __init__(self, length, k2, foc_plane='x'):
         self.length = length
@@ -675,7 +677,7 @@ class Sextupole(object):
         self.foc_plane = foc_plane
 
     def track_bunch(self, bunch, steps, backtrack=False, order=2):
-        print("Tracking quadrupole in {} step(s)...   ".format(steps))
+        print("Tracking sextupole in {} step(s)...   ".format(steps))
         l_step = self.length/steps
         bunch_list = list()
 
