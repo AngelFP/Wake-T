@@ -8,7 +8,7 @@ import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.particle_tracking import runge_kutta_4
+from wake_t.particle_tracking import runge_kutta_4, track_with_transfer_map
 from wake_t.wakefields import *
 from wake_t.driver_witness import ParticleBunch
 
@@ -566,9 +566,8 @@ class Drift(object):
         l_step = self.length/steps
         bunch_list = list()
         for i in np.arange(0, steps):
-            l = (i+1)*l_step
-            (x, y, xi, px, py, pz) = self._track_step(bunch, l,
-                                                      backtrack=backtrack)
+            l = (i+1)*l_step*(1-2*backtrack)
+            (x, y, xi, px, py, pz) = self._track_step(bunch, l)
             new_prop_dist = bunch.prop_distance + l
             bunch_list.append(ParticleBunch(bunch.q, x, y, xi, px, py, pz,
                                             prop_distance=new_prop_dist))
@@ -580,7 +579,7 @@ class Drift(object):
         print("Done.")
         return bunch_list
 
-    def _track_step(self, bunch, length=None, backtrack=False):
+    def _track_step(self, bunch, length=None):
         x_0 = bunch.x
         y_0 = bunch.y
         xi_0 = bunch.xi
@@ -591,8 +590,6 @@ class Drift(object):
             t = self.length/ct.c
         else:
             t = length/ct.c
-        if backtrack:
-            t = -t
         g = np.sqrt(1 + px_0**2 + py_0**2 + pz_0**2)
         vx = px_0*ct.c/g
         vy = py_0*ct.c/g
@@ -612,16 +609,21 @@ class Quadrupole(object):
         self.k = k
         self.foc_plane = foc_plane
 
-    def track_bunch(self, bunch, steps, backtrack=False):
+    def track_bunch(self, bunch, steps, backtrack=False, order=2):
         print("Tracking quadrupole in {} step(s)...   ".format(steps))
         l_step = self.length/steps
         bunch_list = list()
+
         for i in np.arange(0, steps):
-            l = (i+1)*l_step
-            (x, y, xi, px, py, pz) = self._track_step(bunch, l,
-                                                      backtrack=backtrack)
+            l = (i+1)*l_step*(1-2*backtrack)
+            k1 = self.k * (2*(self.foc_plane=='x')-1)
             new_prop_dist = bunch.prop_distance + l
-            bunch_list.append(ParticleBunch(bunch.q, x, y, xi, px, py, pz,
+            bunch_mat, g_avg = bunch.get_alternative_6D_matrix()
+            bunch_mat = track_with_transfer_map(bunch_mat, l, self.length, 0,
+                                                k1, 0, g_avg, order=order)
+            bunch_list.append(ParticleBunch(bunch.q, bunch_matrix=bunch_mat,
+                                            matrix_type='alternative',
+                                            gamma_ref = g_avg,
                                             prop_distance=new_prop_dist))
         # update bunch data
         last_bunch = bunch_list[-1]
@@ -630,50 +632,6 @@ class Quadrupole(object):
         bunch.prop_distance += (1-2*backtrack) * self.length
         print("Done.")
         return bunch_list
-
-    def _track_step(self, bunch, length=None, backtrack=False):
-        x_0 = bunch.x
-        y_0 = bunch.y
-        xi_0 = bunch.xi
-        xp_0 = bunch.px/bunch.pz
-        yp_0 = bunch.py/bunch.pz
-        px_0 = bunch.px
-        py_0 = bunch.py
-        pz_0 = bunch.pz
-        if length is None:
-            l = self.length
-        else:
-            l = length
-        if backtrack:
-            l = -l
-        g = np.sqrt(1 + px_0**2 + py_0**2 + pz_0**2)
-        g_avg = np.average(g, weights=bunch.q)
-        g_rel = g/g_avg
-        if self.foc_plane == 'x':
-            x, xp, y, yp = self._transfer_matrix(x_0, xp_0, y_0, yp_0, l,
-                                                 g_rel)
-        elif self.foc_plane =='y':
-            y, yp, x, xp = self._transfer_matrix(y_0, yp_0, x_0, xp_0, l,
-                                                 g_rel)
-        px = xp*pz_0
-        py = yp*pz_0
-        pz = np.sqrt(g**2 - px**2 - py**2 - 1)
-        vz = pz*ct.c/g
-        xi = xi_0 + (vz/ct.c-1)*l
-        return (x, y, xi, px, py, pz_0)
-
-    def _transfer_matrix(self, x_0, xp_0, y_0, yp_0, l, g_rel):
-        """ focuses x, defocuses y """
-        k = self.k / g_rel
-        x = (x_0*np.cos(np.sqrt(k)*l)
-             + xp_0*np.sin(np.sqrt(k)*l)/np.sqrt(k))
-        xp = (-x_0*np.sqrt(k)*np.sin(np.sqrt(k)*l)
-              + xp_0*np.cos(np.sqrt(k)*l))
-        y = (y_0*np.cosh(np.sqrt(k)*l)
-             + yp_0*np.sinh(np.sqrt(k)*l)/np.sqrt(k))
-        yp = (y_0*np.sqrt(k)*np.sinh(np.sqrt(k)*l)
-              + yp_0*np.cosh(np.sqrt(k)*l))
-        return x, xp, y, yp
 
 
 class PlasmaLens(object):
