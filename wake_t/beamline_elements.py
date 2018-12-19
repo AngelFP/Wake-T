@@ -665,6 +665,39 @@ class Quadrupole(object):
         print("Done.")
         return bunch_list
 
+class Sextupole(object):
+
+    """Defines a sentupole."""
+
+    def __init__(self, length, k2, foc_plane='x'):
+        self.length = length
+        self.k2 = k2
+        self.foc_plane = foc_plane
+
+    def track_bunch(self, bunch, steps, backtrack=False, order=2):
+        print("Tracking quadrupole in {} step(s)...   ".format(steps))
+        l_step = self.length/steps
+        bunch_list = list()
+
+        for i in np.arange(0, steps):
+            l = (i+1)*l_step*(1-2*backtrack)
+            k2 = self.k2 * (2*(self.foc_plane=='x')-1)
+            new_prop_dist = bunch.prop_distance + l
+            bunch_mat, g_avg = bunch.get_alternative_6D_matrix()
+            bunch_mat = track_with_transfer_map(bunch_mat, l, self.length, 0,
+                                                0, k2, g_avg, order=order)
+            bunch_list.append(ParticleBunch(bunch.q, bunch_matrix=bunch_mat,
+                                            matrix_type='alternative',
+                                            gamma_ref = g_avg,
+                                            prop_distance=new_prop_dist))
+        # update bunch data
+        last_bunch = bunch_list[-1]
+        bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
+                              last_bunch.px, last_bunch.py, last_bunch.pz)
+        bunch.prop_distance += (1-2*backtrack) * self.length
+        print("Done.")
+        return bunch_list
+
 
 class PlasmaLens(object):
 
