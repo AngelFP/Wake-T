@@ -26,11 +26,54 @@ def equations_of_motion(beam_matrix, t, WF):
                      (pz/gamma-1)*ct.c,
                      K*WF.Wz(x, y, xi, px, py, pz, gamma, t)])
 
-def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, energy, order=2):
-    R = first_order_matrix(z, L, theta, k1, energy)
+def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
+                            order=2):
+    """
+    Track beam distribution throwgh beamline element by using a transfer map.
+    This function is stronly based on code from Ocelot (see 
+    https://github.com/ocelot-collab/ocelot) written by S. Tomin.
+
+    Parameters:
+    -----------
+    beam_matrix : array
+        6 x N matrix, where N is the number of particles, containing the
+        phase-space information of the bunch as (x, x', y, y', xi, dp) in
+        units of (m, rad, m, rad, m, -). dp is defined as
+        dp = (g-g_ref)/g_ref, while x' = px/p_kin and y' = py/p_kin, where
+        p_kin is the kinetic momentum of each particle.
+
+    z : float
+        Longitudinal position in which to obtain the bunch distribution
+
+    L : float
+        Total length of the beamline element
+
+    theta : float
+        Bending angle of the beamline element
+
+    k1 : float
+        Quadrupole gradient of the beamline element in units of 1/m^2. A 
+        positive value implies focusing on the 'x' plane, while a negative
+        gradient corresponds to focusing on 'y'
+
+    k2 : float
+        Sextupole gradient of the beamline element in units of 1/m^3. A 
+        positive value implies focusing on the 'x' plane, while a negative
+        gradient corresponds to focusing on 'y'
+
+    gamma_ref : float
+        Reference energy with respect to which the particle momentum dp is
+        calculated.
+
+    order : int
+        Indicates the order of the transport map to apply. Tracking up to
+        second order is possible.
+
+    """
+    R = first_order_matrix(z, L, theta, k1, gamma_ref)
     new_beam_matrix = np.dot(R, beam_matrix)
     if order == 2:
-        T = second_order_matrix(z, theta, k1, k2, energy)
+        T = second_order_matrix(z, theta, k1, k2, gamma_ref)
         x, xp, y, yp, xi, dp = (beam_matrix[0], beam_matrix[1], beam_matrix[2],
                                 beam_matrix[3], beam_matrix[4], beam_matrix[5])
         # pre-calculate products
@@ -65,10 +108,40 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, energy, order=2):
                                 + T[4,2,2]*y2 + T[4,2,3]*yyp + T[4,3,3]*yp2)
     return new_beam_matrix
 
-def first_order_matrix(z, L, theta, k1, energy=0.):
-    # r = element.l/element.angle
-    #  +K - focusing lens , -K - defoc
-    gamma = energy
+def first_order_matrix(z, L, theta, k1, gamma_ref):
+    """
+    Calculate the first order matrix for the transfer map.
+    This function is an adaptation of the one found in the particle tracking
+    code Ocelot (see https://github.com/ocelot-collab/ocelot) written by 
+    S. Tomin.
+
+    Parameters:
+    -----------
+    z : float
+        Longitudinal position in which to calculate the transfer matrix
+
+    L : float
+        Total length of the beamline element
+
+    theta : float
+        Bending angle of the beamline element
+
+    k1 : float
+        Quadrupole gradient of the beamline element in units of 1/m^2. A 
+        positive value implies focusing on the 'x' plane, while a negative
+        gradient corresponds to focusing on 'y'
+
+    k2 : float
+        Sextupole gradient of the beamline element in units of 1/m^3. A 
+        positive value implies focusing on the 'x' plane, while a negative
+        gradient corresponds to focusing on 'y'
+
+    gamma_ref : float
+        Reference energy with respect to which the particle momentum dp is
+        calculated.
+
+    """
+    gamma = gamma_ref
     hx = theta/L
     kx2 = (k1 + hx*hx)
     ky2 = -k1
@@ -77,14 +150,10 @@ def first_order_matrix(z, L, theta, k1, energy=0.):
     cx = np.cos(z*kx).real
     cy = np.cos(z*ky).real
     sy = (np.sin(ky*z)/ky).real if ky != 0 else z
-
     igamma2 = 0.
-
     if gamma != 0:
         igamma2 = 1./(gamma*gamma)
-
     beta = np.sqrt(1. - igamma2)
-
     if kx != 0:
         sx = (np.sin(kx*z)/kx).real
         dx = hx/kx2*(1. - cx)
@@ -93,9 +162,7 @@ def first_order_matrix(z, L, theta, k1, energy=0.):
         sx = z
         dx = z*z*hx/2.
         r56 = hx*hx*z**3/6./beta**2
-
     r56 -= z/(beta*beta)*igamma2
-
     u_matrix = np.array([[cx, sx, 0., 0., 0., dx/beta],
                          [-kx2*sx, cx, 0., 0., 0., sx*hx/beta],
                          [0., 0., cy, sy, 0., 0.],
@@ -104,21 +171,50 @@ def first_order_matrix(z, L, theta, k1, energy=0.):
                          [0., 0., 0., 0., 0., 1.]])
     return u_matrix
 
-def second_order_matrix(L, h, k1, k2, energy=0):
+def second_order_matrix(L, h, k1, k2, gamma_ref):
     """
-    :param L:
-    :param angle:
-    :param k1:
-    :param k2:
-    :return:
+    Calculate the second order matrix for the transfer map.
+    This function is an adaptation of the one found in the particle tracking
+    code Ocelot (see https://github.com/ocelot-collab/ocelot) written by 
+    S. Tomin.
 
-    here is used the following set of variables:
-    x, dx/ds, y, dy/ds, delta_l, dp/p0
+    Parameters:
+    -----------
+    beam_matrix : array
+        6 x N matrix, where N is the number of particles, containing the
+        phase-space information of the bunch as (x, x', y, y', xi, dp) in
+        units of (m, rad, m, rad, m, -). dp is defined as
+        dp = (g-g_ref)/g_ref, while x' = px/p_kin and y' = py/p_kin, where
+        p_kin is the kinetic momentum of each particle.
+
+    z : float
+        Longitudinal position in which to obtain the bunch distribution
+
+    L : float
+        Total length of the beamline element
+
+    theta : float
+        Bending angle of the beamline element
+
+    k1 : float
+        Quadrupole gradient of the beamline element in units of 1/m^2. A 
+        positive value implies focusing on the 'x' plane, while a negative
+        gradient corresponds to focusing on 'y'
+
+    k2 : float
+        Sextupole gradient of the beamline element in units of 1/m^3. A 
+        positive value implies focusing on the 'x' plane, while a negative
+        gradient corresponds to focusing on 'y'
+
+    gamma_ref : float
+        Reference energy with respect to which the particle momentum dp is
+        calculated.
+
     """
-
+    # todo: determine what L and h stand for in this function.
     igamma2 = 0.
-    if energy != 0:
-        gamma = energy
+    if gamma_ref != 0:
+        gamma = gamma_ref
         gamma2 = gamma*gamma
         igamma2 = 1./gamma2
 
