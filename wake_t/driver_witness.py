@@ -71,8 +71,9 @@ class ParticleBunch():
 
     """ Defines a particle bunch. """
 
-    def __init__(self, q, x, y, xi, px, py, pz, tags=None, prop_distance=0,
-                 t_flight=0):
+    def __init__(self, q, x=None, y=None, xi=None, px=None, py=None, pz=None,
+                 bunch_matrix=None, matrix_type='standard', gamma_ref=None,
+                 tags=None, prop_distance=0, t_flight=0):
         """
         Initialize particle bunch.
 
@@ -95,6 +96,19 @@ class ParticleBunch():
         pz : array
             Momentum of each particle in the z-plane in non-dimensional units
             (beta*gamma).
+        bunch_matrix : array
+            6 x N matrix, where N is the number of partciles, containing the
+            phase-space information of the bunch. If provided, the argumets x
+            to pz are not considered. The matrix contains (x, px, y, py, z, pz)
+            if matrix_type='standard' or (x, x', y, y', xi, dp) if
+            matrix_type='alternative'.
+        matrix_type : string
+            Indicates the type of bunch_matrix. Possible values are 'standard'
+            or 'alternative' (see above).
+        gamma_ref : float
+            Reference energy with respect to which the particle momentum dp is
+            calculated. Only needed if bunch_matrix is used and
+            matrix_type='alternative'.
         tags : array
             Individual tags assigned to each particle.
         prop_distance : float
@@ -103,26 +117,75 @@ class ParticleBunch():
             Time of flight of the bunch along the beamline.
 
         """
+        if bunch_matrix is not None:
+            if matrix_type == 'standard':
+                self.set_phase_space_from_matrix(bunch_matrix)
+            elif matrix_type == 'alternative':
+                self.set_phase_space_from_alternative_matrix(bunch_matrix,
+                                                             gamma_ref)
+        else:
+            self.x = x
+            self.y = y
+            self.xi = xi
+            self.px = px
+            self.py = py
+            self.pz = pz
         self.q = q
-        self.x = x
-        self.y = y
-        self.xi = xi
-        self.px = px
-        self.py = py
-        self.pz = pz
         #self.mu = 0
         self.tags = tags
         self.prop_distance = prop_distance
         self.t_flight = t_flight
 
     def set_phase_space(self, x, y, xi, px, py, pz):
-        """Sets the 6D phase space coordinates"""
+        """Sets the phase space coordinates"""
         self.x = x
         self.y = y
         self.xi = xi
         self.px = px
         self.py = py
         self.pz = pz
+
+    def set_phase_space_from_matrix(self, beam_matrix):
+        """
+        Sets the phase space coordinates from a matrix with the values of
+        (x, px, y, py, xi, pz).
+        
+        """
+        self.x = beam_matrix[0]
+        self.y = beam_matrix[2]
+        self.xi = beam_matrix[4]
+        self.px = beam_matrix[1]
+        self.py = beam_matrix[3]
+        self.pz = beam_matrix[5]
+
+    def set_phase_space_from_alternative_matrix(self, beam_matrix, gamma_ref):
+        """
+        Sets the phase space coordinates from a matrix with the values of
+        (x, x', y, y', xi, dp).
+
+        Parameters:
+        -----------
+        bunch_matrix : array
+            6 x N matrix, where N is the number of partciles, containing the
+            phase-space information of the bunch as (x, x', y, y', xi, dp) in
+            units of (m, rad, m, rad, m, -). dp is defined as
+            dp = (g-g_ref)/g_ref, while x' = px/p_kin and y' = py/p_kin, where
+            p_kin is the kinetic momentum of each particle.
+
+        gamma_ref : float
+            Reference energy with respect to which the particle momentum dp is
+            calculated. 
+
+        """
+        dp = beam_matrix[5]
+        gamma = (dp + 1)*gamma_ref
+        p_kin = np.sqrt(gamma**2 - 1)
+        self.x = beam_matrix[0]
+        self.px = beam_matrix[1] * p_kin
+        self.y = beam_matrix[2]
+        self.py = beam_matrix[3] * p_kin
+        self.xi = beam_matrix[4]
+        self.pz = np.sqrt(gamma**2 - self.px**2 - self.py**2 - 1)
 
     def get_bunch_matrix(self):
         """Returns a matrix with the 6D phase space and charge of the bunch"""
@@ -130,8 +193,24 @@ class ParticleBunch():
                          self.q])
 
     def get_6D_matrix(self):
-        """Returns the 6D phase space matrix of the bunch"""
+        """
+        Returns the 6D phase space matrix of the bunch containing
+        (x, px, y, py, xi, pz)
+        """
         return np.array([self.x, self.px, self.y, self.py, self.xi, self.pz])
+
+    def get_alternative_6D_matrix(self):
+        """
+        Returns the 6D matrix of the bunch containing
+        (x, x', y, y', xi, dp)
+        """
+        g = np.sqrt(1 + self.px**2 + self.py**2 + self.pz**2)
+        g_avg = np.average(g, weights=self.q)
+        b_avg = np.sqrt(1 - g_avg**(-2))
+        dp = (g-g_avg)/(g_avg*b_avg)
+        p_kin = np.sqrt(g**2 - 1)
+        return np.array([self.x, self.px/p_kin, self.y, self.py/p_kin,
+                         self.xi, dp]), g_avg
 
     def increase_prop_distance(self, dist):
         """Increases the propagation distance"""
