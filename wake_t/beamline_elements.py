@@ -1,5 +1,5 @@
 """ This module contains the classes for all beamline elements. """
-# TODO: implement di, quad and sextupoles as children of same superclass.
+
 import time
 from multiprocessing import Pool, cpu_count
 from functools import partial
@@ -8,9 +8,12 @@ import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.particle_tracking import runge_kutta_4, track_with_transfer_map
+from wake_t.particle_tracking import (runge_kutta_4, track_with_transfer_map)
 from wake_t.wakefields import *
 from wake_t.driver_witness import ParticleBunch
+from wake_t.utilities.bunch_manipulation import (convert_to_ocelot_matrix,
+                                                 convert_from_ocelot_matrix,
+                                                 rotation_matrix_xz)
 
 
 class PlasmaStage():
@@ -569,13 +572,18 @@ class Drift():
             l = (i+1)*l_step*(1-2*backtrack)
             (x, y, xi, px, py, pz) = self._track_step(bunch, l)
             new_prop_dist = bunch.prop_distance + l
-            bunch_list.append(ParticleBunch(bunch.q, x, y, xi, px, py, pz,
-                                            prop_distance=new_prop_dist))
+            new_bunch = ParticleBunch(bunch.q, x, y, xi, px, py, pz,
+                                      prop_distance=new_prop_dist)
+            new_bunch.x_ref = bunch.x_ref + l*np.sin(bunch.theta_ref)
+            new_bunch.theta_ref = bunch.theta_ref
+            bunch_list.append(new_bunch)
         # update bunch data
         last_bunch = bunch_list[-1]
         bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
                               last_bunch.px, last_bunch.py, last_bunch.pz)
-        bunch.prop_distance += (1-2*backtrack) * self.length
+        bunch.prop_distance = last_bunch.prop_distance
+        bunch.theta_ref = last_bunch.theta_ref
+        bunch.x_ref = last_bunch.x_ref
         print("Done.")
         return bunch_list
 
@@ -599,106 +607,104 @@ class Drift():
         xi = xi_0 + (vz-ct.c)*t
         return (x, y, xi, px_0, py_0, pz_0)
 
+class TMElement():
 
-class Dipole():
+    """Defines an element to be tracked using transfer maps."""
 
-    """Defines a dipole."""
-
-    def __init__(self, length, angle):
+    def __init__(self, length=0, angle=0, k1=0, k2=0, gamma_ref=None):
         self.length = length
         self.angle = angle
-
-    def track_bunch(self, bunch, steps, backtrack=False, order=2):
-        print("Tracking dipole in {} step(s)...   ".format(steps))
-        l_step = self.length/steps
-        bunch_list = list()
-
-        for i in np.arange(0, steps):
-            l = (i+1)*l_step*(1-2*backtrack)
-            new_prop_dist = bunch.prop_distance + l
-            bunch_mat, g_avg = bunch.get_alternative_6D_matrix()
-            bunch_mat = track_with_transfer_map(bunch_mat, l, self.length,
-                                                self.angle, 0, 0, g_avg,
-                                                order=order)
-            bunch_list.append(ParticleBunch(bunch.q, bunch_matrix=bunch_mat,
-                                            matrix_type='alternative',
-                                            gamma_ref = g_avg,
-                                            prop_distance=new_prop_dist))
-        # update bunch data
-        last_bunch = bunch_list[-1]
-        bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
-                              last_bunch.px, last_bunch.py, last_bunch.pz)
-        bunch.prop_distance += (1-2*backtrack) * self.length
-        print("Done.")
-        return bunch_list
-
-
-class Quadrupole():
-
-    """Defines a quadrupole."""
-
-    def __init__(self, length, k, foc_plane='x'):
-        self.length = length
-        self.k = k
-        self.foc_plane = foc_plane
-
-    def track_bunch(self, bunch, steps, backtrack=False, order=2):
-        print("Tracking quadrupole in {} step(s)...   ".format(steps))
-        l_step = self.length/steps
-        bunch_list = list()
-
-        for i in np.arange(0, steps):
-            l = (i+1)*l_step*(1-2*backtrack)
-            k1 = self.k * (2*(self.foc_plane=='x')-1)
-            new_prop_dist = bunch.prop_distance + l
-            bunch_mat, g_avg = bunch.get_alternative_6D_matrix()
-            bunch_mat = track_with_transfer_map(bunch_mat, l, self.length, 0,
-                                                k1, 0, g_avg, order=order)
-            bunch_list.append(ParticleBunch(bunch.q, bunch_matrix=bunch_mat,
-                                            matrix_type='alternative',
-                                            gamma_ref = g_avg,
-                                            prop_distance=new_prop_dist))
-        # update bunch data
-        last_bunch = bunch_list[-1]
-        bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
-                              last_bunch.px, last_bunch.py, last_bunch.pz)
-        bunch.prop_distance += (1-2*backtrack) * self.length
-        print("Done.")
-        return bunch_list
-
-
-class Sextupole():
-
-    """Defines a sextupole."""
-
-    def __init__(self, length, k2, foc_plane='x'):
-        self.length = length
+        self.k1 = k1
         self.k2 = k2
-        self.foc_plane = foc_plane
+        self.gamma_ref = gamma_ref
+        self.element_name = ""
 
     def track_bunch(self, bunch, steps, backtrack=False, order=2):
-        print("Tracking sextupole in {} step(s)...   ".format(steps))
+        print("Tracking " + self.element_name
+              + " in {} step(s)...   ".format(steps))
         l_step = self.length/steps
         bunch_list = list()
-
+        bunch_mat, g_avg = self.get_aligned_beam_matrix_for_tracking(bunch)
+        if self.gamma_ref is None:
+            self.gamma_ref = g_avg
         for i in np.arange(0, steps):
             l = (i+1)*l_step*(1-2*backtrack)
-            k2 = self.k2 * (2*(self.foc_plane=='x')-1)
             new_prop_dist = bunch.prop_distance + l
-            bunch_mat, g_avg = bunch.get_alternative_6D_matrix()
-            bunch_mat = track_with_transfer_map(bunch_mat, l, self.length, 0,
-                                                0, k2, g_avg, order=order)
-            bunch_list.append(ParticleBunch(bunch.q, bunch_matrix=bunch_mat,
-                                            matrix_type='alternative',
-                                            gamma_ref = g_avg,
-                                            prop_distance=new_prop_dist))
+            #bunch_mat, g_avg = bunch.get_alternative_6D_matrix()
+            new_bunch_mat = track_with_transfer_map(bunch_mat, l, self.length,
+                                                    -self.angle, self.k1,
+                                                    self.k2, self.gamma_ref,
+                                                    order=order)
+            new_bunch_mat = convert_from_ocelot_matrix(new_bunch_mat, g_avg)
+            new_bunch = self.create_new_bunch(bunch, new_bunch_mat, l)
+            bunch_list.append(new_bunch)
         # update bunch data
         last_bunch = bunch_list[-1]
         bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
                               last_bunch.px, last_bunch.py, last_bunch.pz)
-        bunch.prop_distance += (1-2*backtrack) * self.length
+        bunch.prop_distance = last_bunch.prop_distance
+        bunch.theta_ref = last_bunch.theta_ref
+        bunch.x_ref = last_bunch.x_ref
         print("Done.")
         return bunch_list
+
+    def get_aligned_beam_matrix_for_tracking(self, bunch):
+        bunch_mat = bunch.get_6D_matrix()
+        # obtain with respect to reference displacement
+        bunch_mat[0] -= bunch.x_ref
+        # rotate by the reference angle so that it entern normal to the element
+        if bunch.theta_ref != 0:
+            rot = rotation_matrix_xz(-bunch.theta_ref)
+            bunch_mat = np.dot(rot, bunch_mat)
+        return convert_to_ocelot_matrix(bunch_mat, bunch.q)
+
+    def create_new_bunch(self, old_bunch, new_bunch_mat, prop_dist):
+        q = old_bunch.q
+        if self.angle != 0:
+            # angle rotated for prop_dist
+            theta_step = self.angle*prop_dist/self.length
+            # magnet bending radius
+            rho = abs(self.length/self.angle)
+            # new reference angle and transverse displacement
+            new_theta_ref = old_bunch.theta_ref + theta_step
+            sign = -theta_step/abs(theta_step)
+            new_x_ref = (old_bunch.x_ref
+                         + sign*rho*(np.cos(new_theta_ref)-np.cos(old_bunch.theta_ref)))
+        else:
+            # new reference angle and transverse displacement
+            new_theta_ref = old_bunch.theta_ref
+            new_x_ref = (old_bunch.x_ref + self.length*np.sin(old_bunch.theta_ref))
+        # new prop. distance
+        new_prop_dist = old_bunch.prop_distance + prop_dist
+        # rotate distribution if reference angle != 0
+        if new_theta_ref != 0:
+            rot = rotation_matrix_xz(new_theta_ref)
+            new_bunch_mat = np.dot(rot, new_bunch_mat)
+        new_bunch_mat[0] += new_x_ref
+        # create new bunch
+        new_bunch = ParticleBunch(q, bunch_matrix=new_bunch_mat,
+                                  prop_distance=new_prop_dist)
+        new_bunch.theta_ref = new_theta_ref
+        new_bunch.x_ref = new_x_ref
+        return new_bunch
+
+
+class Dipole(TMElement):
+    def __init__(self, length=0, angle=0, gamma_ref = None):
+        super().__init__(length, angle, 0, 0, gamma_ref)
+        self.element_name = 'dipole'
+
+
+class Quadrupole(TMElement):
+    def __init__(self, length=0, k1=0, gamma_ref = None):
+        super().__init__(length, 0, k1, 0, gamma_ref)
+        self.element_name = 'quadrupole'
+
+
+class Sextupole(TMElement):
+    def __init__(self, length=0, k2=0, gamma_ref = None):
+        super().__init__(length, 0, 0, k2, gamma_ref)
+        self.element_name = 'sextupole'
 
 
 class PlasmaLens(object):
