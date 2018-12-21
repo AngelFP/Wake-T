@@ -607,6 +607,7 @@ class Drift():
         xi = xi_0 + (vz-ct.c)*t
         return (x, y, xi, px_0, py_0, pz_0)
 
+
 class TMElement():
 
     """Defines an element to be tracked using transfer maps."""
