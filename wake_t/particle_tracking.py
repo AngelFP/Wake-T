@@ -495,13 +495,3 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     T[4, 2, 3] = T534/beta
     T[4, 3, 3] = T544/beta
     return T
-
-def rotation_matrix_xz(angle):
-    cs = np.cos(angle)
-    sn = np.sin(angle)
-    return np.array([[cs, 0., 0., 0., sn, 0.],
-                     [0., cs, 0., 0., 0., sn],
-                     [0., 0., 1., 0., 0., 0.],
-                     [0., 0., 0., 1., 0., 0.],
-                     [-sn, 0., 0., 0., cs, 0.],
-                     [0., -sn, 0., 0., 0., cs]])

@@ -50,3 +50,15 @@ def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
     xi = beam_matrix[4]
     pz = np.sqrt(gamma**2 - px**2 - py**2 - 1)
     return np.array([x, px, y, py, xi, pz])
+
+def rotation_matrix_xz(angle):
+    """ Returns matrix to rotate the beam in the x-z plane """
+    cs = np.cos(angle)
+    sn = np.sin(angle)
+    return np.array([[cs, 0., 0., 0., sn, 0.],
+                     [0., cs, 0., 0., 0., sn],
+                     [0., 0., 1., 0., 0., 0.],
+                     [0., 0., 0., 1., 0., 0.],
+                     [-sn, 0., 0., 0., cs, 0.],
+                     [0., -sn, 0., 0., 0., cs]])
+
