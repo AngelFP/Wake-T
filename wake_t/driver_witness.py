@@ -135,6 +135,8 @@ class ParticleBunch():
         self.tags = tags
         self.prop_distance = prop_distance
         self.t_flight = t_flight
+        self.x_ref = 0
+        self.theta_ref = 0
 
     def set_phase_space(self, x, y, xi, px, py, pz):
         """Sets the phase space coordinates"""
