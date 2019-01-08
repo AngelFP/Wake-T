@@ -609,7 +609,7 @@ class Drift():
 
 
 class TMElement():
-
+    # TODO: fix backtracking issues.
     """Defines an element to be tracked using transfer maps."""
 
     def __init__(self, length=0, angle=0, k1=0, k2=0, gamma_ref=None):
