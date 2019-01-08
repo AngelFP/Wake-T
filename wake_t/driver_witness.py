@@ -189,7 +189,7 @@ class ParticleBunch():
         self.xi = beam_matrix[4]
         self.pz = np.sqrt(gamma**2 - self.px**2 - self.py**2 - 1)
 
-    def set_bunch_matrix(self):
+    def set_bunch_matrix(self, bunch_matrix):
         """Sets the 6D phase space and charge of the bunch"""
         self.x = beam_matrix[0]
         self.y = beam_matrix[1]
