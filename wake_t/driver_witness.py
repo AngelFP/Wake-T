@@ -3,7 +3,7 @@ This module contains the classes for laser pulses and particle bunches to be
 used as driver and witness
 
 """
-
+# TODO: clean methods to set and get bunch matrix
 import numpy as np
 import scipy.constants as ct
 
@@ -188,6 +188,16 @@ class ParticleBunch():
         self.py = beam_matrix[3] * p_kin
         self.xi = beam_matrix[4]
         self.pz = np.sqrt(gamma**2 - self.px**2 - self.py**2 - 1)
+
+    def set_bunch_matrix(self):
+        """Sets the 6D phase space and charge of the bunch"""
+        self.x = beam_matrix[0]
+        self.y = beam_matrix[1]
+        self.xi = beam_matrix[2]
+        self.px = beam_matrix[3]
+        self.py = beam_matrix[4]
+        self.pz = beam_matrix[5]
+        self.q = beam_matrix[6]
 
     def get_bunch_matrix(self):
         """Returns a matrix with the 6D phase space and charge of the bunch"""
