@@ -81,9 +81,9 @@ class PlasmaStage():
     def track_beam_numerically_RK_parallel(
             self, laser, beam, mode, steps, simulation_code=None,
             simulation_path=None, time_step=None, auto_update_fields=False,
-            laser_pos_in_pic_code=None, lon_field=None, lon_field_slope=None,
-            foc_strength=None, filter_fields=False, filter_sigma=20,
-            n_proc=None):
+            reverse_tracking=False, laser_pos_in_pic_code=None, lon_field=None,
+            lon_field_slope=None, foc_strength=None, filter_fields=False,
+            filter_sigma=20, n_proc=None):
         """
         Track the beam through the plasma using a 4th order Runge-Kutta method.
         
@@ -164,7 +164,7 @@ class PlasmaStage():
         elif mode == "FromPICCode":
             WF = WakefieldFromPICSimulation(
                 simulation_code, simulation_path, laser, time_step, self.n_p,
-                filter_fields, filter_sigma)
+                filter_fields, filter_sigma, reverse_tracking)
         # Get 6D matrix
         mat = beam.get_6D_matrix()
         # Plasma length in time
@@ -225,11 +225,12 @@ class PlasmaStage():
     def _get_optimized_dt(self, beam, WF):
         """ Get optimized time step """ 
         gamma = self._gamma(beam.px, beam.py, beam.pz)
-        Kx = WF.Kx(
-            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, gamma, 0)
-        mean_Kx = np.average(Kx, weights=beam.q)
+        #Kx = WF.Kx(
+        #    beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, gamma, 0)
+        k_x = ge.plasma_focusing_gradient_blowout(self.n_p)
+        #mean_Kx = np.average(Kx, weights=beam.q)
         mean_gamma = np.average(gamma, weights=beam.q)
-        w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
+        w_x = np.sqrt(ct.e*ct.c/ct.m_e * k_x/mean_gamma)
         T_x = 1/w_x
         dt = 0.1*T_x
         return dt
