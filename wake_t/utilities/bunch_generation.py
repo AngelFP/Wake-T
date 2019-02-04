@@ -182,4 +182,4 @@ def get_from_file(file_path, code_name, species_name=None,
     bunch = ParticleBunch(q, x, y, xi, px, py, pz)
     if preserve_prop_dist:
         bunch.prop_distance = z_avg
-    return ParticleBunch(q, x, y, xi, px, py, pz)
+    return bunch
