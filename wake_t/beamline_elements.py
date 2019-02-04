@@ -629,6 +629,7 @@ class TMElement():
         bunch_mat, g_avg = self.get_aligned_beam_matrix_for_tracking(bunch)
         if self.gamma_ref is None:
             self.gamma_ref = g_avg
+        self.print_element_properties()
         for i in np.arange(0, steps):
             l = (i+1)*l_step*(1-2*backtrack)
             new_prop_dist = bunch.prop_distance + l
@@ -690,11 +691,22 @@ class TMElement():
         new_bunch.x_ref = new_x_ref
         return new_bunch
 
+    def print_element_properties(self):
+        "To be implemented by each element. Prints the element properties"
+        raise NotImplementedError
+
 
 class Dipole(TMElement):
     def __init__(self, length=0, angle=0, gamma_ref = None):
         super().__init__(length, angle, 0, 0, gamma_ref)
         self.element_name = 'dipole'
+
+    def print_element_properties(self):
+        ang_deg = self.angle * 180/ct.pi
+        b_field = (ct.m_e*ct.c/ct.e) * self.angle*self.gamma_ref/self.length
+        print('Bending angle = {:1.4f} rad ({:1.4f} deg)'.format(self.angle,
+                                                                 ang_deg))
+        print('Dipole field = {:1.4f} T'.format(b_field))
 
 
 class Quadrupole(TMElement):
@@ -702,11 +714,19 @@ class Quadrupole(TMElement):
         super().__init__(length, 0, k1, 0, gamma_ref)
         self.element_name = 'quadrupole'
 
+    def print_element_properties(self):
+        g = self.k1 * self.gamma_ref*(ct.m_e*ct.c/ct.e)
+        print('Quadrupole gradient = {:1.4f} T/m'.format(g))
+
 
 class Sextupole(TMElement):
     def __init__(self, length=0, k2=0, gamma_ref = None):
         super().__init__(length, 0, 0, k2, gamma_ref)
         self.element_name = 'sextupole'
+
+    def print_element_properties(self):
+        g = self.k2 * self.gamma_ref*(ct.m_e*ct.c/ct.e)
+        print('Sextupole gradient = {:1.4f} T/m^2'.format(g))
 
 
 class PlasmaLens(object):
