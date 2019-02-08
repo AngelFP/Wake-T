@@ -3,7 +3,7 @@
 import numpy as np
 
 
-def convert_to_ocelot_matrix(bunch_matrix, q):
+def convert_to_ocelot_matrix(bunch_matrix, q, gamma_ref=None):
     """
     Produces a matrix with the phase space coordinates 
     (x, x', y, y', xi, dp) from a matrix containing (x, px, y, py, xi, pz).
@@ -15,11 +15,12 @@ def convert_to_ocelot_matrix(bunch_matrix, q):
     py = bunch_matrix[3]
     pz = bunch_matrix[5]
     g = np.sqrt(1 + px**2 + py**2 + pz**2)
-    g_avg = np.average(g, weights=q)
-    b_avg = np.sqrt(1 - g_avg**(-2))
-    dp = (g-g_avg)/(g_avg*b_avg)
+    if gamma_ref is None:
+        gamma_ref = np.average(g, weights=q)
+    b_ref = np.sqrt(1 - gamma_ref**(-2))
+    dp = (g-gamma_ref)/(gamma_ref*b_ref)
     p_kin = np.sqrt(g**2 - 1)
-    return np.array([x, px/p_kin, y, py/p_kin, xi, dp]), g_avg
+    return np.array([x, px/p_kin, y, py/p_kin, xi, dp]), gamma_ref
 
 def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
     """
@@ -41,7 +42,8 @@ def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
 
     """
     dp = beam_matrix[5]
-    gamma = (dp + 1)*gamma_ref
+    b_ref = np.sqrt(1 - gamma_ref**(-2))
+    gamma = dp*gamma_ref*b_ref + gamma_ref
     p_kin = np.sqrt(gamma**2 - 1)
     x = beam_matrix[0]
     px = beam_matrix[1] * p_kin

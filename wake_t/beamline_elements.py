@@ -82,8 +82,8 @@ class PlasmaStage():
             self, laser, beam, mode, steps, simulation_code=None,
             simulation_path=None, time_step=None, auto_update_fields=False,
             reverse_tracking=False, laser_pos_in_pic_code=None, lon_field=None,
-            lon_field_slope=None, foc_strength=None, filter_fields=False,
-            filter_sigma=20, n_proc=None):
+            lon_field_slope=None, foc_strength=None, field_offset=0,
+            filter_fields=False, filter_sigma=20, n_proc=None):
         """
         Track the beam through the plasma using a 4th order Runge-Kutta method.
         
@@ -138,6 +138,12 @@ class PlasmaStage():
             Value of the focusing gradient along the bunch in units of T/m. 
             Only used if mode='CustomBlowout'.
 
+        field_offset : float
+            If 0, the values of 'lon_field', 'lon_field_slope' and
+            'foc_strength' will be applied at the bunch center. A value >0 (<0)
+            gives them a positive (negative) offset towards the front (back) of
+            the bunch. Only used if mode='CustomBlowout'.
+
         filter_fields : bool
             If true, a Gaussian filter is applied to smooth the wakefields.
             This can be useful to remove noise. Only used if
@@ -160,7 +166,7 @@ class PlasmaStage():
         if mode == "CustomBlowout":
             WF = CustomBlowoutWakefield(
                 self.n_p, laser, np.average(beam.xi, weights=beam.q), 
-                lon_field, lon_field_slope, foc_strength)
+                lon_field, lon_field_slope, foc_strength, field_offset)
         elif mode == "FromPICCode":
             WF = WakefieldFromPICSimulation(
                 simulation_code, simulation_path, laser, time_step, self.n_p,
@@ -638,7 +644,8 @@ class TMElement():
                                                     -self.angle, self.k1,
                                                     self.k2, self.gamma_ref,
                                                     order=order)
-            new_bunch_mat = convert_from_ocelot_matrix(new_bunch_mat, g_avg)
+            new_bunch_mat = convert_from_ocelot_matrix(new_bunch_mat,
+                                                       self.gamma_ref)
             new_bunch = self.create_new_bunch(bunch, new_bunch_mat, l)
             bunch_list.append(new_bunch)
         # update bunch data
@@ -659,7 +666,7 @@ class TMElement():
         if bunch.theta_ref != 0:
             rot = rotation_matrix_xz(-bunch.theta_ref)
             bunch_mat = np.dot(rot, bunch_mat)
-        return convert_to_ocelot_matrix(bunch_mat, bunch.q)
+        return convert_to_ocelot_matrix(bunch_mat, bunch.q, self.gamma_ref)
 
     def create_new_bunch(self, old_bunch, new_bunch_mat, prop_dist):
         q = old_bunch.q

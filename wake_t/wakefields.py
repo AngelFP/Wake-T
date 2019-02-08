@@ -27,12 +27,14 @@ class Wakefield():
 
 class CustomBlowoutWakefield(Wakefield):
     def __init__(self, n_p, driver, beam_center, lon_field=None,
-                 lon_field_slope=None, foc_strength=None):
+                 lon_field_slope=None, foc_strength=None,
+                 field_offset=0):
         """
         [n_p] = cm^-3
         """
         self.n_p = n_p
         self.xi_c = beam_center	
+        self.field_off = field_offset
         self.driver = driver
         self._calculate_base_quantities(lon_field, lon_field_slope,
                                         foc_strength)
@@ -52,7 +54,8 @@ class CustomBlowoutWakefield(Wakefield):
         return ct.c*self.g_x*y
 
     def Wz(self, x, y, xi, px, py, pz, gamma, t):
-        return self.E_z_0 + self.E_z_p*(xi-self.xi_c + (1-self.b_w)*ct.c*t)
+        return self.E_z_0 + self.E_z_p*(xi - self.field_off - self.xi_c
+                                        + (1-self.b_w)*ct.c*t)
 
     def Kx(self, x, y, xi, px, py, pz, gamma, t):
         return self.g_x*np.ones_like(x)
