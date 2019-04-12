@@ -241,12 +241,70 @@ class PlasmaStage():
         dt = 0.1*T_x
         return dt
 
-    def track_beam_analytically(self, laser, beam, mode, steps,
-                                    simulation_path=None, time_step=None,
-                                    laser_pos_in_osiris=None, lon_field=None,
-                                    lon_field_slope=None, foc_strength=None,
-                                    foc_strength_slope=None):
-        """Tracks the beam through the plasma and returns the final phase space"""
+    def track_beam_analytically(
+        self, laser, beam, mode, steps, simulation_code=None,
+        simulation_path=None, time_step=None, laser_pos_in_pic_code=None,
+        lon_field=None, lon_field_slope=None, foc_strength=None,
+        field_offset=0):
+        """
+        Track the beam through the plasma using a the analytical model from
+        https://arxiv.org/abs/1804.10966.
+        
+        Parameters:
+        -----------
+        laser : LaserPulse
+            Laser used in the plasma stage.
+
+        beam : ParticleBunch
+            Particle bunch to track.
+
+        mode : string
+            Mode used to determine the wakefields. Possible values are 
+            'Blowout', 'CustomBlowout', 'FromPICCode'.
+
+        steps : int
+            Number of steps in which output should be given.
+
+        simulation_code : string
+            Name of the simulation code from which fields should be read. Only
+            used if mode='FromPICCode'.
+
+        simulation_path : string
+            Path to the simulation folder where the fields to read are located.
+            Only used if mode='FromPICCode'.
+
+        time_step : int
+            Time step at which the fields should be read.
+
+        laser_pos_in_pic_code : float (deprecated)
+            Position of the laser pulse center in the comoving frame in the pic
+            code simulation.
+
+        lon_field : float
+            Value of the longitudinal electric field at the bunch center at the
+            beginning of the tracking in units of V/m. Only used if
+            mode='CustomBlowout'.
+
+        lon_field_slope : float
+            Value of the longitudinal electric field slope along z at the bunch
+            center at the beginning of the tracking in units of V/m^2. Only
+            used if mode='CustomBlowout'.
+
+        foc_strength : float
+            Value of the focusing gradient along the bunch in units of T/m. 
+            Only used if mode='CustomBlowout'.
+
+        field_offset : float
+            If 0, the values of 'lon_field', 'lon_field_slope' and
+            'foc_strength' will be applied at the bunch center. A value >0 (<0)
+            gives them a positive (negative) offset towards the front (back) of
+            the bunch. Only used if mode='CustomBlowout'.
+
+        Returns:
+        --------
+        A list of size 'steps' containing the beam distribution at each step.
+
+        """
         # Main laser quantities
         l_c = laser.xi_c
         v_w = laser.get_group_velocity(self.n_p)*ct.c
@@ -271,13 +329,13 @@ class PlasmaStage():
             """Bubble center is assumed at lambda/2"""
             w_p = np.sqrt(self.n_p*1e6*ct.e**2/(ct.m_e*ct.epsilon_0))
             l_p = 2*np.pi*ct.c/w_p
-            E_p = -w_p**2/(2*ct.c)
-            K = w_p**2/2
+            E_p = -w_p**2/(2*ct.c) * np.ones_like(xi_0)
+            K = w_p**2/2 * np.ones_like(xi_0)
             E = E_p*(l_p/2+dist_l_b)
 
         elif mode == "CustomBlowout":
-            E_p = -lon_field_slope*ct.e/(ct.m_e*ct.c)
-            K = foc_strength*ct.c*ct.e/ct.m_e
+            E_p = -lon_field_slope*ct.e/(ct.m_e*ct.c) * np.ones_like(xi_0)
+            K = foc_strength*ct.c*ct.e/ct.m_e * np.ones_like(xi_0)
             E = -lon_field*ct.e/(ct.m_e*ct.c) + E_p*(xi_0 - np.mean(xi_0))
 
         elif mode == "Linear":
@@ -288,8 +346,9 @@ class PlasmaStage():
             E0 = ct.m_e*ct.c*w_p/ct.e
             K = (8*np.pi/np.e)**(1/4)*a0/(k_p*w_0_l)
 
-            E_z = E0*np.sqrt(np.pi/(2*np.e))*a0**2*np.cos(k_p*(dist_l_b))
-            E_z_p = -E0*np.sqrt(np.pi/(2*np.e))*a0**2*k_p*np.sin(k_p*(dist_l_b))
+            A = E0*np.sqrt(np.pi/(2*np.e))*a0**2
+            E_z = A*np.cos(k_p*(dist_l_b))
+            E_z_p = -A*k_p*np.sin(k_p*(dist_l_b))
             g_x = -E0*K**2*k_p*np.sin(k_p*dist_l_b)/ct.c
             g_x_slope = -E0*K**2*k_p**2*np.cos(k_p*dist_l_b)/ct.c
 
@@ -297,7 +356,7 @@ class PlasmaStage():
             E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
             K = g_x*ct.c*ct.e/ct.m_e
 
-        elif mode == "LinearAlberto":
+        elif mode == "Linear2":
             a0 = laser.a_0
             n_p_SI = self.n_p*1e6
             w_p = np.sqrt(n_p_SI*ct.e**2/(ct.m_e*ct.epsilon_0))
@@ -309,30 +368,38 @@ class PlasmaStage():
             sz = L/np.sqrt(2)
             sx = w_0_l/2
 
-            E_z = E0 * nb0 * np.sqrt(2*np.pi) * sz * np.exp(-(sz)**2/2) * np.cos(k_p*dist_l_b)
-            E_z_p = - E0 * nb0 * np.sqrt(2*np.pi) * sz * np.exp(-(sz)**2/2) *k_p*np.sin(k_p*(dist_l_b)) # [V/m^2]
-            g_x = -nb0 * np.sqrt(2*np.pi) * sz * np.exp(-(sz)**2/2) * ( 1/ (k_p*sx)**2) * np.sin(k_p*(dist_l_b)) * k_p*E0/ct.c
+            A = E0 * nb0 * np.sqrt(2*np.pi) * sz * np.exp(-(sz)**2/2)
+            E_z =  A*np.cos(k_p*dist_l_b)
+            E_z_p = -A*k_p*np.sin(k_p*(dist_l_b)) # [V/m^2]
+            g_x = -(nb0 * np.sqrt(2*np.pi) * sz * np.exp(-(sz)**2/2)
+                    * ( 1/ (k_p*sx)**2) * np.sin(k_p*(dist_l_b)) * k_p*E0/ct.c)
 
             E = -ct.e/(ct.m_e*ct.c)*E_z
             E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
             K = g_x*ct.c*ct.e/ct.m_e
 
         elif mode == "FromOsiris2D":
-            (E_z, E_z_p, g_x) = self.get_fields_from_osiris_2D(simulation_path, time_step, laser, laser_pos_in_osiris, dist_l_b)
-            E = -ct.e/(ct.m_e*ct.c)*E_z
-            E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
-            K = g_x*ct.c*ct.e/ct.m_e
+            raise NotImplementedError()
+            #(E_z, E_z_p, g_x) = self.get_fields_from_osiris_2D(
+            #    simulation_path, time_step, laser, laser_pos_in_osiris,
+            #    dist_l_b)
+            #E = -ct.e/(ct.m_e*ct.c)*E_z
+            #E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
+            #K = g_x*ct.c*ct.e/ct.m_e
 
         elif mode == "FromOsiris3D":
-            (E_z, E_z_p, g_x) = self.get_fields_from_osiris_3D(simulation_path, time_step, laser, laser_pos_in_osiris, dist_l_b)
-            E = -ct.e/(ct.m_e*ct.c)*E_z
-            E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
-            K = g_x*ct.c*ct.e/ct.m_e
+            raise NotImplementedError()
+            #(E_z, E_z_p, g_x) = self.get_fields_from_osiris_3D(
+            #    simulation_path, time_step, laser, laser_pos_in_osiris,
+            #    dist_l_b)
+            #E = -ct.e/(ct.m_e*ct.c)*E_z
+            #E_p = -ct.e/(ct.m_e*ct.c)*E_z_p
+            #K = g_x*ct.c*ct.e/ct.m_e
         
 
         # Some initial values
         p_0 = np.sqrt(np.square(px_0) + np.square(py_0) + np.square(pz_0))
-        g_0 = np.sqrt(np.square(p_0*ct.c) + (0.511*1e6*ct.e)**2)/(0.511*1e6*ct.e) # gamma rel.
+        g_0 = np.sqrt(np.square(p_0)/(ct.m_e*ct.c)**2 + 1)
         w_0 = np.sqrt(K/g_0)
 
         # Initial velocities
@@ -358,14 +425,18 @@ class PlasmaStage():
         start = time.time()
         p = Pool(cpu_count())
         t = t_final/steps*(np.arange(steps)+1)
-        part = partial(self._get_beam_at_specified_time_step_from_paper_final, beam=beam, g_0=g_0, w_0=w_0, xi_0=xi_0, A_x=A_x, A_y=A_y, phi_x_0=phi_x_0, phi_y_0=phi_y_0, E=E, E_p=E_p, v_w=v_w, K=K)
+        part = partial(self._get_beam_at_specified_time_step_analytically,
+                       beam=beam, g_0=g_0, w_0=w_0, xi_0=xi_0, A_x=A_x,
+                       A_y=A_y, phi_x_0=phi_x_0, phi_y_0=phi_y_0, E=E, E_p=E_p,
+                       v_w=v_w, K=K)
         beam_steps_list = p.map(part, t)
         end = time.time()
         print("Done ({} seconds)".format(end-start))
 
         # update beam data
         last_beam = beam_steps_list[-1]
-        beam.set_phase_space(last_beam.x, last_beam.y, last_beam.xi, last_beam.px, last_beam.py, last_beam.pz)
+        beam.set_phase_space(last_beam.x, last_beam.y, last_beam.xi,
+                             last_beam.px, last_beam.py, last_beam.pz)
         beam.increase_prop_distance(self.length)
 
         # update laser data
@@ -375,30 +446,45 @@ class PlasmaStage():
         # return steps
         return beam_steps_list
 
-    def _get_beam_at_specified_time_step_from_paper_final(self, t, beam, g_0, w_0, xi_0, A_x, A_y, phi_x_0, phi_y_0, E, E_p, v_w, K):
-        # Start calculation
-        # print(np.mean(g_0))
+    def _get_beam_at_specified_time_step_analytically(
+        self, t, beam, g_0, w_0, xi_0, A_x, A_y, phi_x_0, phi_y_0, E, E_p, v_w,
+        K):
         G = 1 + E/g_0*t
+        if (G < 1/g_0).any():
+            n_part = len(np.where(G<1/g_0)[0])
+            print('Warning: unphysical energy found in {}'.format(n_part) 
+                  + 'particles due to negative accelerating gradient.')
+            # fix unphysical energies (model does not work well when E<=0)
+            G = np.where(G<1/g_0, 1/g_0, G)
+
         phi = 2*np.sqrt(K*g_0)/E*(G**(1/2) - 1)
+        if (E == 0).any():
+            # apply limit when E->0
+            idx_0 = np.where(E==0)[0]
+            phi[idx_0] =  np.sqrt(K[idx_0]/g_0[idx_0])*t[idx_0]
         A_0 = np.sqrt(A_x**2 + A_y**2)
 
         x = A_x*G**(-1/4)*np.cos(phi + phi_x_0)
         v_x = -w_0*A_x*G**(-3/4)*np.sin(phi + phi_x_0)
-        p_x = G*g_0*v_x/ct.c # [m_e *c]
+        p_x = G*g_0*v_x/ct.c
 
         y = A_y*G**(-1/4)*np.cos(phi + phi_y_0)
         v_y = -w_0*A_y*G**(-3/4)*np.sin(phi + phi_y_0)
-        p_y = G*g_0*v_y/ct.c # [m_e *c]
+        p_y = G*g_0*v_y/ct.c
 
-        delta_xi = ct.c/(2*E*g_0)*(G**(-1)- 1) + A_0**2*K/(2*ct.c*E)*(G**(-1/2) - 1)
+        delta_xi = (ct.c/(2*E*g_0)*(G**(-1)- 1)
+                    + A_0**2*K/(2*ct.c*E)*(G**(-1/2) - 1))
         xi = xi_0 + delta_xi
 
         delta_xi_max = -1/(2*E)*(ct.c/g_0 + A_0**2*K/ct.c)
         
-        g = g_0 + E*t + E_p*delta_xi_max*t +E_p/2*(ct.c-v_w)*t**2 + ct.c*E_p/(2*E**2)*np.log(G) +E_p*A_0**2*K*g_0/(ct.c*E**2)*(G**(1/2) - 1)
-        p_z = np.sqrt(g**2-p_x**2-p_y**2) # [m_e *c]
+        g = (g_0 + E*t + E_p*delta_xi_max*t + E_p/2*(ct.c-v_w)*t**2
+             + ct.c*E_p/(2*E**2)*np.log(G)
+             + E_p*A_0**2*K*g_0/(ct.c*E**2)*(G**(1/2) - 1))
+        p_z = np.sqrt(g**2-p_x**2-p_y**2)
 
-        beam_step = ParticleBunch(beam.q, x, y, xi, p_x, p_y, p_z, prop_distance=beam.prop_distance+t*ct.c)
+        beam_step = ParticleBunch(beam.q, x, y, xi, p_x, p_y, p_z,
+                                  prop_distance=beam.prop_distance+t*ct.c)
 
         return beam_step
 
