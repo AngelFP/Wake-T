@@ -407,7 +407,7 @@ class PlasmaRamp():
 
     """Defines a plasma ramp."""
 
-    def __init__(self, length, plasma_dens_down, plasma_dens_top,
+    def __init__(self, length, plasma_dens_top, plasma_dens_down=None,
                  position_down=None, ramp_type='upramp',
                  profile='inverse square'):
         """
@@ -557,9 +557,13 @@ class PlasmaRamp():
             b = self.position_down/a
             n_p = self.plasma_dens_top/np.square(1+z/b)
         elif self.profile == 'exponential':
-            b = (np.log(self.plasma_dens_top / self.plasma_dens_down)
-                 /self.position_down)
             a = self.plasma_dens_top
+            if self.plasma_dens_down is None:
+                # use length as total length for 99 phase advance
+                b = 4*np.log(10)/self.length
+            else:
+                b = (np.log(self.plasma_dens_top / self.plasma_dens_down)
+                     /self.position_down)
             n_p = a*np.exp(-b*z)
         return n_p
 
