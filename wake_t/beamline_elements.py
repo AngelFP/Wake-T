@@ -902,7 +902,8 @@ class PlasmaLens(object):
     def _get_optimized_dt(self, beam, WF):
         gamma = self._gamma(beam.px, beam.py, beam.pz)
         mean_gamma = np.average(gamma, weights=beam.q)
-        Kx = WF.Kx(beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, gamma, 0)
+        Kx = WF.Kx(
+            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, gamma, 0)
         mean_Kx = np.average(Kx, weights=beam.q)
         w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
         T_x = 1/w_x
