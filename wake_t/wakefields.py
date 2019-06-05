@@ -229,6 +229,9 @@ class WakefieldFromPICSimulation(Wakefield):
         return self.K_x(R)
 
 
+class NonLinearColdFluidWakefield(Wakefield):
+    pass
+
 class PlasmaRampBlowoutField(Wakefield):
     def __init__(self, density_function):
         self.density_function = density_function
