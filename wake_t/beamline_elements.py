@@ -1,8 +1,10 @@
 """ This module contains the classes for all beamline elements. """
-
+# TODO: unify classes of plasma elements to avoid code repetition (specially in
+# tracking)
 import time
 from multiprocessing import Pool, cpu_count
 from functools import partial
+from copy import copy
 
 import numpy as np
 import scipy.constants as ct
@@ -78,12 +80,13 @@ class PlasmaStage():
     def _gamma(self, px, py, pz):
         return np.sqrt(1 + px**2 + py**2 + pz**2)
     
-    def track_beam_numerically_RK_parallel(
+    def track_beam_numerically(
             self, laser, beam, mode, steps, simulation_code=None,
             simulation_path=None, time_step=None, auto_update_fields=False,
             reverse_tracking=False, laser_pos_in_pic_code=None, lon_field=None,
             lon_field_slope=None, foc_strength=None, field_offset=0,
-            filter_fields=False, filter_sigma=20, n_proc=None):
+            filter_fields=False, filter_sigma=20, r_max=None, xi_min=None,
+            xi_max=None, n_r=100, n_xi=100, parallel=False, n_proc=None):
         """
         Track the beam through the plasma using a 4th order Runge-Kutta method.
         
@@ -97,7 +100,7 @@ class PlasmaStage():
 
         mode : string
             Mode used to determine the wakefields. Possible values are 
-            'Blowout', 'CustomBlowout', 'FromPICCode'.
+            'Blowout', 'CustomBlowout', 'FromPICCode' or 'cold_fluid_1d'.
 
         steps : int
             Number of steps in which output should be given.
@@ -119,6 +122,10 @@ class PlasmaStage():
             time step will be time_step, and new ones will be loaded as the
             time of flight of the bunch reaches the next time step available in
             the simulation folder.
+
+        reverse_tracking : bool
+            Whether to reverse-track the particles through the stage. Currenly
+            only available for mode= 'FromPICCode'. 
 
         laser_pos_in_pic_code : float (deprecated)
             Position of the laser pulse center in the comoving frame in the pic
@@ -151,6 +158,31 @@ class PlasmaStage():
 
         filter_sigma : float
             Sigma to be used by the Gaussian filter. 
+        
+        r_max : float
+            Maximum radial position up to which plasma wakefield will be
+            calulated. Required only if mode='cold_fluid_1d'.
+
+        xi_min : float
+            Minimum longiudinal (speed of light frame) position up to which
+            plasma wakefield will be calulated. Required only if
+            mode='cold_fluid_1d'.
+
+        xi_max : float
+            Maximum longiudinal (speed of light frame) position up to which
+            plasma wakefield will be calulated. Required only if
+            mode='cold_fluid_1d'.
+
+        n_r : int
+            Number of grid elements along r to calculate the wakefields.
+            Required only if mode='cold_fluid_1d'.
+
+        n_xi : int
+            Number of grid elements along xi to calculate the wakefields.
+            Required only if mode='cold_fluid_1d'.
+
+        parallel : float
+            Determines whether or not to use parallel computation.
 
         n_proc : int
             Number of processes to run in parallel. If None, this will equal
@@ -171,6 +203,9 @@ class PlasmaStage():
             WF = WakefieldFromPICSimulation(
                 simulation_code, simulation_path, laser, time_step, self.n_p,
                 filter_fields, filter_sigma, reverse_tracking)
+        elif mode == 'cold_fluid_1d':
+            WF = NonLinearColdFluidWakefield(self.calculate_density, laser,
+                                             r_max, xi_min, xi_max, n_r, n_xi)
         # Get 6D matrix
         mat = beam.get_6D_matrix()
         # Plasma length in time
@@ -186,38 +221,54 @@ class PlasmaStage():
         beam_list = list()
         # get start time
         start = time.time()
-        if n_proc is None:
-            num_proc = cpu_count()
-        else:
-            num_proc = n_proc
-        num_part = mat.shape[1]
-        part_per_proc = int(np.ceil(num_part/num_proc))
-        process_pool = Pool(num_proc)
-        t_s = 0
-        matrix_list = list()
-        # start computaton
-        try:
-            for p in np.arange(num_proc):
-                matrix_list.append(mat[:,p*part_per_proc:(p+1)*part_per_proc])
+        if parallel:
+            # compute in parallel
+            if n_proc is None:
+                num_proc = cpu_count()
+            else:
+                num_proc = n_proc
+            num_part = mat.shape[1]
+            part_per_proc = int(np.ceil(num_part/num_proc))
+            process_pool = Pool(num_proc)
+            t_s = 0
+            matrix_list = list()
+            # start computaton
+            try:
+                for p in np.arange(num_proc):
+                    matrix_list.append(
+                        mat[:,p*part_per_proc:(p+1)*part_per_proc])
 
+                for s in np.arange(steps):
+                    print(s)
+                    if auto_update_fields:
+                        WF.check_if_update_fields(s*t_step)
+                    partial_solver = partial(
+                        runge_kutta_4, WF=WF, dt=dt_adjusted,
+                        iterations=it_per_step, t0=s*t_step)
+                    matrix_list = process_pool.map(partial_solver, matrix_list)
+                    beam_matrix = np.concatenate(matrix_list, axis=1)
+                    x, px, y, py, xi, pz = beam_matrix
+                    new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
+                    beam_list.append(
+                        ParticleBunch(beam.q, x, y, xi, px, py, pz,
+                                      prop_distance=new_prop_dist)
+                        )
+            finally:
+                process_pool.close()
+                process_pool.join()
+        else:
+            # compute in single process
             for s in np.arange(steps):
                 print(s)
-                if auto_update_fields:
-                    WF.check_if_update_fields(s*t_step)
-                partial_solver = partial(
-                    runge_kutta_4, WF=WF, dt=dt_adjusted,
-                    iterations=it_per_step, t0=s*t_step)
-                matrix_list = process_pool.map(partial_solver, matrix_list)
-                beam_matrix = np.concatenate(matrix_list, axis=1)
-                x, px, y, py, xi, pz = beam_matrix
+                beam_matrix = runge_kutta_4(mat, WF=WF, t0=s*t_step,
+                                            dt=dt_adjusted,
+                                            iterations=it_per_step)
+                x, px, y, py, xi, pz = copy(beam_matrix)
                 new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
                 beam_list.append(
                     ParticleBunch(beam.q, x, y, xi, px, py, pz,
-                                  prop_distance=new_prop_dist)
+                                    prop_distance=new_prop_dist)
                     )
-        finally:
-            process_pool.close()
-            process_pool.join()
         # print computing time
         end = time.time()
         print("Done ({} seconds)".format(end-start))
@@ -231,15 +282,15 @@ class PlasmaStage():
     def _get_optimized_dt(self, beam, WF):
         """ Get optimized time step """ 
         gamma = self._gamma(beam.px, beam.py, beam.pz)
-        #Kx = WF.Kx(
-        #    beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, gamma, 0)
         k_x = ge.plasma_focusing_gradient_blowout(self.n_p)
-        #mean_Kx = np.average(Kx, weights=beam.q)
         mean_gamma = np.average(gamma, weights=beam.q)
         w_x = np.sqrt(ct.e*ct.c/ct.m_e * k_x/mean_gamma)
         T_x = 1/w_x
         dt = 0.1*T_x
         return dt
+
+    def calculate_density(self, z):
+        return self.n_p*1e6
 
     def track_beam_analytically(
         self, laser, beam, mode, steps, simulation_code=None,
@@ -504,18 +555,25 @@ class PlasmaRamp():
         length : float
             Length of the plasma stage in cm.
             
-        plasma_dens_down : float
-            Plasma density at the position 'position_down' in units of
-            cm^{-3}.
-
         plasma_dens_top : float
             Plasma density at the beginning (end) of the downramp (upramp) in
             units of cm^{-3}.
+
+        plasma_dens_down : float
+            Plasma density at the position 'position_down' in units of
+            cm^{-3}.        
 
         position_down : float
             Position where the plasma density will be equal to 
             'plasma_dens_down' measured from the beginning (end) of the 
             downramp (upramp).
+
+        ramp_type : string
+            Possible types are 'upramp' and 'downramp'.
+
+        profile : string
+            Longitudinal density profile of the ramp. Possible values are
+            'linear', 'inverse square' and 'exponential'.
 
         """
         self.length = length
@@ -528,8 +586,10 @@ class PlasmaRamp():
         self.ramp_type = ramp_type
         self.profile = profile
         
-    def track_beam_numerically_RK_parallel(self, beam, steps, non_rel=False, 
-                                           n_proc=None):
+    def track_beam_numerically(self, beam, steps, mode='blowout', laser=None,
+                               laser_evolution=False, laser_z_foc=0, 
+                               r_max=None, xi_min=None, xi_max=None, n_r=100,
+                               n_xi=100, parallel=False, n_proc=None):
         """
         Track the beam through the plasma using a 4th order Runge-Kutta method.
         
@@ -541,23 +601,70 @@ class PlasmaRamp():
         steps : int
             Number of steps in which output should be given.
 
-        non_rel : bool
-            If True, the relativistic assumplion is not used for the equations
-            of motion.
+        mode: str
+            Mode used to determine the wakefields. Possible values are 
+            'blowout', 'blowout_non_rel' and 'cold_fluid_1d'.
+
+        laser : LaserPulse
+            Laser used in the plasma stage. Required only if
+            mode='cold_fluid_1d'.
+
+        laser_evolution : bool
+            If True, the laser pulse transverse profile evolves as a Gaussian
+            in vacuum. If False, the pulse envelope stays fixed throughout
+            the computation.
+
+        laser_z_foc : float
+            Focal position of the laser along z in meters. It is measured as
+            the distance from the position where the plasma density is
+            n=plasma_dens_top, i.e, as the distance from the beginning (end)
+            of the downramp (upramp). Required only if laser_evolution=True.
+
+        r_max : float
+            Maximum radial position up to which plasma wakefield will be
+            calulated. Required only if mode='cold_fluid_1d'.
+
+        xi_min : float
+            Minimum longiudinal (speed of light frame) position up to which
+            plasma wakefield will be calulated. Required only if
+            mode='cold_fluid_1d'.
+
+        xi_max : float
+            Maximum longiudinal (speed of light frame) position up to which
+            plasma wakefield will be calulated. Required only if
+            mode='cold_fluid_1d'.
+
+        n_r : int
+            Number of grid elements along r to calculate the wakefields.
+            Required only if mode='cold_fluid_1d'.
+
+        n_xi : int
+            Number of grid elements along xi to calculate the wakefields.
+            Required only if mode='cold_fluid_1d'.
+
+        parallel : float
+            Determines whether or not to use parallel computation.
 
         n_proc : int
             Number of processes to run in parallel. If None, this will equal
-            the number of physical cores.
+            the number of physical cores. Required only if parallel=True.
 
         Returns:
         --------
         A list of size 'steps' containing the beam distribution at each step.
 
         """
-        if non_rel:
-            raise NotImplementedError()
-        else:
+        if mode == 'blowout':
             field = PlasmaRampBlowoutField(self.calculate_density)
+        elif mode == 'blowout_non_rel':
+            raise NotImplementedError()
+        elif mode == 'cold_fluid_1d':
+            if self.ramp_type == 'upramp':
+                laser_z_foc = self.length - laser_z_foc
+            field = NonLinearColdFluidWakefield(self.calculate_density,
+                                                laser, laser_evolution,
+                                                laser_z_foc, r_max, xi_min,
+                                                xi_max, n_r, n_xi)
         # Main beam quantities
         mat = beam.get_6D_matrix()
         # Plasma length in time
@@ -572,36 +679,50 @@ class PlasmaRamp():
         beam_list = list()
 
         start = time.time()
-        if n_proc is None:
-            num_proc = cpu_count()
-        else:
-            num_proc = n_proc
-        num_part = mat.shape[1]
-        part_per_proc = int(np.ceil(num_part/num_proc))
-        process_pool = Pool(num_proc)
-        t_s = 0
-        matrix_list = list()
-        try:
-            for p in np.arange(num_proc):
-                matrix_list.append(mat[:,p*part_per_proc:(p+1)*part_per_proc])
 
+        if parallel:
+            if n_proc is None:
+                num_proc = cpu_count()
+            else:
+                num_proc = n_proc
+            num_part = mat.shape[1]
+            part_per_proc = int(np.ceil(num_part/num_proc))
+            process_pool = Pool(num_proc)
+            t_s = 0
+            matrix_list = list()
+            try:
+                for p in np.arange(num_proc):
+                    matrix_list.append(
+                        mat[:,p*part_per_proc:(p+1)*part_per_proc])
+
+                for s in np.arange(steps):
+                    print(s)
+                    partial_solver = partial(
+                        runge_kutta_4, WF=field, dt=dt_adjusted,
+                        iterations=it_per_step, t0=s*t_step)
+                    matrix_list = process_pool.map(partial_solver, matrix_list)
+                    beam_matrix = np.concatenate(matrix_list, axis=1)
+                    x, px, y, py, xi, pz = beam_matrix
+                    new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
+                    beam_list.append(
+                        ParticleBunch(beam.q, x, y, xi, px, py, pz,
+                                      prop_distance=new_prop_dist)
+                        )
+            finally:
+                process_pool.close()
+                process_pool.join()
+        else:
             for s in np.arange(steps):
                 print(s)
-                partial_solver = partial(
-                    runge_kutta_4, WF=field, dt=dt_adjusted,
-                    iterations=it_per_step, t0=s*t_step)
-                matrix_list = process_pool.map(partial_solver, matrix_list)
-                beam_matrix = np.concatenate(matrix_list, axis=1)
-                x, px, y, py, xi, pz = beam_matrix
+                beam_matrix = runge_kutta_4(mat, WF=field, t0=s*t_step,
+                                            dt=dt_adjusted,
+                                            iterations=it_per_step)
+                x, px, y, py, xi, pz = copy(beam_matrix)
                 new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
                 beam_list.append(
                     ParticleBunch(beam.q, x, y, xi, px, py, pz,
-                                  prop_distance=new_prop_dist)
+                                    prop_distance=new_prop_dist)
                     )
-        finally:
-            process_pool.close()
-            process_pool.join()
-
         end = time.time()
         print("Done ({} seconds)".format(end-start))
 
@@ -617,9 +738,10 @@ class PlasmaRamp():
         gamma = self._gamma(beam.px, beam.py, beam.pz)
         mean_gamma = np.average(gamma, weights=beam.q)
         # calculate maximum focusing on ramp.
-        t = np.linspace(0, self.length, 100)/ct.c
-        kx = wakefield.calculate_focusing(0, t)
-        max_kx = max(kx)
+        z = np.linspace(0, self.length, 100)
+        n_p = self.calculate_density(z)
+        w_p = np.sqrt(max(n_p)*ct.e**2/(ct.m_e*ct.epsilon_0))
+        max_kx = (ct.m_e/(2*ct.e*ct.c))*w_p**2
         w_x = np.sqrt(ct.e*ct.c/ct.m_e * max_kx/mean_gamma)
         period_x = 1/w_x
         dt = 0.1*period_x
