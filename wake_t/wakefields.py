@@ -4,6 +4,9 @@ import numpy as np
 import scipy.constants as ct
 from scipy.interpolate import RegularGridInterpolator
 from VisualPIC.DataHandling.dataContainer import DataContainer
+from aptools.plasma_accel.general_equations import (
+    plasma_skin_depth, plasma_cold_non_relativisct_wave_breaking_field)
+import matplotlib.pyplot as plt
 
 class Wakefield():
 
@@ -230,7 +233,113 @@ class WakefieldFromPICSimulation(Wakefield):
 
 
 class NonLinearColdFluidWakefield(Wakefield):
-    pass
+    def __init__(self, density_function, driver, driver_evolution,
+                 driver_z_foc, r_max, xi_min, xi_max, n_r, n_xi):
+        self.density_function = density_function
+        self.driver = driver
+        self.driver_evolution = driver_evolution
+        self.driver_z_foc = driver_z_foc
+        self.r_max = r_max
+        self.xi_min = xi_min
+        self.xi_max = xi_max
+        self.n_r = n_r
+        self.n_xi = n_xi
+        self.current_t = -1
+
+    def __wakefield_ode_system(self, u_1, u_2, r, z, laser_a0):
+        return np.array([u_2, 1/2*((1+laser_a0**2)/(1+u_1)**2 - 1)])
+
+    def __calculate_wakefields(self, x, y, xi, px, py, pz, gamma, t):
+        if self.current_t != t:
+            self.current_t = t
+        else:
+            return
+        z_beam = t*ct.c + np.average(xi) # z postion of beam center
+        n_p = self.density_function(z_beam)
+        s_d = plasma_skin_depth(n_p*1e-6)
+        r = np.linspace(0, self.r_max, self.n_r)
+        dz = (self.xi_max - self.xi_min) / self.n_xi / s_d
+        dr = self.r_max / self.n_r / s_d
+        n_iter = self.n_xi - 1
+        u_1 = np.zeros((n_iter+1, len(r)))
+        u_2 = np.zeros((n_iter+1, len(r)))
+        z_arr = np.zeros(n_iter+1) 
+        z_arr[-1] = self.xi_max / s_d
+        # calculate distance to laser focus
+        if self.driver_evolution:
+            dist_z_foc = self.driver_z_foc - ct.c*t
+        else:
+            dist_z_foc = 0
+        for i in np.arange(n_iter):
+            z = z_arr[-1] - i*dz
+            # get laser a0 at z, z+dz/2 and z+dz
+            a0_0 = self.driver.get_a0_profile(r, z, dist_z_foc)
+            a0_1 = self.driver.get_a0_profile(r, (z - dz/2)*s_d, dist_z_foc)
+            a0_2 = self.driver.get_a0_profile(r, (z - dz)*s_d, dist_z_foc)
+            # perform runge-kutta
+            A = dz*self.__wakefield_ode_system(
+                u_1[-1-i], u_2[-1-i], r, z*s_d, a0_0)
+            B = dz*self.__wakefield_ode_system(
+                u_1[-1-i] + A[0]/2, u_2[-1-i] + A[1]/2, r, (z - dz/2)*s_d,
+                a0_1)
+            C = dz*self.__wakefield_ode_system(
+                u_1[-1-i] + B[0]/2, u_2[-1-i] + B[1]/2, r, (z - dz/2)*s_d,
+                a0_1)
+            D = dz*self.__wakefield_ode_system(
+                u_1[-1-i] + C[0], u_2[-1-i] + C[1], r, (z - dz)*s_d, a0_2)
+            u_1[-2-i] = u_1[-1-i] + 1/6*(A[0] + 2*B[0] + 2*C[0] + D[0])
+            u_2[-2-i] = u_2[-1-i] + 1/6*(A[1] + 2*B[1] + 2*C[1] + D[1])
+            z_arr[-2-i] = z - dz
+        E_z = -np.gradient(u_1, dz, axis=0, edge_order=2)
+        W_r = -np.gradient(u_1, dr, axis=1, edge_order=2)
+        K_r = np.gradient(W_r, dr, axis=1, edge_order=2)
+        E_0 = plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
+        
+        ## For debugging
+        #E_z_p = np.gradient(E_z, dz, axis=0, edge_order=2)
+        #plt.subplot(311)
+        #plt.imshow(E_z.T*E_0, aspect='auto',
+        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
+        #plt.subplot(312)
+        #plt.imshow(K_r.T*E_0/s_d, aspect='auto',
+        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
+        #plt.subplot(313)
+        #plt.imshow(E_z_p.T*E_0/s_d, aspect='auto',
+        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
+        #plt.show()
+
+        self.E_z = RegularGridInterpolator((z_arr*s_d, r), E_z*E_0,
+                                            fill_value=0,
+                                            bounds_error=False)
+        self.W_x = RegularGridInterpolator((z_arr*s_d, r), W_r*E_0,
+                                            fill_value=0,
+                                            bounds_error=False)
+        self.K_x = RegularGridInterpolator((z_arr*s_d, r), K_r*E_0/s_d,
+                                            fill_value=0,
+                                            bounds_error=False)
+
+    def Wx(self, x, y, xi, px, py, pz, gamma, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, gamma, t)
+        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
+        theta = np.arctan2(x, y)
+        return self.W_x(R) * np.sin(theta)
+
+    def Wy(self, x, y, xi, px, py, pz, gamma, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, gamma, t)
+        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
+        theta = np.arctan2(x, y)
+        return self.W_x(R)*np.cos(theta)
+
+    def Wz(self, x, y, xi, px, py, pz, gamma, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, gamma, t)
+        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
+        return self.E_z(R)
+
+    def Kx(self, x, y, xi, px, py, pz, gamma, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, gamma, t)
+        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
+        return self.K_x(R)
+
 
 class PlasmaRampBlowoutField(Wakefield):
     def __init__(self, density_function):
