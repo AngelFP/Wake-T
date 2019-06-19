@@ -88,7 +88,7 @@ class LaserPulse():
 
         """
 
-        w_fac = np.sqrt(1 + (z/self.z_r)**2)
+        w_fac = np.sqrt(1 + (dz_foc/self.z_r)**2)
         s_r = self.w_0 * w_fac / np.sqrt(2)
         s_z = self.tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
         return self.a_0/w_fac * (np.exp(-(r)**2/(2*s_r**2))
