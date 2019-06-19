@@ -39,6 +39,7 @@ class LaserPulse():
         self.a_0 = a_0
         self.tau = tau
         self.w_0 = w_0
+        self.z_r = np.pi * w_0**2 / l_0
         self.prop_distance = prop_distance
 
     def increase_prop_distance(self, dist):
@@ -66,7 +67,7 @@ class LaserPulse():
         v_g = k*ct.c**2/np.sqrt(w_p**2+k**2*ct.c**2)/ct.c
         return v_g
 
-    def get_a0_profile(r, xi):
+    def get_a0_profile(self, r, xi, dz_foc=0):
         """
         Return the normalized vector potential profile of the laser.
 
@@ -77,15 +78,20 @@ class LaserPulse():
         xi : array
             Longitudinal position at which to calculate normalized potential.
 
+        dz_foc : float
+            Distance to focal point (beam waist).
+
         Returns:
         --------
         An array containing the values of the normalized vector potential at
         the specified positions.
 
         """
-        s_r = self.w_0 / np.sqrt(2)
+
+        w_fac = np.sqrt(1 + (z/self.z_r)**2)
+        s_r = self.w_0 * w_fac / np.sqrt(2)
         s_z = self.tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
-        return self.a_0 * (np.exp(-(r)**2/(2*s_r**2))
+        return self.a_0/w_fac * (np.exp(-(r)**2/(2*s_r**2))
                            * np.exp(-(xi-self.xi_c)**2/(2*s_z**2)))
 
 class ParticleBunch():
