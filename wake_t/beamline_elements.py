@@ -85,8 +85,9 @@ class PlasmaStage():
             simulation_path=None, time_step=None, auto_update_fields=False,
             reverse_tracking=False, laser_pos_in_pic_code=None, lon_field=None,
             lon_field_slope=None, foc_strength=None, field_offset=0,
-            filter_fields=False, filter_sigma=20, r_max=None, xi_min=None,
-            xi_max=None, n_r=100, n_xi=100, parallel=False, n_proc=None):
+            filter_fields=False, filter_sigma=20, laser_evolution=False,
+            laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100, 
+            n_xi=100, parallel=False, n_proc=None):
         """
         Track the beam through the plasma using a 4th order Runge-Kutta method.
         
@@ -159,6 +160,18 @@ class PlasmaStage():
         filter_sigma : float
             Sigma to be used by the Gaussian filter. 
         
+        laser_evolution : bool
+            If True, the laser pulse transverse profile evolves as a Gaussian
+            in vacuum. If False, the pulse envelope stays fixed throughout
+            the computation. Used only if mode='cold_fluid_1d'.
+
+        laser_z_foc : float
+            Focal position of the laser along z in meters. It is measured as
+            the distance from the beginning of the PlasmaStage. A negative
+            value implies that the focal point is located before the
+            PlasmaStage. Required only if laser_evolution=True and
+            mode='cold_fluid_1d'.
+
         r_max : float
             Maximum radial position up to which plasma wakefield will be
             calulated. Required only if mode='cold_fluid_1d'.
@@ -205,6 +218,7 @@ class PlasmaStage():
                 filter_fields, filter_sigma, reverse_tracking)
         elif mode == 'cold_fluid_1d':
             WF = NonLinearColdFluidWakefield(self.calculate_density, laser,
+                                             laser_evolution, laser_z_foc,
                                              r_max, xi_min, xi_max, n_r, n_xi)
         # Get 6D matrix
         mat = beam.get_6D_matrix()
