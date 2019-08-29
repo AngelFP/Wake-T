@@ -12,7 +12,8 @@ class LaserPulse():
 
     """ Stores the laser pulse parameters. """
 
-    def __init__(self, xi_c, l_0, w_0, a_0=None, tau=None, prop_distance=0):
+    def __init__(self, xi_c, l_0, w_0, a_0=None, tau=None,
+                 polarization='linear', prop_distance=0):
         """
         Initialize laser pulse parameters.
 
@@ -40,6 +41,7 @@ class LaserPulse():
         self.tau = tau
         self.w_0 = w_0
         self.z_r = np.pi * w_0**2 / l_0
+        self.polarization = polarization
         self.prop_distance = prop_distance
 
     def increase_prop_distance(self, dist):
@@ -69,7 +71,8 @@ class LaserPulse():
 
     def get_a0_profile(self, r, xi, dz_foc=0):
         """
-        Return the normalized vector potential profile of the laser.
+        Return the normalized vector potential profile of the laser averaged
+        envelope.
 
         Parameters:
         -----------
@@ -87,12 +90,14 @@ class LaserPulse():
         the specified positions.
 
         """
-
         w_fac = np.sqrt(1 + (dz_foc/self.z_r)**2)
         s_r = self.w_0 * w_fac / np.sqrt(2)
         s_z = self.tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
-        return self.a_0/w_fac * (np.exp(-(r)**2/(2*s_r**2))
-                           * np.exp(-(xi-self.xi_c)**2/(2*s_z**2)))
+        avg_amplitude = self.a_0
+        if self.polarization == 'linear':
+            avg_amplitude /= np.sqrt(2)
+        return avg_amplitude/w_fac * (np.exp(-(r)**2/(2*s_r**2))
+                                      * np.exp(-(xi-self.xi_c)**2/(2*s_z**2)))
 
 class ParticleBunch():
 
