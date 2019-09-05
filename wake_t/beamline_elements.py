@@ -221,7 +221,7 @@ class PlasmaStage():
                                              laser_evolution, laser_z_foc,
                                              r_max, xi_min, xi_max, n_r, n_xi)
         # Get 6D matrix
-        mat = beam.get_6D_matrix()
+        mat = beam.get_6D_matrix_with_charge()
         # Plasma length in time
         t_final = self.length/ct.c
         t_step = t_final/steps
@@ -277,7 +277,7 @@ class PlasmaStage():
                 beam_matrix = runge_kutta_4(mat, WF=WF, t0=s*t_step,
                                             dt=dt_adjusted,
                                             iterations=it_per_step)
-                x, px, y, py, xi, pz = copy(beam_matrix)
+                x, px, y, py, xi, pz, q = copy(beam_matrix)
                 new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
                 beam_list.append(
                     ParticleBunch(beam.q, x, y, xi, px, py, pz,
@@ -680,7 +680,7 @@ class PlasmaRamp():
                                                 laser_z_foc, r_max, xi_min,
                                                 xi_max, n_r, n_xi)
         # Main beam quantities
-        mat = beam.get_6D_matrix()
+        mat = beam.get_6D_matrix_with_charge()
         # Plasma length in time
         t_final = self.length/ct.c
         t_step = t_final/steps
@@ -716,7 +716,7 @@ class PlasmaRamp():
                         iterations=it_per_step, t0=s*t_step)
                     matrix_list = process_pool.map(partial_solver, matrix_list)
                     beam_matrix = np.concatenate(matrix_list, axis=1)
-                    x, px, y, py, xi, pz = beam_matrix
+                    x, px, y, py, xi, pz, q = beam_matrix
                     new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
                     beam_list.append(
                         ParticleBunch(beam.q, x, y, xi, px, py, pz,
@@ -731,7 +731,7 @@ class PlasmaRamp():
                 beam_matrix = runge_kutta_4(mat, WF=field, t0=s*t_step,
                                             dt=dt_adjusted,
                                             iterations=it_per_step)
-                x, px, y, py, xi, pz = copy(beam_matrix)
+                x, px, y, py, xi, pz, q = copy(beam_matrix)
                 new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
                 beam_list.append(
                     ParticleBunch(beam.q, x, y, xi, px, py, pz,
@@ -787,6 +787,10 @@ class PlasmaRamp():
                 b = (np.log(self.plasma_dens_top / self.plasma_dens_down)
                      /self.position_down)
             n_p = a*np.exp(-b*z)
+        elif self.profile == 'gaussian':
+            s_z = self.position_down / np.sqrt(2*np.log(self.plasma_dens_top /
+                                                        self.plasma_dens_down))
+            n_p = self.plasma_dens_top * np.exp(-z**2/(2*s_z**2))
         return n_p
 
 
@@ -973,8 +977,8 @@ class PlasmaLens(object):
     def get_matched_beta(self, ene):
         return ge.matched_plasma_beta_function(ene, k_x=self.foc_strength)
 
-    def track_beam_numerically_RK_parallel(self, beam, steps, non_rel=False,
-                                           n_proc=None):
+    def track_beam_numerically(self, beam, steps, non_rel=False,
+                               parallel=False, n_proc=None):
         """Tracks the beam through the plasma lens and returns the final
         phase space"""
         if non_rel:
@@ -982,7 +986,7 @@ class PlasmaLens(object):
         else:
             field = PlasmaLensFieldRelativistic(self.foc_strength)
         # Main beam quantities
-        mat = beam.get_6D_matrix()
+        mat = beam.get_6D_matrix_with_charge()
 
         # Plasma length in time
         t_final = self.length/ct.c
@@ -997,34 +1001,47 @@ class PlasmaLens(object):
         beam_list = list()
 
         start = time.time()
-        if n_proc is None:
-            num_proc = cpu_count()
-        else:
-            num_proc = n_proc
-        num_part = mat.shape[1]
-        part_per_proc = int(np.ceil(num_part/num_proc))
-        process_pool = Pool(num_proc)
-        t_s = 0
-        matrix_list = list()
-        try:
-            for p in np.arange(num_proc):
-                matrix_list.append(mat[:,p*part_per_proc:(p+1)*part_per_proc])
+        if parallel:
+            if n_proc is None:
+                num_proc = cpu_count()
+            else:
+                num_proc = n_proc
+            num_part = mat.shape[1]
+            part_per_proc = int(np.ceil(num_part/num_proc))
+            process_pool = Pool(num_proc)
+            t_s = 0
+            matrix_list = list()
+            try:
+                for p in np.arange(num_proc):
+                    matrix_list.append(mat[:,p*part_per_proc:(p+1)*part_per_proc])
 
+                for s in np.arange(steps):
+                    print(s)
+                    partial_solver = partial(
+                        runge_kutta_4, WF=field, dt=dt_adjusted,
+                        iterations=it_per_step, t0=s*t_step)
+                    matrix_list = process_pool.map(partial_solver, matrix_list)
+                    beam_matrix = np.concatenate(matrix_list, axis=1)
+                    x, px, y, py, xi, pz, q = beam_matrix
+                    new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
+                    beam_list.append(ParticleBunch(beam.q, x, y, xi, px, py, pz,
+                                                   prop_distance=new_prop_dist))
+            finally:
+                process_pool.close()
+                process_pool.join()
+        else:
+            # compute in single process
             for s in np.arange(steps):
                 print(s)
-                partial_solver = partial(
-                    runge_kutta_4, WF=field, dt=dt_adjusted,
-                    iterations=it_per_step, t0=s*t_step)
-                matrix_list = process_pool.map(partial_solver, matrix_list)
-                beam_matrix = np.concatenate(matrix_list, axis=1)
-                x, px, y, py, xi, pz = beam_matrix
+                beam_matrix = runge_kutta_4(mat, WF=field, t0=s*t_step,
+                                            dt=dt_adjusted,
+                                            iterations=it_per_step)
+                x, px, y, py, xi, pz, q = copy(beam_matrix)
                 new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
-                beam_list.append(ParticleBunch(beam.q, x, y, xi, px, py, pz,
-                                               prop_distance=new_prop_dist))
-        finally:
-            process_pool.close()
-            process_pool.join()
-
+                beam_list.append(
+                    ParticleBunch(beam.q, x, y, xi, px, py, pz,
+                                    prop_distance=new_prop_dist)
+                    )
         end = time.time()
         print("Done ({} seconds)".format(end-start))
 
@@ -1039,7 +1056,8 @@ class PlasmaLens(object):
         gamma = self._gamma(beam.px, beam.py, beam.pz)
         mean_gamma = np.average(gamma, weights=beam.q)
         Kx = WF.Kx(
-            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, gamma, 0)
+            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, beam.q, gamma,
+            0)
         mean_Kx = np.average(Kx, weights=beam.q)
         w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
         T_x = 1/w_x

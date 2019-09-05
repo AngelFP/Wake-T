@@ -243,6 +243,14 @@ class ParticleBunch():
         """
         return np.array([self.x, self.px, self.y, self.py, self.xi, self.pz])
 
+    def get_6D_matrix_with_charge(self):
+        """
+        Returns the 6D phase space matrix of the bunch containing
+        (x, px, y, py, xi, pz)
+        """
+        return np.array(
+            [self.x, self.px, self.y, self.py, self.xi, self.pz, self.q])
+
     def get_alternative_6D_matrix(self):
         """
         Returns the 6D matrix of the bunch containing
