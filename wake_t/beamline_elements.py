@@ -13,6 +13,7 @@ import aptools.plasma_accel.general_equations as ge
 from wake_t.particle_tracking import (runge_kutta_4, track_with_transfer_map)
 from wake_t.wakefields import *
 from wake_t.driver_witness import ParticleBunch
+from wake_t.utilities.other import print_progress_bar
 from wake_t.utilities.bunch_manipulation import (convert_to_ocelot_matrix,
                                                  convert_from_ocelot_matrix,
                                                  rotation_matrix_xz)
@@ -206,6 +207,9 @@ class PlasmaStage():
         A list of size 'steps' containing the beam distribution at each step.
 
         """
+        print('')
+        print('Plasma stage')
+        print('-'*len('Plasma stage'))
         if mode == "Blowout":
             WF = BlowoutWakefield(self.n_p, laser)
         if mode == "CustomBlowout":
@@ -244,6 +248,7 @@ class PlasmaStage():
                 num_proc = cpu_count()
             else:
                 num_proc = n_proc
+            print('Parallel computation in {} processes.'.format(num_proc))
             num_part = mat.shape[1]
             part_per_proc = int(np.ceil(num_part/num_proc))
             process_pool = Pool(num_proc)
@@ -254,9 +259,11 @@ class PlasmaStage():
                 for p in np.arange(num_proc):
                     matrix_list.append(
                         mat[:,p*part_per_proc:(p+1)*part_per_proc])
-
+                
+                print('')
+                st_0 = "Tracking in {} step(s)... ".format(steps)
                 for s in np.arange(steps):
-                    print(s)
+                    print_progress_bar(st_0, s, steps-1)
                     if auto_update_fields:
                         WF.check_if_update_fields(s*t_step)
                     partial_solver = partial(
@@ -275,8 +282,11 @@ class PlasmaStage():
                 process_pool.join()
         else:
             # compute in single process
+            print('Serial computation.')
+            print('')
+            st_0 = "Tracking in {} step(s)... ".format(steps)
             for s in np.arange(steps):
-                print(s)
+                print_progress_bar(st_0, s, steps-1)
                 beam_matrix = runge_kutta_4(mat, WF=WF, t0=s*t_step,
                                             dt=dt_adjusted,
                                             iterations=it_per_step)
@@ -288,7 +298,8 @@ class PlasmaStage():
                     )
         # print computing time
         end = time.time()
-        print("Done ({} seconds)".format(end-start))
+        print("Done ({:1.3f} seconds).".format(end-start))
+        print('-'*80)
         # update beam data
         last_beam = beam_list[-1]
         beam.set_phase_space(last_beam.x, last_beam.y, last_beam.xi,
@@ -671,6 +682,9 @@ class PlasmaRamp():
         A list of size 'steps' containing the beam distribution at each step.
 
         """
+        print('')
+        print('Plasma ramp')
+        print('-'*len('Plasma ramp'))
         if mode == 'blowout':
             field = PlasmaRampBlowoutField(self.calculate_density)
         elif mode == 'blowout_non_rel':
@@ -702,6 +716,7 @@ class PlasmaRamp():
                 num_proc = cpu_count()
             else:
                 num_proc = n_proc
+            print('Parallel computation in {} processes.'.format(num_proc))
             num_part = mat.shape[1]
             part_per_proc = int(np.ceil(num_part/num_proc))
             process_pool = Pool(num_proc)
@@ -711,9 +726,10 @@ class PlasmaRamp():
                 for p in np.arange(num_proc):
                     matrix_list.append(
                         mat[:,p*part_per_proc:(p+1)*part_per_proc])
-
+                print('')
+                st_0 = "Tracking in {} step(s)... ".format(steps)
                 for s in np.arange(steps):
-                    print(s)
+                    print_progress_bar(st_0, s, steps-1)
                     partial_solver = partial(
                         runge_kutta_4, WF=field, dt=dt_adjusted,
                         iterations=it_per_step, t0=s*t_step)
@@ -729,8 +745,11 @@ class PlasmaRamp():
                 process_pool.close()
                 process_pool.join()
         else:
+            print('Serial computation.')
+            print('')
+            st_0 = "Tracking in {} step(s)... ".format(steps)
             for s in np.arange(steps):
-                print(s)
+                print_progress_bar(st_0, s, steps-1)
                 beam_matrix = runge_kutta_4(mat, WF=field, t0=s*t_step,
                                             dt=dt_adjusted,
                                             iterations=it_per_step)
@@ -741,8 +760,8 @@ class PlasmaRamp():
                                     prop_distance=new_prop_dist)
                     )
         end = time.time()
-        print("Done ({} seconds)".format(end-start))
-
+        print("Done ({:1.3f} seconds).".format(end-start))
+        print('-'*80)
         # update beam data
         last_beam = beam_list[-1]
         beam.set_phase_space(last_beam.x, last_beam.y, last_beam.xi,
@@ -992,6 +1011,9 @@ class PlasmaLens(object):
                                parallel=False, n_proc=None):
         """Tracks the beam through the plasma lens and returns the final
         phase space"""
+        print('')
+        print('Plasma lens')
+        print('-'*len('Plasma lens'))
         if non_rel:
             field = PlasmaLensField(self.foc_strength)
         else:
@@ -1008,15 +1030,14 @@ class PlasmaLens(object):
         it_per_step = max(int(iterations/steps), 1)
         iterations = it_per_step*steps
         dt_adjusted = t_final/iterations
-
         beam_list = list()
-
         start = time.time()
         if parallel:
             if n_proc is None:
                 num_proc = cpu_count()
             else:
                 num_proc = n_proc
+            print('Parallel computation in {} processes.'.format(num_proc))
             num_part = mat.shape[1]
             part_per_proc = int(np.ceil(num_part/num_proc))
             process_pool = Pool(num_proc)
@@ -1025,9 +1046,10 @@ class PlasmaLens(object):
             try:
                 for p in np.arange(num_proc):
                     matrix_list.append(mat[:,p*part_per_proc:(p+1)*part_per_proc])
-
+                print('')
+                st_0 = "Tracking in {} step(s)... ".format(steps)
                 for s in np.arange(steps):
-                    print(s)
+                    print_progress_bar(st_0, s, steps-1)
                     partial_solver = partial(
                         runge_kutta_4, WF=field, dt=dt_adjusted,
                         iterations=it_per_step, t0=s*t_step)
@@ -1042,8 +1064,11 @@ class PlasmaLens(object):
                 process_pool.join()
         else:
             # compute in single process
+            print('Serial computation.')
+            print('')
+            st_0 = "Tracking in {} step(s)... ".format(steps)
             for s in np.arange(steps):
-                print(s)
+                print_progress_bar(st_0, s, steps-1)
                 beam_matrix = runge_kutta_4(mat, WF=field, t0=s*t_step,
                                             dt=dt_adjusted,
                                             iterations=it_per_step)
@@ -1054,8 +1079,8 @@ class PlasmaLens(object):
                                     prop_distance=new_prop_dist)
                     )
         end = time.time()
-        print("Done ({} seconds)".format(end-start))
-
+        print("Done ({:1.3f} seconds).".format(end-start))
+        print('-'*80)
         # update beam data
         last_beam = beam_list[-1]
         beam.set_phase_space(last_beam.x, last_beam.y, last_beam.xi,
