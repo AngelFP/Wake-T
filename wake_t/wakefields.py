@@ -250,6 +250,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.n_r = n_r
         self.n_xi = n_xi
         self.current_t = -1
+        self.current_n_p = None
 
     def __wakefield_ode_system(self, u_1, u_2, r, z, laser_a0, n_beam):
         #return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) + n_beam - 1/2])
@@ -262,6 +263,13 @@ class NonLinearColdFluidWakefield(Wakefield):
             return
         z_beam = t*ct.c + np.average(xi) # z postion of beam center
         n_p = self.density_function(z_beam)
+
+        if n_p == self.current_n_p and not self.driver_evolution:
+            # If density has not changed and driver does not evolve, it is
+            # not necessary to recompute fields.
+            return
+        self.current_n_p = n_p
+
         s_d = plasma_skin_depth(n_p*1e-6)
         r = np.linspace(0, self.r_max, self.n_r)
         dz = (self.xi_max - self.xi_min) / self.n_xi / s_d
