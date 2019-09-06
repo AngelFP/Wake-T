@@ -861,14 +861,18 @@ class TMElement():
         self.element_name = ""
 
     def track_bunch(self, bunch, steps, backtrack=False, order=2):
-        print("Tracking " + self.element_name
-              + " in {} step(s)...   ".format(steps))
+        print('')
+        print('-'*80)
+        print(self.element_name.capitalize())
+        print('-'*80)
         l_step = self.length/steps
         bunch_list = list()
         bunch_mat, g_avg = self.get_aligned_beam_matrix_for_tracking(bunch)
         if self.gamma_ref is None:
             self.gamma_ref = g_avg
         self.print_element_properties()
+        print('-'*80)
+        print("Tracking in {} step(s)... ".format(steps), end = '')
         for i in np.arange(0, steps):
             l = (i+1)*l_step*(1-2*backtrack)
             new_prop_dist = bunch.prop_distance + l
@@ -889,6 +893,7 @@ class TMElement():
         bunch.theta_ref = last_bunch.theta_ref
         bunch.x_ref = last_bunch.x_ref
         print("Done.")
+        print('-'*80)
         return bunch_list
 
     def get_aligned_beam_matrix_for_tracking(self, bunch):
