@@ -176,7 +176,8 @@ def get_matched_bunch(en_x, en_y, ene, ene_sp, x_c, y_c, xi_c, s_t,
 
 def get_from_file(file_path, code_name, species_name=None,
                   preserve_prop_dist=False):
-    x, y, z, px, py, pz, q = dr.read_beam(code_name, file_path, species_name)
+    x, y, z, px, py, pz, q = dr.read_beam(code_name, file_path,
+                                          species_name=species_name)
     z_avg = np.average(z, weights=q)
     xi = z - z_avg
     bunch = ParticleBunch(q, x, y, xi, px, py, pz)

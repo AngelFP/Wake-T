@@ -12,7 +12,8 @@ class LaserPulse():
 
     """ Stores the laser pulse parameters. """
 
-    def __init__(self, xi_c, l_0, w_0, a_0=None, s_z=None, prop_distance=0):
+    def __init__(self, xi_c, l_0, w_0, a_0=None, tau=None,
+                 polarization='linear', prop_distance=0):
         """
         Initialize laser pulse parameters.
 
@@ -26,8 +27,8 @@ class LaserPulse():
             Spot size (w_0) of the laser pulse in units of m.
         a_0 : float
             Peak normalized vector potential.
-        s_z : float
-            Longitudinal pulse length (standard deviation) in units of fs.
+        tau : float
+            Longitudinal pulse length (FWHM in intentisy) in units of s.
         prop_distance : float
             Propagation distance of the bunch along the beamline.
 
@@ -37,8 +38,10 @@ class LaserPulse():
         #self.x_c = x_c
         #self.y_c = y_c
         self.a_0 = a_0
-        self.s_z = s_z
+        self.tau = tau
         self.w_0 = w_0
+        self.z_r = np.pi * w_0**2 / l_0
+        self.polarization = polarization
         self.prop_distance = prop_distance
 
     def increase_prop_distance(self, dist):
@@ -66,6 +69,35 @@ class LaserPulse():
         v_g = k*ct.c**2/np.sqrt(w_p**2+k**2*ct.c**2)/ct.c
         return v_g
 
+    def get_a0_profile(self, r, xi, dz_foc=0):
+        """
+        Return the normalized vector potential profile of the laser averaged
+        envelope.
+
+        Parameters:
+        -----------
+        r : array
+            Radial position at which to calculate normalized potential.
+        xi : array
+            Longitudinal position at which to calculate normalized potential.
+
+        dz_foc : float
+            Distance to focal point (beam waist).
+
+        Returns:
+        --------
+        An array containing the values of the normalized vector potential at
+        the specified positions.
+
+        """
+        w_fac = np.sqrt(1 + (dz_foc/self.z_r)**2)
+        s_r = self.w_0 * w_fac / np.sqrt(2)
+        s_z = self.tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
+        avg_amplitude = self.a_0
+        if self.polarization == 'linear':
+            avg_amplitude /= np.sqrt(2)
+        return avg_amplitude/w_fac * (np.exp(-(r)**2/(2*s_r**2))
+                                      * np.exp(-(xi-self.xi_c)**2/(2*s_z**2)))
 
 class ParticleBunch():
 
@@ -210,6 +242,14 @@ class ParticleBunch():
         (x, px, y, py, xi, pz)
         """
         return np.array([self.x, self.px, self.y, self.py, self.xi, self.pz])
+
+    def get_6D_matrix_with_charge(self):
+        """
+        Returns the 6D phase space matrix of the bunch containing
+        (x, px, y, py, xi, pz)
+        """
+        return np.array(
+            [self.x, self.px, self.y, self.py, self.xi, self.pz, self.q])
 
     def get_alternative_6D_matrix(self):
         """

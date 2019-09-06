@@ -266,3 +266,4 @@ __pycache__/
 *.egg-info
 /build
 /dist
+/examples/track_plasma_stage_old.py
