@@ -213,9 +213,12 @@ class PlasmaStage():
                 self.n_p, laser, np.average(beam.xi, weights=beam.q), 
                 lon_field, lon_field_slope, foc_strength, field_offset)
         elif mode == "FromPICCode":
-            WF = WakefieldFromPICSimulation(
-                simulation_code, simulation_path, laser, time_step, self.n_p,
-                filter_fields, filter_sigma, reverse_tracking)
+            if vpic_installed:
+                WF = WakefieldFromPICSimulation(
+                    simulation_code, simulation_path, laser, time_step,
+                    self.n_p, filter_fields, filter_sigma, reverse_tracking)
+            else:
+                return []
         elif mode == 'cold_fluid_1d':
             WF = NonLinearColdFluidWakefield(self.calculate_density, laser,
                                              laser_evolution, laser_z_foc,
@@ -261,7 +264,7 @@ class PlasmaStage():
                         iterations=it_per_step, t0=s*t_step)
                     matrix_list = process_pool.map(partial_solver, matrix_list)
                     beam_matrix = np.concatenate(matrix_list, axis=1)
-                    x, px, y, py, xi, pz = beam_matrix
+                    x, px, y, py, xi, pz, q = beam_matrix
                     new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
                     beam_list.append(
                         ParticleBunch(beam.q, x, y, xi, px, py, pz,

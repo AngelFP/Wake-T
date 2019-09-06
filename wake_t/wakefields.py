@@ -3,10 +3,15 @@
 import numpy as np
 import scipy.constants as ct
 from scipy.interpolate import RegularGridInterpolator
-from VisualPIC.DataHandling.dataContainer import DataContainer
 from aptools.plasma_accel.general_equations import (
     plasma_skin_depth, plasma_cold_non_relativisct_wave_breaking_field)
 import matplotlib.pyplot as plt
+try:
+    from VisualPIC.DataHandling.dataContainer import DataContainer
+    vpic_installed = True
+except:
+    vpic_installed = False
+
 
 class Wakefield():
 
