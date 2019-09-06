@@ -10,3 +10,4 @@ def print_progress_bar(pre_string, step, total_steps):
     if step < total_steps:
         status += '\r'
     sys.stdout.write(status)
+    sys.stdout.flush()
