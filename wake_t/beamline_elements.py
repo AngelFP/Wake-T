@@ -808,8 +808,8 @@ class Drift():
         print('')
         print('-'*80)
         print('Drift')
-        print('-'*80)
-        print("Tracking in {} step(s)...   ".format(steps), end = '')
+        print('-'*len('Drift'))
+        print("Tracking in {} step(s)... ".format(steps), end = '')
         l_step = self.length/steps
         bunch_list = list()
         for i in np.arange(0, steps):
@@ -869,14 +869,14 @@ class TMElement():
         print('')
         print('-'*80)
         print(self.element_name.capitalize())
-        print('-'*80)
+        print('-'*len(self.element_name))
         l_step = self.length/steps
         bunch_list = list()
         bunch_mat, g_avg = self.get_aligned_beam_matrix_for_tracking(bunch)
         if self.gamma_ref is None:
             self.gamma_ref = g_avg
         self.print_element_properties()
-        print('-'*80)
+        print('')
         print("Tracking in {} step(s)... ".format(steps), end = '')
         for i in np.arange(0, steps):
             l = (i+1)*l_step*(1-2*backtrack)
