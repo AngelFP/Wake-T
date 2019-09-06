@@ -805,7 +805,11 @@ class Drift():
         self.length = length
 
     def track_bunch(self, bunch, steps, backtrack=False):
-        print("Tracking drift in {} step(s)...   ".format(steps))
+        print('')
+        print('-'*80)
+        print('Drift')
+        print('-'*80)
+        print("Tracking in {} step(s)...   ".format(steps), end = '')
         l_step = self.length/steps
         bunch_list = list()
         for i in np.arange(0, steps):
@@ -825,6 +829,7 @@ class Drift():
         bunch.theta_ref = last_bunch.theta_ref
         bunch.x_ref = last_bunch.x_ref
         print("Done.")
+        print('-'*80)
         return bunch_list
 
     def _track_step(self, bunch, length=None):
