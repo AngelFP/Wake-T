@@ -806,7 +806,6 @@ class Drift():
 
     def track_bunch(self, bunch, steps, backtrack=False):
         print('')
-        print('-'*80)
         print('Drift')
         print('-'*len('Drift'))
         print("Tracking in {} step(s)... ".format(steps), end = '')
@@ -867,7 +866,6 @@ class TMElement():
 
     def track_bunch(self, bunch, steps, backtrack=False, order=2):
         print('')
-        print('-'*80)
         print(self.element_name.capitalize())
         print('-'*len(self.element_name))
         l_step = self.length/steps
