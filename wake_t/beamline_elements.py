@@ -30,7 +30,7 @@ class PlasmaStage():
         Parameters:
         -----------
         n_p : float
-            Plasma density in units of cm^{-3}.
+            Plasma density in units of m^{-3}.
 
         length : float
             Length of the plasma stage in cm.
@@ -66,7 +66,7 @@ class PlasmaStage():
 
         """
         if mode == "Blowout":
-            return ge.matched_plasma_beta_function(ene, n_p=self.n_p,
+            return ge.matched_plasma_beta_function(ene, n_p=self.n_p*1e-6,
                                                    regime='Blowout')
 
         elif mode in ["CustomBlowout", "FromGivenFields"]:
@@ -75,8 +75,8 @@ class PlasmaStage():
         elif mode == "Linear":
             dist_l_b = -(laser.get_lon_center()-xi)
             return ge.matched_plasma_beta_function(
-                ene, n_p=self.n_p, regime='Blowout', dist_from_driver=dist_l_b,
-                a_0=laser.a_0, w_0=laser.w_0)
+                ene, n_p=self.n_p*1e-6, regime='Blowout',
+                dist_from_driver=dist_l_b, a_0=laser.a_0, w_0=laser.w_0)
 
     def _gamma(self, px, py, pz):
         return np.sqrt(1 + px**2 + py**2 + pz**2)
@@ -310,7 +310,7 @@ class PlasmaStage():
     def _get_optimized_dt(self, beam, WF):
         """ Get optimized time step """ 
         gamma = self._gamma(beam.px, beam.py, beam.pz)
-        k_x = ge.plasma_focusing_gradient_blowout(self.n_p)
+        k_x = ge.plasma_focusing_gradient_blowout(self.n_p*1e-6)
         mean_gamma = np.average(gamma, weights=beam.q)
         w_x = np.sqrt(ct.e*ct.c/ct.m_e * k_x/mean_gamma)
         T_x = 1/w_x
@@ -318,7 +318,7 @@ class PlasmaStage():
         return dt
 
     def calculate_density(self, z):
-        return self.n_p*1e6
+        return self.n_p
 
     def track_beam_analytically(
         self, laser, beam, mode, steps, simulation_code=None,
@@ -406,7 +406,7 @@ class PlasmaStage():
         # Fields
         if mode == "Blowout":
             """Bubble center is assumed at lambda/2"""
-            w_p = np.sqrt(self.n_p*1e6*ct.e**2/(ct.m_e*ct.epsilon_0))
+            w_p = np.sqrt(self.n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
             l_p = 2*np.pi*ct.c/w_p
             E_p = -w_p**2/(2*ct.c) * np.ones_like(xi_0)
             K = w_p**2/2 * np.ones_like(xi_0)
@@ -419,8 +419,7 @@ class PlasmaStage():
 
         elif mode == "Linear":
             a0 = laser.a_0
-            n_p_SI = self.n_p*1e6
-            w_p = np.sqrt(n_p_SI*ct.e**2/(ct.m_e*ct.epsilon_0))
+            w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
             k_p = w_p/ct.c
             E0 = ct.m_e*ct.c*w_p/ct.e
             K = (8*np.pi/np.e)**(1/4)*a0/(k_p*w_0_l)
@@ -437,8 +436,7 @@ class PlasmaStage():
 
         elif mode == "Linear2":
             a0 = laser.a_0
-            n_p_SI = self.n_p*1e6
-            w_p = np.sqrt(n_p_SI*ct.e**2/(ct.m_e*ct.epsilon_0))
+            w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
             k_p = w_p/ct.c
             E0 = ct.m_e*ct.c*w_p/ct.e
 
@@ -585,11 +583,11 @@ class PlasmaRamp():
             
         plasma_dens_top : float
             Plasma density at the beginning (end) of the downramp (upramp) in
-            units of cm^{-3}.
+            units of m^{-3}.
 
         plasma_dens_down : float
             Plasma density at the position 'position_down' in units of
-            cm^{-3}.        
+            m^{-3}.        
 
         position_down : float
             Position where the plasma density will be equal to 

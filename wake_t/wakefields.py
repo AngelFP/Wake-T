@@ -38,7 +38,7 @@ class CustomBlowoutWakefield(Wakefield):
                  lon_field_slope=None, foc_strength=None,
                  field_offset=0):
         """
-        [n_p] = cm^-3
+        [n_p] = m^-3
         """
         self.n_p = n_p
         self.xi_c = beam_center	
@@ -53,7 +53,7 @@ class CustomBlowoutWakefield(Wakefield):
         self.E_z_0 = lon_field
         self.E_z_p = lon_field_slope
         self.l_c = self.driver.xi_c
-        self.b_w = self.driver.get_group_velocity(self.n_p*1e-6)
+        self.b_w = self.driver.get_group_velocity(self.n_p)
 
     def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
         return ct.c*self.g_x*x
@@ -74,7 +74,7 @@ class WakefieldFromPICSimulation(Wakefield):
                  n_p=None, filter_fields=False, sigma_filter=20,
                  reverse_tracking=False):
         """
-        [n_p] = cm^-3
+        [n_p] = m^-3
         """
         self.driver = driver
         self.b_w = driver.get_group_velocity(n_p)
@@ -92,7 +92,7 @@ class WakefieldFromPICSimulation(Wakefield):
         simulation_parameters = {"isLaser":False,
                                 "SimulationCode":simulation_code}
         if n_p is not None:
-            simulation_parameters["n_p"] = n_p/1e18
+            simulation_parameters["n_p"] = n_p/1e24
         self.dc.SetSimulationParameters(simulation_parameters)
         self.dc.LoadData()
 
