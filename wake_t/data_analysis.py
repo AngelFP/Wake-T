@@ -1,6 +1,9 @@
 """ This module contains methods for data analysis """
 
+import os
+
 import numpy as np
+from h5py import File as H5File
 
 import aptools.data_analysis.beam_diagnostics as bd
 
@@ -60,7 +63,14 @@ def analyze_bunch_list(bunch_list, n_slices=50, len_slice=None):
         g_x, g_y, em_x, em_y, em_x_sl_avg, em_y_sl_avg, ene, ene_sp,
         ene_sp_sl_avg, i_peak, s_z)
     return bunch_list_params
-    
+
+
+def save_parameters_to_file(bunch_params, folder_path, file_name):
+    file_path = os.path.join(folder_path, file_name + '.h5')
+    with H5File(file_path, 'w') as h5_file:
+        for param_name, param_data in bunch_params.items():
+            h5_file.create_dataset(param_name, data=param_data)
+
 
 def _get_distribution_parameters(x, y, z, px, py, pz, q, n_slices, len_slice):
     a_x, b_x, g_x = bd.twiss_parameters(x, px, pz, py, w=q)
