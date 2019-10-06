@@ -55,15 +55,14 @@ class LaserPulse():
         Parameters:
         -----------
         n_p : float
-            Plasma density in units of cm^{-3}.
+            Plasma density in units of m^{-3}.
 
         Returns:
         --------
         A float containing the group velocity.
             
         """
-        n_p_SI = n_p*1e6
-        w_p = np.sqrt(n_p_SI*ct.e**2/(ct.m_e*ct.epsilon_0))
+        w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
         k = 2*np.pi/self.l_0
         w = np.sqrt(w_p**2+k**2*ct.c**2)
         v_g = k*ct.c**2/np.sqrt(w_p**2+k**2*ct.c**2)/ct.c
