@@ -9,7 +9,7 @@ def analyze_bunch(bunch, n_slices=50, len_slice=None):
     # perform analysis
     dist = bunch.prop_distance
     params_analysis = _get_distribution_parameters(
-        bunch.x, bunch.y, bunch.z, bunch.px, bunch.py, bunch.pz, bunch.q,
+        bunch.x, bunch.y, bunch.xi, bunch.px, bunch.py, bunch.pz, bunch.q,
         n_slices, len_slice)
 
     # store data
