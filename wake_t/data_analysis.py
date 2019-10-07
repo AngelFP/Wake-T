@@ -66,10 +66,27 @@ def analyze_bunch_list(bunch_list, n_slices=50, len_slice=None):
 
 
 def save_parameters_to_file(bunch_params, folder_path, file_name):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
     file_path = os.path.join(folder_path, file_name + '.h5')
     with H5File(file_path, 'w') as h5_file:
         for param_name, param_data in bunch_params.items():
             h5_file.create_dataset(param_name, data=param_data)
+
+
+def save_bunch_to_file(bunch, folder_path, file_name):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    file_path = os.path.join(folder_path, file_name + '.h5')
+    with H5File(file_path, 'w') as h5_file:
+        h5_file.create_dataset('x', data=bunch.x)
+        h5_file.create_dataset('y', data=bunch.y)
+        h5_file.create_dataset('xi', data=bunch.xi)
+        h5_file.create_dataset('px', data=bunch.px)
+        h5_file.create_dataset('py', data=bunch.py)
+        h5_file.create_dataset('pz', data=bunch.pz)
+        h5_file.create_dataset('q', data=bunch.q)
+        h5_file.attrs['prop_dist'] = bunch.prop_distance
 
 
 def _get_distribution_parameters(x, y, z, px, py, pz, q, n_slices, len_slice):
