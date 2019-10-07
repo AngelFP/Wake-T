@@ -74,6 +74,14 @@ def save_parameters_to_file(bunch_params, folder_path, file_name):
             h5_file.create_dataset(param_name, data=param_data)
 
 
+def read_parameters_from_file(file_path):
+    bunch_params = {}
+    with H5File(file_path, 'r') as h5_file:
+        for param in h5_file.keys():
+            bunch_params[param] = h5_file.get(param).value
+    return bunch_params
+
+
 def save_bunch_to_file(bunch, folder_path, file_name):
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
