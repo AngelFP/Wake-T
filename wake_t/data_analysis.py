@@ -102,17 +102,17 @@ def _get_distribution_parameters(x, y, z, px, py, pz, q, n_slices, len_slice):
     a_y, b_y, g_y = bd.twiss_parameters(y, py, pz, px, w=q)
     ene = bd.mean_energy(px, py, pz, w=q)
     ene_sp = bd.relative_rms_energy_spread(px, py, pz, w=q)
-    ene_sp_sl, sl_w, *_ = bd.relative_rms_slice_energy_spread(
+    ene_sp_slice_params = bd.relative_rms_slice_energy_spread(
         z, px, py, pz, w=q, n_slices=n_slices, len_slice=len_slice)
-    ene_sp_sl_avg = np.average(ene_sp_sl, weights=sl_w)
+    ene_sp_sl, sl_w, sl_e, ene_sp_sl_avg = ene_sp_slice_params
     em_x = bd.normalized_transverse_rms_emittance(x, px, py, pz, w=q)
     em_y = bd.normalized_transverse_rms_emittance(y, py, px, pz, w=q)
-    em_x_sl, sl_w, *_ = bd.normalized_transverse_rms_slice_emittance(
+    emitt_x_slice_params = bd.normalized_transverse_rms_slice_emittance(
         z, x, px, py, pz, w=q, n_slices=n_slices, len_slice=len_slice)
-    em_x_sl_avg = np.average(em_x_sl, weights=sl_w)
-    em_y_sl, sl_w, *_ = bd.normalized_transverse_rms_slice_emittance(
+    em_x_sl, sl_w, sl_e, em_x_sl_avg = emitt_x_slice_params
+    emitt_y_slice_params = bd.normalized_transverse_rms_slice_emittance(
         z, y, py, px, pz, w=q, n_slices=n_slices, len_slice=len_slice)
-    em_y_sl_avg = np.average(em_y_sl, weights=sl_w)
+    em_y_sl, sl_w, sl_e, em_y_sl_avg = emitt_y_slice_params
     s_z = bd.rms_length(z, w=q)
     s_x = bd.rms_size(x, w=q)
     s_y = bd.rms_size(y, w=q)
