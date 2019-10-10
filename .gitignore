@@ -267,3 +267,4 @@ __pycache__/
 /build
 /dist
 /examples/track_plasma_stage_old.py
+/examples/tests.py
