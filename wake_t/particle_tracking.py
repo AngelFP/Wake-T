@@ -2,7 +2,7 @@
 
 import numpy as np
 import scipy.constants as ct
-from numba import jit, njit
+#from numba import jit, njit
 
 
 def runge_kutta_4(beam_matrix, WF, t0, dt, iterations):
