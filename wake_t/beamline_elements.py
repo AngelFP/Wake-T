@@ -287,6 +287,8 @@ class PlasmaStage():
             st_0 = "Tracking in {} step(s)... ".format(steps)
             for s in np.arange(steps):
                 print_progress_bar(st_0, s, steps-1)
+                if auto_update_fields:
+                    WF.check_if_update_fields(s*t_step)
                 beam_matrix = runge_kutta_4(mat, WF=WF, t0=s*t_step,
                                             dt=dt_adjusted,
                                             iterations=it_per_step)
