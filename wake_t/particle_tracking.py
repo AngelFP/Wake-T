@@ -15,6 +15,7 @@ def runge_kutta_4(beam_matrix, WF, t0, dt, iterations):
         beam_matrix += 1/6*(A + 2*B + 2*C + D)
     return beam_matrix
 
+
 def equations_of_motion(beam_matrix, t, WF):
     K = -ct.e/(ct.m_e*ct.c)
     x, px, y, py, xi, pz, q = beam_matrix
@@ -26,6 +27,7 @@ def equations_of_motion(beam_matrix, t, WF):
                      (pz/gamma-1)*ct.c,
                      K*WF.Wz(x, y, xi, px, py, pz, q, gamma, t),
                      np.zeros_like(q)])
+
 
 def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
                             order=2):
@@ -109,6 +111,7 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
                                 + T[4,2,2]*y2 + T[4,2,3]*yyp + T[4,3,3]*yp2)
     return new_beam_matrix
 
+
 def first_order_matrix(z, L, theta, k1, gamma_ref):
     """
     Calculate the first order matrix for the transfer map.
@@ -171,6 +174,7 @@ def first_order_matrix(z, L, theta, k1, gamma_ref):
                          [-hx*sx/beta, -dx/beta, 0., 0., 1., -r56],
                          [0., 0., 0., 0., 0., 1.]])
     return u_matrix
+
 
 def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     """

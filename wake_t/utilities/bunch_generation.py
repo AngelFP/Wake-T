@@ -94,6 +94,7 @@ def get_gaussian_bunch_from_twiss(en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp,
     q = np.ones(n_part)*(q_tot/n_part)
     return ParticleBunch(q, x, y, xi, px, py, pz)
 
+
 def get_gaussian_bunch_from_size(en_x, en_y, s_x, s_y, ene, ene_sp, s_t, xi_c,
                                  q_tot, n_part, x_off=0, y_off=0, theta_x=0,
                                  theta_y=0):
@@ -142,6 +143,7 @@ def get_gaussian_bunch_from_size(en_x, en_y, s_x, s_y, ene, ene_sp, s_t, xi_c,
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_x, b_y, ene,
                                          ene_sp, s_t, xi_c, q_tot, n_part,
                                          x_off, y_off, theta_x, theta_y)
+
 
 def get_matched_bunch(en_x, en_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
                       x_off=0, y_off=0, theta_x=0, theta_y=0, n_p=None,
@@ -192,6 +194,7 @@ def get_matched_bunch(en_x, en_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_m, b_m, ene, 
                                          ene_sp, s_t, xi_c, q_tot, n_part,
                                          x_off, y_off, theta_x, theta_y)
+
 
 def get_from_file(file_path, code_name, preserve_prop_dist=False, **kwargs):
     x, y, z, px, py, pz, q = dr.read_beam(code_name, file_path, **kwargs)

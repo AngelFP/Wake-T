@@ -1,7 +1,6 @@
 """
 This module contains the classes for laser pulses and particle bunches to be
 used as driver and witness
-
 """
 # TODO: clean methods to set and get bunch matrix
 import numpy as np
@@ -97,6 +96,7 @@ class LaserPulse():
             avg_amplitude /= np.sqrt(2)
         return avg_amplitude/w_fac * (np.exp(-(r)**2/(2*s_r**2))
                                       * np.exp(-(xi-self.xi_c)**2/(2*s_z**2)))
+
 
 class ParticleBunch():
 

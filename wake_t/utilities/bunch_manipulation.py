@@ -22,6 +22,7 @@ def convert_to_ocelot_matrix(bunch_matrix, q, gamma_ref=None):
     p_kin = np.sqrt(g**2 - 1)
     return np.array([x, px/p_kin, y, py/p_kin, xi, dp]), gamma_ref
 
+
 def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
     """
     Produces a matrix with the phase space coordinates 
@@ -53,6 +54,7 @@ def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
     pz = np.sqrt(gamma**2 - px**2 - py**2 - 1)
     return np.array([x, px, y, py, xi, pz])
 
+
 def rotation_matrix_xz(angle):
     """ Returns matrix to rotate the beam in the x-z plane """
     cs = np.cos(angle)
@@ -63,4 +65,3 @@ def rotation_matrix_xz(angle):
                      [0., 0., 0., 1., 0., 0.],
                      [-sn, 0., 0., 0., cs, 0.],
                      [0., -sn, 0., 0., 0., cs]])
-
