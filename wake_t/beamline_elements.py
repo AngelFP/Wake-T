@@ -11,12 +11,11 @@ import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particle_tracking import (runge_kutta_4, track_with_transfer_map)
-from wake_t.wakefields import *
+import wake_t.wakefields as wf
 from wake_t.driver_witness import ParticleBunch
 from wake_t.utilities.other import print_progress_bar
-from wake_t.utilities.bunch_manipulation import (convert_to_ocelot_matrix,
-                                                 convert_from_ocelot_matrix,
-                                                 rotation_matrix_xz)
+from wake_t.utilities.bunch_manipulation import (
+    convert_to_ocelot_matrix, convert_from_ocelot_matrix, rotation_matrix_xz)
 
 
 class PlasmaStage():
@@ -211,22 +210,22 @@ class PlasmaStage():
         print('Plasma stage')
         print('-'*len('Plasma stage'))
         if mode == "Blowout":
-            WF = BlowoutWakefield(self.n_p, laser)
+            WF = wf.BlowoutWakefield(self.n_p, laser)
         if mode == "CustomBlowout":
-            WF = CustomBlowoutWakefield(
+            WF = wf.CustomBlowoutWakefield(
                 self.n_p, laser, np.average(beam.xi, weights=beam.q), 
                 lon_field, lon_field_slope, foc_strength, field_offset)
         elif mode == "FromPICCode":
             if vpic_installed:
-                WF = WakefieldFromPICSimulation(
+                WF = wf.WakefieldFromPICSimulation(
                     simulation_code, simulation_path, laser, time_step,
                     self.n_p, filter_fields, filter_sigma, reverse_tracking)
             else:
                 return []
         elif mode == 'cold_fluid_1d':
-            WF = NonLinearColdFluidWakefield(self.calculate_density, laser,
-                                             laser_evolution, laser_z_foc,
-                                             r_max, xi_min, xi_max, n_r, n_xi)
+            WF = wf.NonLinearColdFluidWakefield(
+                self.calculate_density, laser, laser_evolution, laser_z_foc,
+                r_max, xi_min, xi_max, n_r, n_xi)
         # Get 6D matrix
         mat = beam.get_6D_matrix_with_charge()
         # Plasma length in time
@@ -686,16 +685,15 @@ class PlasmaRamp():
         print('Plasma ramp')
         print('-'*len('Plasma ramp'))
         if mode == 'blowout':
-            field = PlasmaRampBlowoutField(self.calculate_density)
+            field = wf.PlasmaRampBlowoutField(self.calculate_density)
         elif mode == 'blowout_non_rel':
             raise NotImplementedError()
         elif mode == 'cold_fluid_1d':
             if self.ramp_type == 'upramp':
                 laser_z_foc = self.length - laser_z_foc
-            field = NonLinearColdFluidWakefield(self.calculate_density,
-                                                laser, laser_evolution,
-                                                laser_z_foc, r_max, xi_min,
-                                                xi_max, n_r, n_xi)
+            field = wf.NonLinearColdFluidWakefield(
+                self.calculate_density, laser, laser_evolution, laser_z_foc,
+                r_max, xi_min, xi_max, n_r, n_xi)
         # Main beam quantities
         mat = beam.get_6D_matrix_with_charge()
         # Plasma length in time
@@ -835,9 +833,9 @@ class PlasmaLens():
         print('Plasma lens')
         print('-'*len('Plasma lens'))
         if non_rel:
-            field = PlasmaLensField(self.foc_strength)
+            field = wf.PlasmaLensField(self.foc_strength)
         else:
-            field = PlasmaLensFieldRelativistic(self.foc_strength)
+            field = wf.PlasmaLensFieldRelativistic(self.foc_strength)
         # Main beam quantities
         mat = beam.get_6D_matrix_with_charge()
 
