@@ -823,7 +823,7 @@ class Drift():
     def __init__(self, length):
         self.length = length
 
-    def track_bunch(self, bunch, steps, backtrack=False):
+    def track(self, bunch, steps, backtrack=False):
         print('')
         print('Drift')
         print('-'*len('Drift'))
@@ -883,7 +883,7 @@ class TMElement():
         self.gamma_ref = gamma_ref
         self.element_name = ""
 
-    def track_bunch(self, bunch, steps, backtrack=False, order=2):
+    def track(self, bunch, steps, backtrack=False, order=2):
         print('')
         print(self.element_name.capitalize())
         print('-'*len(self.element_name))
