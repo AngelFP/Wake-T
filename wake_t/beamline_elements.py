@@ -848,7 +848,6 @@ class TMElement():
         for i in np.arange(0, steps):
             l = (i+1)*l_step*(1-2*backtrack)
             new_prop_dist = bunch.prop_distance + l
-            #bunch_mat, g_avg = bunch.get_alternative_6D_matrix()
             new_bunch_mat = track_with_transfer_map(bunch_mat, l, self.length,
                                                     -self.theta, self.k1,
                                                     self.k2, self.gamma_ref,
