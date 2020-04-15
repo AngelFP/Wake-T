@@ -816,7 +816,7 @@ class PlasmaRamp():
         return n_p
     
 
-class PlasmaLens(object):
+class PlasmaLens():
 
     """Defines a plasma lens"""
 
@@ -1061,5 +1061,4 @@ class Sextupole(TMElement):
     def _print_element_properties(self):
         g = self.k2 * self.gamma_ref*(ct.m_e*ct.c/ct.e)
         print('Sextupole gradient = {:1.4f} T/m^2'.format(g))
-
 
