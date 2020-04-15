@@ -875,38 +875,44 @@ class TMElement():
     # TODO: fix backtracking issues.
     """Defines an element to be tracked using transfer maps."""
 
-    def __init__(self, length=0, angle=0, k1=0, k2=0, gamma_ref=None):
+    def __init__(self, length=0, theta=0, k1=0, k2=0, gamma_ref=None):
         self.length = length
-        self.angle = angle
+        self.theta = theta
         self.k1 = k1
         self.k2 = k2
         self.gamma_ref = gamma_ref
         self.element_name = ""
 
     def track(self, bunch, steps, backtrack=False, order=2):
-        print('')
-        print(self.element_name.capitalize())
-        print('-'*len(self.element_name))
-        l_step = self.length/steps
-        bunch_list = list()
+        # convert bunch to ocelot units and reference frame
         bunch_mat, g_avg = self.get_aligned_beam_matrix_for_tracking(bunch)
         if self.gamma_ref is None:
             self.gamma_ref = g_avg
+
+        # print output
+        print('')
+        print(self.element_name.capitalize())
+        print('-'*len(self.element_name))
         self.print_element_properties()
         print('')
         print("Tracking in {} step(s)... ".format(steps), end = '')
+
+        # start tracking
+        l_step = self.length/steps
+        bunch_list = list()
         for i in np.arange(0, steps):
             l = (i+1)*l_step*(1-2*backtrack)
             new_prop_dist = bunch.prop_distance + l
             #bunch_mat, g_avg = bunch.get_alternative_6D_matrix()
             new_bunch_mat = track_with_transfer_map(bunch_mat, l, self.length,
-                                                    -self.angle, self.k1,
+                                                    -self.theta, self.k1,
                                                     self.k2, self.gamma_ref,
                                                     order=order)
             new_bunch_mat = convert_from_ocelot_matrix(new_bunch_mat,
                                                        self.gamma_ref)
             new_bunch = self.create_new_bunch(bunch, new_bunch_mat, l)
             bunch_list.append(new_bunch)
+
         # update bunch data
         last_bunch = bunch_list[-1]
         bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
@@ -922,7 +928,7 @@ class TMElement():
         bunch_mat = bunch.get_6D_matrix()
         # obtain with respect to reference displacement
         bunch_mat[0] -= bunch.x_ref
-        # rotate by the reference angle so that it entern normal to the element
+        # rotate by the reference angle so that it enters normal to the element
         if bunch.theta_ref != 0:
             rot = rotation_matrix_xz(-bunch.theta_ref)
             bunch_mat = np.dot(rot, bunch_mat)
@@ -930,11 +936,11 @@ class TMElement():
 
     def create_new_bunch(self, old_bunch, new_bunch_mat, prop_dist):
         q = old_bunch.q
-        if self.angle != 0:
+        if self.theta != 0:
             # angle rotated for prop_dist
-            theta_step = self.angle*prop_dist/self.length
+            theta_step = self.theta*prop_dist/self.length
             # magnet bending radius
-            rho = abs(self.length/self.angle)
+            rho = abs(self.length/self.theta)
             # new reference angle and transverse displacement
             new_theta_ref = old_bunch.theta_ref + theta_step
             sign = -theta_step/abs(theta_step)
@@ -964,14 +970,14 @@ class TMElement():
 
 
 class Dipole(TMElement):
-    def __init__(self, length=0, angle=0, gamma_ref = None):
-        super().__init__(length, angle, 0, 0, gamma_ref)
+    def __init__(self, length=0, theta=0, gamma_ref = None):
+        super().__init__(length, theta, 0, 0, gamma_ref)
         self.element_name = 'dipole'
 
     def print_element_properties(self):
-        ang_deg = self.angle * 180/ct.pi
-        b_field = (ct.m_e*ct.c/ct.e) * self.angle*self.gamma_ref/self.length
-        print('Bending angle = {:1.4f} rad ({:1.4f} deg)'.format(self.angle,
+        ang_deg = self.theta * 180/ct.pi
+        b_field = (ct.m_e*ct.c/ct.e) * self.theta*self.gamma_ref/self.length
+        print('Bending angle = {:1.4f} rad ({:1.4f} deg)'.format(self.theta,
                                                                  ang_deg))
         print('Dipole field = {:1.4f} T'.format(b_field))
 
