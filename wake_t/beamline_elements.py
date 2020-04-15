@@ -830,7 +830,7 @@ class TMElement():
 
     def track(self, bunch, steps, backtrack=False, order=2):
         # convert bunch to ocelot units and reference frame
-        bunch_mat, g_avg = self.get_aligned_beam_matrix_for_tracking(bunch)
+        bunch_mat, g_avg = self._get_aligned_beam_matrix_for_tracking(bunch)
         if self.gamma_ref is None:
             self.gamma_ref = g_avg
 
@@ -838,7 +838,7 @@ class TMElement():
         print('')
         print(self.element_name.capitalize())
         print('-'*len(self.element_name))
-        self.print_element_properties()
+        self._print_element_properties()
         print('')
         print("Tracking in {} step(s)... ".format(steps), end = '')
 
@@ -855,7 +855,7 @@ class TMElement():
                                                     order=order)
             new_bunch_mat = convert_from_ocelot_matrix(new_bunch_mat,
                                                        self.gamma_ref)
-            new_bunch = self.create_new_bunch(bunch, new_bunch_mat, l)
+            new_bunch = self._create_new_bunch(bunch, new_bunch_mat, l)
             bunch_list.append(new_bunch)
 
         # update bunch data
@@ -869,7 +869,7 @@ class TMElement():
         print('-'*80)
         return bunch_list
 
-    def get_aligned_beam_matrix_for_tracking(self, bunch):
+    def _get_aligned_beam_matrix_for_tracking(self, bunch):
         bunch_mat = bunch.get_6D_matrix()
         # obtain with respect to reference displacement
         bunch_mat[0] -= bunch.x_ref
@@ -879,7 +879,7 @@ class TMElement():
             bunch_mat = np.dot(rot, bunch_mat)
         return convert_to_ocelot_matrix(bunch_mat, bunch.q, self.gamma_ref)
 
-    def create_new_bunch(self, old_bunch, new_bunch_mat, prop_dist):
+    def _create_new_bunch(self, old_bunch, new_bunch_mat, prop_dist):
         q = old_bunch.q
         if self.theta != 0:
             # angle rotated for prop_dist
@@ -909,7 +909,7 @@ class TMElement():
         new_bunch.x_ref = new_x_ref
         return new_bunch
 
-    def print_element_properties(self):
+    def _print_element_properties(self):
         "To be implemented by each element. Prints the element properties"
         raise NotImplementedError
 
@@ -919,7 +919,7 @@ class Drift(TMElement):
         super().__init__(length, 0, 0, 0, gamma_ref)
         self.element_name = 'drift'
 
-    def print_element_properties(self):
+    def _print_element_properties(self):
         print('Length = {:1.4f} m'.format(self.length))
 
 
@@ -928,7 +928,7 @@ class Dipole(TMElement):
         super().__init__(length, theta, 0, 0, gamma_ref)
         self.element_name = 'dipole'
 
-    def print_element_properties(self):
+    def _print_element_properties(self):
         ang_deg = self.theta * 180/ct.pi
         b_field = (ct.m_e*ct.c/ct.e) * self.theta*self.gamma_ref/self.length
         print('Bending angle = {:1.4f} rad ({:1.4f} deg)'.format(self.theta,
@@ -941,7 +941,7 @@ class Quadrupole(TMElement):
         super().__init__(length, 0, k1, 0, gamma_ref)
         self.element_name = 'quadrupole'
 
-    def print_element_properties(self):
+    def _print_element_properties(self):
         g = self.k1 * self.gamma_ref*(ct.m_e*ct.c/ct.e)
         print('Quadrupole gradient = {:1.4f} T/m'.format(g))
 
@@ -951,7 +951,7 @@ class Sextupole(TMElement):
         super().__init__(length, 0, 0, k2, gamma_ref)
         self.element_name = 'sextupole'
 
-    def print_element_properties(self):
+    def _print_element_properties(self):
         g = self.k2 * self.gamma_ref*(ct.m_e*ct.c/ct.e)
         print('Sextupole gradient = {:1.4f} T/m^2'.format(g))
 
