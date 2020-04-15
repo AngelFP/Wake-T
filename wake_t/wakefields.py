@@ -253,7 +253,8 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.current_n_p = None
 
     def __wakefield_ode_system(self, u_1, u_2, r, z, laser_a0, n_beam):
-        #return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) + n_beam - 1/2])
+        # return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) + n_beam - 1/2])
+        # return np.array([u_2, laser_a0**2/2 - u_1]) # linear regime
         return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) - 1/2])
 
     def __calculate_wakefields(self, x, y, xi, px, py, pz, q, gamma, t):
@@ -323,6 +324,12 @@ class NonLinearColdFluidWakefield(Wakefield):
         
         ## For debugging
         #E_z_p = np.gradient(E_z, dz, axis=0, edge_order=2)
+
+        #plt.plot(E_z[:,0])
+        #plt.plot(K_r[:,0])
+        ##plt.plot(a0_0[:,0])
+        #plt.show()
+
         #plt.subplot(411)
         #plt.imshow(E_z.T*E_0, aspect='auto',
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
