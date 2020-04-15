@@ -816,6 +816,114 @@ class PlasmaRamp():
         return n_p
     
 
+class PlasmaLens(object):
+
+    """Defines a plasma lens"""
+
+    def __init__(self, length, foc_strength):
+        self.length = length
+        self.foc_strength = foc_strength
+
+    def get_matched_beta(self, ene):
+        return ge.matched_plasma_beta_function(ene, k_x=self.foc_strength)
+
+    def track_beam_numerically(self, beam, steps, non_rel=False,
+                               parallel=False, n_proc=None):
+        """Tracks the beam through the plasma lens and returns the final
+        phase space"""
+        print('')
+        print('Plasma lens')
+        print('-'*len('Plasma lens'))
+        if non_rel:
+            field = PlasmaLensField(self.foc_strength)
+        else:
+            field = PlasmaLensFieldRelativistic(self.foc_strength)
+        # Main beam quantities
+        mat = beam.get_6D_matrix_with_charge()
+
+        # Plasma length in time
+        t_final = self.length/ct.c
+        t_step = t_final/steps
+        dt = self._get_optimized_dt(beam, field)
+        iterations = int(t_final/dt)
+        # force at least 1 iteration per step
+        it_per_step = max(int(iterations/steps), 1)
+        iterations = it_per_step*steps
+        dt_adjusted = t_final/iterations
+        beam_list = list()
+        start = time.time()
+        if parallel:
+            if n_proc is None:
+                num_proc = cpu_count()
+            else:
+                num_proc = n_proc
+            print('Parallel computation in {} processes.'.format(num_proc))
+            num_part = mat.shape[1]
+            part_per_proc = int(np.ceil(num_part/num_proc))
+            process_pool = Pool(num_proc)
+            t_s = 0
+            matrix_list = list()
+            try:
+                for p in np.arange(num_proc):
+                    matrix_list.append(mat[:,p*part_per_proc:(p+1)*part_per_proc])
+                print('')
+                st_0 = "Tracking in {} step(s)... ".format(steps)
+                for s in np.arange(steps):
+                    print_progress_bar(st_0, s, steps-1)
+                    partial_solver = partial(
+                        runge_kutta_4, WF=field, dt=dt_adjusted,
+                        iterations=it_per_step, t0=s*t_step)
+                    matrix_list = process_pool.map(partial_solver, matrix_list)
+                    beam_matrix = np.concatenate(matrix_list, axis=1)
+                    x, px, y, py, xi, pz, q = beam_matrix
+                    new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
+                    beam_list.append(ParticleBunch(beam.q, x, y, xi, px, py, pz,
+                                                   prop_distance=new_prop_dist))
+            finally:
+                process_pool.close()
+                process_pool.join()
+        else:
+            # compute in single process
+            print('Serial computation.')
+            print('')
+            st_0 = "Tracking in {} step(s)... ".format(steps)
+            for s in np.arange(steps):
+                print_progress_bar(st_0, s, steps-1)
+                beam_matrix = runge_kutta_4(mat, WF=field, t0=s*t_step,
+                                            dt=dt_adjusted,
+                                            iterations=it_per_step)
+                x, px, y, py, xi, pz, q = copy(beam_matrix)
+                new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
+                beam_list.append(
+                    ParticleBunch(beam.q, x, y, xi, px, py, pz,
+                                    prop_distance=new_prop_dist)
+                    )
+        end = time.time()
+        print("Done ({:1.3f} seconds).".format(end-start))
+        print('-'*80)
+        # update beam data
+        last_beam = beam_list[-1]
+        beam.set_phase_space(last_beam.x, last_beam.y, last_beam.xi,
+                             last_beam.px, last_beam.py, last_beam.pz)
+        beam.increase_prop_distance(self.length)
+        return beam_list
+    
+    def _get_optimized_dt(self, beam, WF):
+        gamma = self._gamma(beam.px, beam.py, beam.pz)
+        mean_gamma = np.average(gamma, weights=beam.q)
+        Kx = WF.Kx(
+            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, beam.q, gamma,
+            0)
+        mean_Kx = np.average(Kx, weights=beam.q)
+        w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
+        T_x = 1/w_x
+        dt = 0.1*T_x
+        return dt
+
+    def _gamma(self, px, py, pz):
+        return np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
+
+
 class TMElement():
     # TODO: fix backtracking issues.
     """Defines an element to be tracked using transfer maps."""
@@ -955,109 +1063,3 @@ class Sextupole(TMElement):
         print('Sextupole gradient = {:1.4f} T/m^2'.format(g))
 
 
-class PlasmaLens(object):
-
-    """Defines a plasma lens"""
-
-    def __init__(self, length, foc_strength):
-        self.length = length
-        self.foc_strength = foc_strength
-
-    def get_matched_beta(self, ene):
-        return ge.matched_plasma_beta_function(ene, k_x=self.foc_strength)
-
-    def track_beam_numerically(self, beam, steps, non_rel=False,
-                               parallel=False, n_proc=None):
-        """Tracks the beam through the plasma lens and returns the final
-        phase space"""
-        print('')
-        print('Plasma lens')
-        print('-'*len('Plasma lens'))
-        if non_rel:
-            field = PlasmaLensField(self.foc_strength)
-        else:
-            field = PlasmaLensFieldRelativistic(self.foc_strength)
-        # Main beam quantities
-        mat = beam.get_6D_matrix_with_charge()
-
-        # Plasma length in time
-        t_final = self.length/ct.c
-        t_step = t_final/steps
-        dt = self._get_optimized_dt(beam, field)
-        iterations = int(t_final/dt)
-        # force at least 1 iteration per step
-        it_per_step = max(int(iterations/steps), 1)
-        iterations = it_per_step*steps
-        dt_adjusted = t_final/iterations
-        beam_list = list()
-        start = time.time()
-        if parallel:
-            if n_proc is None:
-                num_proc = cpu_count()
-            else:
-                num_proc = n_proc
-            print('Parallel computation in {} processes.'.format(num_proc))
-            num_part = mat.shape[1]
-            part_per_proc = int(np.ceil(num_part/num_proc))
-            process_pool = Pool(num_proc)
-            t_s = 0
-            matrix_list = list()
-            try:
-                for p in np.arange(num_proc):
-                    matrix_list.append(mat[:,p*part_per_proc:(p+1)*part_per_proc])
-                print('')
-                st_0 = "Tracking in {} step(s)... ".format(steps)
-                for s in np.arange(steps):
-                    print_progress_bar(st_0, s, steps-1)
-                    partial_solver = partial(
-                        runge_kutta_4, WF=field, dt=dt_adjusted,
-                        iterations=it_per_step, t0=s*t_step)
-                    matrix_list = process_pool.map(partial_solver, matrix_list)
-                    beam_matrix = np.concatenate(matrix_list, axis=1)
-                    x, px, y, py, xi, pz, q = beam_matrix
-                    new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
-                    beam_list.append(ParticleBunch(beam.q, x, y, xi, px, py, pz,
-                                                   prop_distance=new_prop_dist))
-            finally:
-                process_pool.close()
-                process_pool.join()
-        else:
-            # compute in single process
-            print('Serial computation.')
-            print('')
-            st_0 = "Tracking in {} step(s)... ".format(steps)
-            for s in np.arange(steps):
-                print_progress_bar(st_0, s, steps-1)
-                beam_matrix = runge_kutta_4(mat, WF=field, t0=s*t_step,
-                                            dt=dt_adjusted,
-                                            iterations=it_per_step)
-                x, px, y, py, xi, pz, q = copy(beam_matrix)
-                new_prop_dist = beam.prop_distance + (s+1)*t_step*ct.c
-                beam_list.append(
-                    ParticleBunch(beam.q, x, y, xi, px, py, pz,
-                                    prop_distance=new_prop_dist)
-                    )
-        end = time.time()
-        print("Done ({:1.3f} seconds).".format(end-start))
-        print('-'*80)
-        # update beam data
-        last_beam = beam_list[-1]
-        beam.set_phase_space(last_beam.x, last_beam.y, last_beam.xi,
-                             last_beam.px, last_beam.py, last_beam.pz)
-        beam.increase_prop_distance(self.length)
-        return beam_list
-    
-    def _get_optimized_dt(self, beam, WF):
-        gamma = self._gamma(beam.px, beam.py, beam.pz)
-        mean_gamma = np.average(gamma, weights=beam.q)
-        Kx = WF.Kx(
-            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, beam.q, gamma,
-            0)
-        mean_Kx = np.average(Kx, weights=beam.q)
-        w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
-        T_x = 1/w_x
-        dt = 0.1*T_x
-        return dt
-
-    def _gamma(self, px, py, pz):
-        return np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
