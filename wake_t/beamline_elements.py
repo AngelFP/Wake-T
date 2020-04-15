@@ -814,62 +814,7 @@ class PlasmaRamp():
                                                         self.plasma_dens_down))
             n_p = self.plasma_dens_top * np.exp(-z**2/(2*s_z**2))
         return n_p
-
-
-class Drift():
-
-    """Defines a drift space"""
-
-    def __init__(self, length):
-        self.length = length
-
-    def track(self, bunch, steps, backtrack=False):
-        print('')
-        print('Drift')
-        print('-'*len('Drift'))
-        print("Tracking in {} step(s)... ".format(steps), end = '')
-        l_step = self.length/steps
-        bunch_list = list()
-        for i in np.arange(0, steps):
-            l = (i+1)*l_step*(1-2*backtrack)
-            (x, y, xi, px, py, pz) = self._track_step(bunch, l)
-            new_prop_dist = bunch.prop_distance + l
-            new_bunch = ParticleBunch(bunch.q, x, y, xi, px, py, pz,
-                                      prop_distance=new_prop_dist)
-            new_bunch.x_ref = bunch.x_ref + l*np.sin(bunch.theta_ref)
-            new_bunch.theta_ref = bunch.theta_ref
-            bunch_list.append(new_bunch)
-        # update bunch data
-        last_bunch = bunch_list[-1]
-        bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
-                              last_bunch.px, last_bunch.py, last_bunch.pz)
-        bunch.prop_distance = last_bunch.prop_distance
-        bunch.theta_ref = last_bunch.theta_ref
-        bunch.x_ref = last_bunch.x_ref
-        print("Done.")
-        print('-'*80)
-        return bunch_list
-
-    def _track_step(self, bunch, length=None):
-        x_0 = bunch.x
-        y_0 = bunch.y
-        xi_0 = bunch.xi
-        px_0 = bunch.px
-        py_0 = bunch.py
-        pz_0 = bunch.pz
-        if length is None:
-            t = self.length/ct.c
-        else:
-            t = length/ct.c
-        g = np.sqrt(1 + px_0**2 + py_0**2 + pz_0**2)
-        vx = px_0*ct.c/g
-        vy = py_0*ct.c/g
-        vz = pz_0*ct.c/g
-        x = x_0 + vx*t
-        y = y_0 + vy*t
-        xi = xi_0 + (vz-ct.c)*t
-        return (x, y, xi, px_0, py_0, pz_0)
-
+    
 
 class TMElement():
     # TODO: fix backtracking issues.
@@ -967,6 +912,15 @@ class TMElement():
     def print_element_properties(self):
         "To be implemented by each element. Prints the element properties"
         raise NotImplementedError
+
+
+class Drift(TMElement):
+    def __init__(self, length=0, gamma_ref = None):
+        super().__init__(length, 0, 0, 0, gamma_ref)
+        self.element_name = 'drift'
+
+    def print_element_properties(self):
+        print('Length = {:1.4f} m'.format(self.length))
 
 
 class Dipole(TMElement):
