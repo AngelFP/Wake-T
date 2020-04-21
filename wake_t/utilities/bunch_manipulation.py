@@ -20,7 +20,7 @@ def convert_to_ocelot_matrix(bunch_matrix, q, gamma_ref=None):
     b_ref = np.sqrt(1 - gamma_ref**(-2))
     dp = (g-gamma_ref)/(gamma_ref*b_ref)
     p_kin = np.sqrt(g**2 - 1)
-    return np.array([x, px/p_kin, y, py/p_kin, xi, dp]), gamma_ref
+    return np.array([x, px/p_kin, y, py/p_kin, -xi, dp]), gamma_ref
 
 
 def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
@@ -50,7 +50,7 @@ def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
     px = beam_matrix[1] * p_kin
     y = beam_matrix[2]
     py = beam_matrix[3] * p_kin
-    xi = beam_matrix[4]
+    xi = -beam_matrix[4]
     pz = np.sqrt(gamma**2 - px**2 - py**2 - 1)
     return np.array([x, px, y, py, xi, pz])
 

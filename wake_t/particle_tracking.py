@@ -77,8 +77,8 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
     new_beam_matrix = np.dot(R, beam_matrix)
     if order == 2:
         T = second_order_matrix(z, L, theta, k1, k2, gamma_ref)
-        x, xp, y, yp, xi, dp = (beam_matrix[0], beam_matrix[1], beam_matrix[2],
-                                beam_matrix[3], beam_matrix[4], beam_matrix[5])
+        x, xp, y, yp, tau, dp = beam_matrix
+
         # pre-calculate products
         x2 = x * x
         xxp = x * xp
@@ -95,6 +95,7 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
         xpyp = xp * yp
         ydp = y * dp
         ypdp = yp * dp
+
         # Add second order effects
         new_beam_matrix[0] += (T[0,0,0]*x2 + T[0,0,1]*xxp + T[0,0,5]*xdp
                                + T[0,1,1]*xp2 + T[0,1,5]*xpdp + T[0,5,5]*dp2
@@ -106,7 +107,7 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
                                + T[2,1,3]*xpyp + T[2,2,5]*ydp + T[2,3,5]*ypdp)
         new_beam_matrix[3] += (T[3,0,2]*xy + T[3,0,3]*xyp + T[3,1,2]*yxp
                                + T[3,1,3]*xpyp + T[3,2,5]*ydp + T[3,3,5]*ypdp)
-        new_beam_matrix[4] -= (T[4,0,0]*x2 + T[4,0,1]*xxp + T[4,0,5]*xdp
+        new_beam_matrix[4] += (T[4,0,0]*x2 + T[4,0,1]*xxp + T[4,0,5]*xdp
                                 + T[4,1,1]*xp2 + T[4,1,5]*xpdp + T[4,5,5]*dp2
                                 + T[4,2,2]*y2 + T[4,2,3]*yyp + T[4,3,3]*yp2)
     return new_beam_matrix
@@ -171,7 +172,7 @@ def first_order_matrix(z, L, theta, k1, gamma_ref):
                          [-kx2*sx, cx, 0., 0., 0., sx*hx/beta],
                          [0., 0., cy, sy, 0., 0.],
                          [0., 0., -ky2*sy, cy, 0., 0.],
-                         [-hx*sx/beta, -dx/beta, 0., 0., 1., -r56],
+                         [hx*sx/beta, dx/beta, 0., 0., 1., r56],
                          [0., 0., 0., 0., 0., 1.]])
     return u_matrix
 
@@ -223,8 +224,8 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
         igamma2 = 1./gamma2
 
     beta = np.sqrt(1. - igamma2)
-    L=z # TODO: test this.
     h = theta/L
+    L=z # TODO: test this.
     h2 = h*h
     h3 = h2*h
     kx2 = (k1 + h*h)
