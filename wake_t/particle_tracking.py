@@ -193,7 +193,7 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
 
     beta = np.sqrt(1. - igamma2)
     h = theta/L
-    L=z # TODO: test this.
+    L = z # Easy fix for the calculation below, where L should actually be z.
     h2 = h*h
     h3 = h2*h
     kx2 = (k1 + h*h)
