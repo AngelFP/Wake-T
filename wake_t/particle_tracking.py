@@ -33,7 +33,7 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
                             order=2):
     """
     Track beam distribution throwgh beamline element by using a transfer map.
-    This function is stronly based on code from Ocelot (see 
+    This function was initially based on code from Ocelot (see 
     https://github.com/ocelot-collab/ocelot) written by S. Tomin.
 
     Parameters:
@@ -74,43 +74,11 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
 
     """
     R = first_order_matrix(z, L, theta, k1, gamma_ref)
-    new_beam_matrix = np.dot(R, beam_matrix)
+    bm_new = np.dot(R, beam_matrix)
     if order == 2:
         T = second_order_matrix(z, L, theta, k1, k2, gamma_ref)
-        x, xp, y, yp, tau, dp = beam_matrix
-
-        # pre-calculate products
-        x2 = x * x
-        xxp = x * xp
-        xp2 = xp * xp
-        yp2 = yp * yp
-        yyp = y * yp
-        y2 = y * y
-        dp2 = dp * dp
-        xdp = x * dp
-        xpdp = xp * dp
-        xy = x * y
-        xyp = x * yp
-        yxp = xp * y
-        xpyp = xp * yp
-        ydp = y * dp
-        ypdp = yp * dp
-
-        # Add second order effects
-        new_beam_matrix[0] += (T[0,0,0]*x2 + T[0,0,1]*xxp + T[0,0,5]*xdp
-                               + T[0,1,1]*xp2 + T[0,1,5]*xpdp + T[0,5,5]*dp2
-                               + T[0,2,2]*y2 + T[0,2,3]*yyp + T[0,3,3]*yp2)
-        new_beam_matrix[1] += (T[1,0,0]*x2 + T[1,0,1]*xxp + T[1,0,5]*xdp
-                               + T[1,1,1]*xp2 + T[1,1,5]*xpdp + T[1,5,5]*dp2
-                               + T[1,2,2]*y2 + T[1,2,3]*yyp + T[1,3,3]*yp2)
-        new_beam_matrix[2] += (T[2,0,2]*xy + T[2,0,3]*xyp + T[2,1,2]*yxp
-                               + T[2,1,3]*xpyp + T[2,2,5]*ydp + T[2,3,5]*ypdp)
-        new_beam_matrix[3] += (T[3,0,2]*xy + T[3,0,3]*xyp + T[3,1,2]*yxp
-                               + T[3,1,3]*xpyp + T[3,2,5]*ydp + T[3,3,5]*ypdp)
-        new_beam_matrix[4] += (T[4,0,0]*x2 + T[4,0,1]*xxp + T[4,0,5]*xdp
-                                + T[4,1,1]*xp2 + T[4,1,5]*xpdp + T[4,5,5]*dp2
-                                + T[4,2,2]*y2 + T[4,2,3]*yyp + T[4,3,3]*yp2)
-    return new_beam_matrix
+        bm_new += np.einsum('ijk,j...,k...', T, beam_matrix, beam_matrix).T
+    return bm_new
 
 
 def first_order_matrix(z, L, theta, k1, gamma_ref):
