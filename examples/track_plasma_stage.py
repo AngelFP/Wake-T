@@ -29,9 +29,7 @@ plasma = PlasmaStage(
     xi_max=120e-6, n_r=70, n_xi=50)
 
 # start tracking
-bunch_list = list()
-bunch_list.append(copy.copy(bunch))
-bunch_list.extend(plasma.track(bunch))
+bunch_list = plasma.track(bunch, out_initial=True)
 
 # analyze bunch evolution
 params_evolution = analyze_bunch_list(bunch_list)
