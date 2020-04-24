@@ -23,15 +23,15 @@ bunch = get_matched_bunch(en, en, ene, ene_sp, s_t, xi_c, q_tot, n_part,
                           k_x=130000)
 
 # create plasma stage
-plasma = PlasmaStage(1e23, 1e-2)
+plasma = PlasmaStage(
+    1e-2, 1e23, driver=laser, wakefield_model='cold_fluid_1d', n_out=20,
+    laser_evolution=True, laser_z_foc=0, r_max=70e-6,  xi_min=40e-6,
+    xi_max=120e-6, n_r=70, n_xi=50)
 
 # start tracking
 bunch_list = list()
 bunch_list.append(copy.copy(bunch))
-bunch_list.extend(plasma.track_beam_numerically(laser,
-    bunch, mode='cold_fluid_1d', steps=20, laser_evolution=True, 
-    laser_z_foc=0, r_max=70e-6,  xi_min=40e-6, xi_max=120e-6, n_r=70,
-    n_xi=50))
+bunch_list.extend(plasma.track(bunch))
 
 # analyze bunch evolution
 params_evolution = analyze_bunch_list(bunch_list)
