@@ -19,6 +19,40 @@ from wake_t.utilities.bunch_manipulation import (
 from wake_t.csr import get_csr_calculator
 
 
+class Beamline():
+
+    """Class for grouping beamline elements and allowing easier tracking."""
+
+    def __init__(self, elements):
+        self.elements = elements
+
+    def track(self, bunch, out_initial=True):
+        """
+        Track bunch through beamline.
+
+        Parameters:
+        -----------
+        bunch : ParticleBunch
+            Particle bunch to be tracked.
+
+        out_initial : bool
+            Determinees whether the initial bunch should be included in the
+            output bunch list. This applies only at the beginning and not for
+            every beamline element.
+
+        Returns:
+        --------
+        A list of size 'n_out' containing the bunch distribution at each step.
+            
+        """
+        bunch_list = []
+        if out_initial:
+            bunch_list.append(copy(bunch))
+        for element in self.elements:
+            bunch_list.extend(element.track(bunch, out_initial=False))
+        return bunch_list
+
+
 class PlasmaStage():
 
     """ Defines a plasma stage. """
@@ -158,7 +192,7 @@ class PlasmaStage():
         self.n_out = n_out
         self.model_params = model_params
 
-    def track(self, bunch, parallel=False, n_proc=None):
+    def track(self, bunch, parallel=False, n_proc=None, out_initial=False):
         """
         Track bunch through plasma stage.
 
@@ -174,6 +208,10 @@ class PlasmaStage():
             Number of processes to run in parallel. If None, this will equal
             the number of physical cores.
 
+        out_initial : bool
+            Determinees whether the initial bunch should be included in the
+            output bunch list.
+
         Returns:
         --------
         A list of size 'n_out' containing the bunch distribution at each step.
@@ -182,10 +220,15 @@ class PlasmaStage():
         print('')
         print('Plasma stage')
         print('-'*len('Plasma stage'))
+        if out_initial:
+            initial_bunch = copu(bunch)
         if self.tracking_mode == 'numerical':
-            return self._track_numerically(bunch, parallel, n_proc)
+            bunch_list = self._track_numerically(bunch, parallel, n_proc)
         elif self.tracking_mode == 'analytical':
-            return self._track_analytically(bunch, parallel, n_proc)
+            bunch_list = self._track_analytically(bunch, parallel, n_proc)
+        if out_initial:
+            bunch_list.insert(0, initial_bunch)
+        return bunch_list
 
     def _get_wakefield(self, wakefield_model, model_params):
         """Create and return corresponding wakefield."""
@@ -522,7 +565,7 @@ class PlasmaRamp():
         self.n_out = n_out
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
 
-    def track(self, bunch, parallel=False, n_proc=None):
+    def track(self, bunch, parallel=False, n_proc=None, out_initial=False):
         """
         Track bunch through plasma ramp.
 
@@ -537,6 +580,10 @@ class PlasmaRamp():
         n_proc : int
             Number of processes to run in parallel. If None, this will equal
             the number of physical cores.
+
+        out_initial : bool
+            Determinees whether the initial bunch should be included in the
+            output bunch list.
 
         Returns:
         --------
@@ -558,7 +605,8 @@ class PlasmaRamp():
         iterations = it_per_step*self.n_out
         dt_adjusted = t_final/iterations
         bunch_list = list()
-
+        if out_initial:
+            bunch_list.append(copy(bunch))
         start = time.time()
 
         if parallel:
@@ -712,7 +760,7 @@ class PlasmaLens():
             self.field = wf.PlasmaLensField(self.foc_strength)
         self.n_out = n_out
 
-    def track(self, bunch, parallel=False, n_proc=None):
+    def track(self, bunch, parallel=False, n_proc=None, out_initial=False):
         """
         Track bunch through plasma lens.
 
@@ -727,6 +775,10 @@ class PlasmaLens():
         n_proc : int
             Number of processes to run in parallel. If None, this will equal
             the number of physical cores.
+
+        out_initial : bool
+            Determinees whether the initial bunch should be included in the
+            output bunch list.
 
         Returns:
         --------
@@ -749,6 +801,8 @@ class PlasmaLens():
         iterations = it_per_step*self.n_out
         dt_adjusted = t_final/iterations
         bunch_list = list()
+        if out_initial:
+            bunch_list.append(copy(bunch))
         start = time.time()
         if parallel:
             if n_proc is None:
@@ -841,7 +895,7 @@ class TMElement():
         self.csr_calculator = get_csr_calculator()
         self.element_name = ''
 
-    def track(self, bunch, backtrack=False):
+    def track(self, bunch, backtrack=False, out_initial=False):
         # Convert bunch to ocelot units and reference frame
         bunch_mat, g_avg = self._get_beam_matrix_for_tracking(bunch)
         if self.gamma_ref is None:
@@ -869,6 +923,8 @@ class TMElement():
         # Start tracking
         start_time = time.time()
         output_bunch_list = list()
+        if out_initial:
+            output_bunch_list.append(copy(bunch))
         for i in track_steps:
             print_progress_bar(st_0, i+1, n_steps)
             l = (i+1) * l_step * (1-2*backtrack)
