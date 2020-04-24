@@ -3,8 +3,7 @@
 import numpy as np
 import scipy.constants as ct
 from scipy.interpolate import RegularGridInterpolator
-from aptools.plasma_accel.general_equations import (
-    plasma_skin_depth, plasma_cold_non_relativisct_wave_breaking_field)
+import aptools.plasma_accel.general_equations as ge
 import matplotlib.pyplot as plt
 try:
     from VisualPIC.DataHandling.dataContainer import DataContainer
@@ -32,11 +31,48 @@ class Wakefield():
     def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
         raise NotImplementedError
 
+    def Ez_p(self, x, y, xi, px, py, pz, q, gamma, t):
+        raise NotImplementedError
+
+
+class SimpleBlowoutWakefield(Wakefield):
+    def __init__(self, n_p, driver, field_offset=0):
+        """
+        [n_p] = m^-3
+        """
+        self.n_p = n_p
+        self.field_off = field_offset
+        self.driver = driver
+        self._calculate_base_quantities()
+
+    def _calculate_base_quantities(self):
+        w_p = ge.plasma_frequency(self.n_p*1e-6)
+        self.l_p = 2*np.pi*ct.c / w_p
+        self.g_x = w_p**2/2 * ct.m_e / (ct.e *ct.c)
+        self.E_z_p = w_p**2/2 * ct.m_e / ct.e
+        self.l_c = self.driver.xi_c
+        self.b_w = self.driver.get_group_velocity(self.n_p)
+
+    def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
+        return ct.c * self.g_x*x
+
+    def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
+        return ct.c * self.g_x*y
+
+    def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
+        return self.E_z_p * (self.l_p/2 + xi - self.l_c - self.field_off +
+                             (1-self.b_w)*ct.c*t)
+
+    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+        return self.g_x*np.ones_like(x)
+
+    def Ez_p(self, x, y, xi, px, py, pz, q, gamma, t):
+        return self.E_z_p*np.ones_like(x)
+
 
 class CustomBlowoutWakefield(Wakefield):
     def __init__(self, n_p, driver, beam_center, lon_field=None,
-                 lon_field_slope=None, foc_strength=None,
-                 field_offset=0):
+                 lon_field_slope=None, foc_strength=None, field_offset=0):
         """
         [n_p] = m^-3
         """
@@ -68,9 +104,12 @@ class CustomBlowoutWakefield(Wakefield):
     def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
         return self.g_x*np.ones_like(x)
 
+    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+        return self.E_z_p*np.ones_like(x)
+
 
 class WakefieldFromPICSimulation(Wakefield):
-    def __init__(self, simulation_code, simulation_path, driver, timestep,
+    def __init__(self, simulation_code, simulation_path, driver, timestep=0,
                  n_p=None, filter_fields=False, sigma_filter=20,
                  reverse_tracking=False):
         """
@@ -238,12 +277,13 @@ class WakefieldFromPICSimulation(Wakefield):
 
 
 class NonLinearColdFluidWakefield(Wakefield):
-    def __init__(self, density_function, driver, driver_evolution,
-                 driver_z_foc, r_max, xi_min, xi_max, n_r, n_xi):
+    def __init__(self, density_function, driver, laser_evolution=False,
+                 laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
+                 n_xi=100):
         self.density_function = density_function
         self.driver = driver
-        self.driver_evolution = driver_evolution
-        self.driver_z_foc = driver_z_foc
+        self.laser_evolution = laser_evolution
+        self.laser_z_foc = laser_z_foc
         self.r_max = r_max
         self.xi_min = xi_min
         self.xi_max = xi_max
@@ -265,13 +305,13 @@ class NonLinearColdFluidWakefield(Wakefield):
         z_beam = t*ct.c + np.average(xi) # z postion of beam center
         n_p = self.density_function(z_beam)
 
-        if n_p == self.current_n_p and not self.driver_evolution:
+        if n_p == self.current_n_p and not self.laser_evolution:
             # If density has not changed and driver does not evolve, it is
             # not necessary to recompute fields.
             return
         self.current_n_p = n_p
 
-        s_d = plasma_skin_depth(n_p*1e-6)
+        s_d = ge.plasma_skin_depth(n_p*1e-6)
         r = np.linspace(0, self.r_max, self.n_r)
         dz = (self.xi_max - self.xi_min) / self.n_xi / s_d
         dr = self.r_max / self.n_r / s_d
@@ -292,8 +332,8 @@ class NonLinearColdFluidWakefield(Wakefield):
         z_arr = np.zeros(n_iter+1) 
         z_arr[-1] = self.xi_max / s_d
         # calculate distance to laser focus
-        if self.driver_evolution:
-            dist_z_foc = self.driver_z_foc - ct.c*t
+        if self.laser_evolution:
+            dist_z_foc = self.laser_z_foc - ct.c*t
         else:
             dist_z_foc = 0
         for i in np.arange(n_iter):
@@ -318,13 +358,12 @@ class NonLinearColdFluidWakefield(Wakefield):
             u_2[-2-i] = u_2[-1-i] + 1/6*(A[1] + 2*B[1] + 2*C[1] + D[1])
             z_arr[-2-i] = z - dz
         E_z = -np.gradient(u_1, dz, axis=0, edge_order=2)
+        E_z_p = np.gradient(E_z, dz, axis=0, edge_order=2)
         W_r = -np.gradient(u_1, dr, axis=1, edge_order=2)
         K_r = np.gradient(W_r, dr, axis=1, edge_order=2)
-        E_0 = plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
+        E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
         
         ## For debugging
-        #E_z_p = np.gradient(E_z, dz, axis=0, edge_order=2)
-
         #plt.plot(E_z[:,0])
         #plt.plot(K_r[:,0])
         ##plt.plot(a0_0[:,0])
@@ -345,15 +384,14 @@ class NonLinearColdFluidWakefield(Wakefield):
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
         #plt.show()
 
-        self.E_z = RegularGridInterpolator((z_arr*s_d, r), E_z*E_0,
-                                            fill_value=0,
-                                            bounds_error=False)
-        self.W_x = RegularGridInterpolator((z_arr*s_d, r), W_r*E_0,
-                                            fill_value=0,
-                                            bounds_error=False)
-        self.K_x = RegularGridInterpolator((z_arr*s_d, r), K_r*E_0/s_d,
-                                            fill_value=0,
-                                            bounds_error=False)
+        self.E_z = RegularGridInterpolator(
+            (z_arr*s_d, r), E_z*E_0, fill_value=0, bounds_error=False)
+        self.W_x = RegularGridInterpolator(
+            (z_arr*s_d, r), W_r*E_0, fill_value=0, bounds_error=False)
+        self.K_x = RegularGridInterpolator(
+            (z_arr*s_d, r), K_r*E_0/s_d, fill_value=0, bounds_error=False)
+        self.E_z_p = RegularGridInterpolator(
+            (z_arr*s_d, r), E_z_p*E_0/s_d, fill_value=0, bounds_error=False)
 
     def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, gamma, t)
@@ -376,6 +414,11 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, gamma, t)
         R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
         return self.K_x(R)
+
+    def Ez_p(self, x, y, xi, px, py, pz, q, gamma, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, gamma, t)
+        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
+        return self.E_z_p(R)
 
 
 class PlasmaRampBlowoutField(Wakefield):
