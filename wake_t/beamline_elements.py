@@ -221,7 +221,7 @@ class PlasmaStage():
         print('Plasma stage')
         print('-'*len('Plasma stage'))
         if out_initial:
-            initial_bunch = copu(bunch)
+            initial_bunch = copy(bunch)
         if self.tracking_mode == 'numerical':
             bunch_list = self._track_numerically(bunch, parallel, n_proc)
         elif self.tracking_mode == 'analytical':
