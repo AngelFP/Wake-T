@@ -113,11 +113,10 @@ class PlasmaStage():
         foc_strength : float
             Value of the focusing gradient along the bunch in units of T/m.
 
-        field_offset : float
-            If 0, the values of 'lon_field', 'lon_field_slope' and
-            'foc_strength' will be applied at the bunch center. A value >0 (<0)
-            gives them a positive (negative) offset towards the front (back) of
-            the bunch.
+        xi_fields : float
+            Longitudinal position at which the wakefields have the values
+            specified by the parameter above. If not specified, this will
+            be the bunch center at the beginning of the plasma stage.
 
         Model 'from_pic_code'
         ---------------------
