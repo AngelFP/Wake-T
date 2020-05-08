@@ -107,7 +107,7 @@ class CSRCalculator():
         bin_centers = bin_edges[1:] - bin_size/2
         bunch_pdf = stats.gaussian_kde(
             bin_centers, bw_method=n_part**(-1/5), weights=bunch_hist)
-        bunch_hist = bunch_pdf(bin_centers) * bin_size * np.sum(bunch_hist)
+        bunch_hist = bunch_pdf(bin_centers) * bin_size * bunch_hist.sum()
         bin_center_0 = bin_centers[0]
 
         # Determine iteration range.
@@ -279,7 +279,7 @@ class CSRCalculator():
         beta = np.sqrt(beta_sq)
 
         # Reference trajectory positions with respect to the current one.
-        s = traj[0, 0:i] - traj[0, i]
+        s = traj[0, :i] - traj[0, i]
 
         # Distance (in x, y, z) from the current to previous trajectory points.
         n = traj[1:4, [i]] - traj[1:4, :i]
@@ -288,7 +288,7 @@ class CSRCalculator():
         t = traj[4:, :i]
 
         # Distance from the current to previous trajectory points.
-        R = np.sqrt(np.sum(n*n, axis=0))
+        R = np.sqrt((n*n).sum(axis=0))
 
         w = s + beta * R
 
@@ -304,9 +304,10 @@ class CSRCalculator():
 
         # Calculate kernel
         n /= R
-        x = np.sum(n * t, axis=0)
-        K = ((beta * (x - np.sum(n * traj[4:, [i]], axis=0)) -
-              beta_sq * (1 - np.sum(t * traj[4:, [i]], axis=0)) -
+        x = (n * t).sum(axis=0)
+        y = traj[4:, [i]]
+        K = ((beta * (x - (n * y).sum(axis=0)) -
+              beta_sq * (1. - (t * y).sum(axis=0)) -
               gamma_sq) / R -
              (1. - beta * x) / w * gamma_sq)
 
@@ -316,7 +317,7 @@ class CSRCalculator():
         K = np.cumsum(K[::-1])[::-1]
 
         return w, K
-    
+
     def _calculate_kernel_short_range(self, i, traj, w_range, gamma):
         """
         Calculate short-range contributions to CSR kernel.
