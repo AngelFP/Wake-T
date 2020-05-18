@@ -274,21 +274,23 @@ class CSRCalculator():
         """
     
         # Relativistic parameters
-        gamma_sq = 1. / gamma ** 2
-        beta_sq = 1. - gamma_sq
+        gamma_sq_inv = 1. / gamma ** 2
+        beta_sq = 1. - gamma_sq_inv
         beta = np.sqrt(beta_sq)
 
+        i_0 = self._estimate_start_index(i, traj, wmin, beta)
+        #i_0 = 0
+
         # Reference trajectory positions with respect to the current one.
-        s = traj[0, :i] - traj[0, i]
+        s = traj[0, i_0:i] - traj[0, i]
 
         # Distance (in x, y, z) from the current to previous trajectory points.
-        n = traj[1:4, [i]] - traj[1:4, :i]
-
-        # Tangential unit vectors along trajectory until current position.
-        t = traj[4:, :i]
+        n0 = traj[1, i] - traj[1, i_0:i]
+        n1 = traj[2, i] - traj[2, i_0:i]
+        n2 = traj[3, i] - traj[3, i_0:i]
 
         # Distance from the current to previous trajectory points.
-        R = np.sqrt((n*n).sum(axis=0))
+        R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
 
         w = s + beta * R
 
@@ -298,18 +300,35 @@ class CSRCalculator():
             j = j[-1]
             w = w[j:i]
             s = s[j:i]
-            n = n[:, j:]
-            t = t[:, j:]
+            n0 = n0[j:]
+            n1 = n1[j:]
+            n2 = n2[j:]
             R = R[j:]
+            j += i_0
+        else:
+            j = i_0
+
+        # Tangential unit vectors along trajectory until current position.
+        t4 = traj[4, j:i]
+        t5 = traj[5, j:i]
+        t6 = traj[6, j:i]
+
+        t4_i = traj[4, i]
+        t5_i = traj[5, i]
+        t6_i = traj[6, i]
 
         # Calculate kernel
-        n /= R
-        x = (n * t).sum(axis=0)
+        R_inv = 1 / R
+        n0 *= R_inv
+        n1 *= R_inv
+        n2 *= R_inv
+
+        x = n0 * t4 + n1 * t5 + n2 * t6
         y = traj[4:, [i]]
-        K = ((beta * (x - (n * y).sum(axis=0)) -
-              beta_sq * (1. - (t * y).sum(axis=0)) -
-              gamma_sq) / R -
-             (1. - beta * x) / w * gamma_sq)
+        K = ((beta * (x - n0 * t4_i - n1 * t5_i - n2 * t6_i) -
+              beta_sq * (1. - t4 * t4_i - t5 * t5_i - t6 * t6_i) -
+              gamma_sq_inv) * R_inv -
+             (1. - beta * x) / w * gamma_sq_inv)
 
         # Integrate kernel
         K[:-1] += K[1:]
@@ -374,6 +393,60 @@ class CSRCalculator():
             KS -= (beta * np.dot(uup, evo) *
                    (np.arctan((s[0] - winf)/a) - np.arctan((s-winf)/a)))
         return KS
+
+    def _estimate_start_index(self, i, traj, w_min, beta, i_min=1000, n_test=10):
+        """
+        This method estimates the index of the first trajectory point from
+        which CSR effects should be computed.
+
+        This method can significantly reduce the computing time of CSR effects
+        by pre-discaring regions of the reference trajectory which do not
+        influence the CSR calculation (i.e. the points where w <= wmin). This
+        is performed by testing the w <= wmin condition for a subset of n_test
+        equally-spaced points along the reference trajectory. The index of the
+        last tested trajectory point in which w <= wmin is returned.
+
+        Parameters
+        ----------
+
+        i : int
+            Iteration index
+
+        traj : ndarray
+            Reference trajectory along which CSR forces are calculated
+
+        w_min : float
+            Leftmost edge of the longitudinal bunch binning.
+
+        beta : float
+            Relativistic factor.
+
+        i_min : int
+            Minimum iteration index. When i<i_min, no estimation of the starting
+            index is performed (0 is returned).
+
+        n_test : int
+            Number of points along the trajectory in which to test whether they
+            should be taken into account for the CSR calculation.
+
+        Returns
+        -------
+        The estimated start index, which is always <= than the real one.
+        
+        """
+        i_0 = 0
+        if i > i_min:
+            idx = np.linspace(0, i, n_test, dtype=np.int32)
+            s = traj[0, idx] - traj[0, i]
+            n0 = traj[1, i] - traj[1, idx]
+            n1 = traj[2, i] - traj[2, idx]
+            n2 = traj[3, i] - traj[3, idx]
+            R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
+            w = s + beta * R
+            j = np.where(w <= w_min)[0]
+            if len(j) > 0:
+                i_0 = idx[j[-1]]
+        return i_0
 
         
 _csr_calculator = CSRCalculator()
