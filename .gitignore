@@ -268,3 +268,9 @@ __pycache__/
 /dist
 /examples/track_plasma_stage_old.py
 /examples/tests.py
+/wake_t/csr - Copy.py
+
+# Other
+/.vscode
+*.pdf
+*.pptx
