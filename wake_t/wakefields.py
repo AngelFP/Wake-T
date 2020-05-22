@@ -2,13 +2,14 @@
 
 import numpy as np
 import scipy.constants as ct
+from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator
 import aptools.plasma_accel.general_equations as ge
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 try:
     from VisualPIC.DataHandling.dataContainer import DataContainer
     vpic_installed = True
-except:
+except ImportError:
     vpic_installed = False
 
 
@@ -48,7 +49,7 @@ class SimpleBlowoutWakefield(Wakefield):
     def _calculate_base_quantities(self):
         w_p = ge.plasma_frequency(self.n_p*1e-6)
         self.l_p = 2*np.pi*ct.c / w_p
-        self.g_x = w_p**2/2 * ct.m_e / (ct.e *ct.c)
+        self.g_x = w_p**2/2 * ct.m_e / (ct.e * ct.c)
         self.E_z_p = w_p**2/2 * ct.m_e / ct.e
         self.l_c = self.driver.xi_c
         self.b_w = self.driver.get_group_velocity(self.n_p)
@@ -105,7 +106,7 @@ class CustomBlowoutWakefield(Wakefield):
     def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
         return self.g_x*np.ones_like(x)
 
-    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Kz(self, x, y, xi, px, py, pz, q, gamma, t):
         return self.E_z_p*np.ones_like(x)
 
 
@@ -129,8 +130,8 @@ class WakefieldFromPICSimulation(Wakefield):
         # Load data
         self.dc = DataContainer()
         self.dc.SetDataFolderLocation(simulation_path)
-        simulation_parameters = {"isLaser":False,
-                                "SimulationCode":simulation_code}
+        simulation_parameters = {"isLaser": False,
+                                 "SimulationCode": simulation_code}
         if n_p is not None:
             simulation_parameters["n_p"] = n_p/1e24
         self.dc.SetSimulationParameters(simulation_parameters)
@@ -142,15 +143,15 @@ class WakefieldFromPICSimulation(Wakefield):
 
         self.create_fields()
         print("Done.")
-        #todo: implement separate components for transverse fields
+        # todo: implement separate components for transverse fields
 
     def check_if_update_fields(self, time):
-        possible_ts = np.where(self.timesteps_in_sec<time)[0]
+        possible_ts = np.where(self.timesteps_in_sec < time)[0]
         if len(possible_ts) > 1:
             if not self.reverse_tracking:
                 requested_ts_index = possible_ts[-1]
                 current_ts_index = np.where(
-                    self.timesteps==self.current_ts)[0][0]
+                    self.timesteps == self.current_ts)[0][0]
                 if current_ts_index < requested_ts_index:
                     # update current time step
                     self.current_ts = self.timesteps[requested_ts_index]
@@ -161,7 +162,7 @@ class WakefieldFromPICSimulation(Wakefield):
             else:
                 requested_ts_index = possible_ts[0]
                 current_ts_index = np.where(
-                    self.timesteps==self.current_ts)[0][0]
+                    self.timesteps == self.current_ts)[0][0]
                 if current_ts_index > requested_ts_index:
                     self.current_ts = self.timesteps[requested_ts_index]
                     print("Updating fields using timestep {} ...".format(
@@ -182,7 +183,7 @@ class WakefieldFromPICSimulation(Wakefield):
         E_z_data = E_z_field.GetAllFieldDataISUnits(self.current_ts)
         W_x_data = W_x_field.GetAllFieldData(self.current_ts, "V/m")
         K_x_data = K_x_field.GetAllFieldData(self.current_ts, "T/m")
-        
+
         # filter noise in data
         if self.filter_fields:
             s = self.sigma_filter
@@ -230,7 +231,7 @@ class WakefieldFromPICSimulation(Wakefield):
                 self.timesteps_in_sec[i] = E_z_field.GetTimeInUnits("s", ts)
             if self.reverse_tracking:
                 current_ts_index = np.where(
-                    self.timesteps==self.current_ts)[0][0]
+                    self.timesteps == self.current_ts)[0][0]
                 self.timesteps = self.timesteps[:current_ts_index+1]
                 self.timesteps_in_sec = self.timesteps_in_sec[
                     :current_ts_index+1]
@@ -303,7 +304,7 @@ class NonLinearColdFluidWakefield(Wakefield):
             self.current_t = t
         else:
             return
-        z_beam = t*ct.c + np.average(xi) # z postion of beam center
+        z_beam = t*ct.c + np.average(xi)  # z postion of beam center
         n_p = self.density_function(z_beam)
 
         if n_p == self.current_n_p and not self.laser_evolution:
@@ -318,19 +319,19 @@ class NonLinearColdFluidWakefield(Wakefield):
         dr = self.r_max / self.n_r / s_d
         r_part = np.sqrt(x**2 + y**2)
         beam_hist, *_ = np.histogram2d(xi, r_part,
-                                   bins=[self.n_xi, self.n_r],
-                                   range=[[self.xi_min, self.xi_max],
-                                          [0, self.r_max]],
-                                   weights=q/ct.e)
-                                   #,
-                                   #weights=1/(ct.pi*dr*2*dz))
+                                       bins=[self.n_xi, self.n_r],
+                                       range=[[self.xi_min, self.xi_max],
+                                              [0, self.r_max]],
+                                       weights=q/ct.e)
+        # ,
+        # weights=1/(ct.pi*dr*2*dz))
         n = np.arange(self.n_r)
         disc_area = np.pi * dr**2*(1+2*n)
         beam_hist *= 1/(disc_area*dz*n_p)/s_d**3
         n_iter = self.n_xi - 1
         u_1 = np.zeros((n_iter+1, len(r)))
         u_2 = np.zeros((n_iter+1, len(r)))
-        z_arr = np.zeros(n_iter+1) 
+        z_arr = np.zeros(n_iter+1)
         z_arr[-1] = self.xi_max / s_d
         # calculate distance to laser focus
         if self.laser_evolution:
@@ -363,27 +364,27 @@ class NonLinearColdFluidWakefield(Wakefield):
         W_r = -np.gradient(u_1, dr, axis=1, edge_order=2)
         K_r = np.gradient(W_r, dr, axis=1, edge_order=2)
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
-        
-        ## For debugging
-        #plt.plot(E_z[:,0])
-        #plt.plot(K_r[:,0])
-        ##plt.plot(a0_0[:,0])
-        #plt.show()
 
-        #plt.subplot(411)
-        #plt.imshow(E_z.T*E_0, aspect='auto',
+        # For debugging
+        # plt.plot(E_z[:,0])
+        # plt.plot(K_r[:,0])
+        # plt.plot(a0_0[:,0])
+        # plt.show()
+
+        # plt.subplot(411)
+        # plt.imshow(E_z.T*E_0, aspect='auto',
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        ##plt.plot(E_z[:,0]*E_0)
-        #plt.subplot(412)
-        #plt.imshow(K_r.T*E_0/s_d, aspect='auto',
+        # plt.plot(E_z[:,0]*E_0)
+        # plt.subplot(412)
+        # plt.imshow(K_r.T*E_0/s_d, aspect='auto',
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        #plt.subplot(413)
-        #plt.imshow(E_z_p.T*E_0/s_d, aspect='auto',
+        # plt.subplot(413)
+        # plt.imshow(E_z_p.T*E_0/s_d, aspect='auto',
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        #plt.subplot(414)
-        #plt.imshow(beam_hist.T, aspect='auto',
+        # plt.subplot(414)
+        # plt.imshow(beam_hist.T, aspect='auto',
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        #plt.show()
+        # plt.show()
 
         self.E_z = RegularGridInterpolator(
             (z_arr*s_d, r), E_z*E_0, fill_value=0, bounds_error=False)
@@ -442,7 +443,7 @@ class PlasmaRampBlowoutField(Wakefield):
         return np.ones(len(xi))*kx
 
     def calculate_focusing(self, xi, t):
-        z = t*ct.c + xi # z postion of each particle at time t
+        z = t*ct.c + xi  # z postion of each particle at time t
         n_p = self.density_function(z)
         w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
         return (ct.m_e/(2*ct.e*ct.c))*w_p**2
@@ -450,18 +451,18 @@ class PlasmaRampBlowoutField(Wakefield):
 
 class PlasmaLensField(Wakefield):
     def __init__(self, dB_r):
-        self.dB_r = dB_r #[T/m]
+        self.dB_r = dB_r  # [T/m]
 
     def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
-        #By = -x*self.dB_r
+        # By = -x*self.dB_r
         return - pz*ct.c/gamma * (-x*self.dB_r)
 
     def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
-        #Bx = y*self.dB_r
+        # Bx = y*self.dB_r
         return pz*ct.c/gamma * y*self.dB_r
 
     def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
-        return (px*(-x*self.dB_r) - py*y*self.dB_r )*ct.c/gamma
+        return (px*(-x*self.dB_r) - py*y*self.dB_r)*ct.c/gamma
 
     def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
         # not really important
@@ -470,7 +471,7 @@ class PlasmaLensField(Wakefield):
 
 class PlasmaLensFieldRelativistic(Wakefield):
     def __init__(self, k_x):
-        self.k_x = k_x #[T/m]
+        self.k_x = k_x  # [T/m]
 
     def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
         return ct.c*self.k_x*x

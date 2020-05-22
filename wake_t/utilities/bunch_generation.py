@@ -9,9 +9,9 @@ import aptools.data_handling.reading as dr
 from wake_t.driver_witness import ParticleBunch
 
 
-def get_gaussian_bunch_from_twiss(en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp,
-                                  s_t, xi_c, q_tot, n_part, x_off=0, y_off=0,
-                                  theta_x=0, theta_y=0):
+def get_gaussian_bunch_from_twiss(
+        en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
+        x_off=0, y_off=0, theta_x=0, theta_y=0):
     """
     Creates a 6D Gaussian particle bunch with the specified Twiss parameters.
 
@@ -49,7 +49,7 @@ def get_gaussian_bunch_from_twiss(en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp,
         Pointing angle in the x-plane in radians.
     theta_y: float
         Pointing angle in the y-plane in radians.
-    
+
     Returns:
     --------
     A ParticleBunch object.
@@ -85,7 +85,7 @@ def get_gaussian_bunch_from_twiss(en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp,
     y = s_y*u_y + y_off
     yp = s_yp*(p_y*u_y + np.sqrt(1-np.square(p_y))*v_y)
     # Create longitudinal distributions (truncated at -3 and 3 sigma in xi)
-    xi = truncnorm.rvs(-3, 3,loc=xi_c,scale=s_z, size=n_part) # 
+    xi = truncnorm.rvs(-3, 3, loc=xi_c, scale=s_z, size=n_part)
     pz = np.random.normal(ene, ene_sp_abs, n_part)
     # Change from slope to momentum and apply offset
     px = xp*pz + p_x_off
@@ -95,9 +95,9 @@ def get_gaussian_bunch_from_twiss(en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp,
     return ParticleBunch(q, x, y, xi, px, py, pz)
 
 
-def get_gaussian_bunch_from_size(en_x, en_y, s_x, s_y, ene, ene_sp, s_t, xi_c,
-                                 q_tot, n_part, x_off=0, y_off=0, theta_x=0,
-                                 theta_y=0):
+def get_gaussian_bunch_from_size(
+        en_x, en_y, s_x, s_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0,
+        y_off=0, theta_x=0, theta_y=0):
     """
     Creates a Gaussian bunch with the specified emitance and spot size. It is
     assumed to be on its waist (alpha_x = alpha_y = 0)
@@ -145,9 +145,9 @@ def get_gaussian_bunch_from_size(en_x, en_y, s_x, s_y, ene, ene_sp, s_t, xi_c,
                                          x_off, y_off, theta_x, theta_y)
 
 
-def get_matched_bunch(en_x, en_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
-                      x_off=0, y_off=0, theta_x=0, theta_y=0, n_p=None,
-                      k_x=None):
+def get_matched_bunch(
+        en_x, en_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0, y_off=0,
+        theta_x=0, theta_y=0, n_p=None, k_x=None):
     """
     Creates a Gaussian bunch matched to the plasma focusing fields.
 
@@ -191,7 +191,7 @@ def get_matched_bunch(en_x, en_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
     if n_p is not None:
         n_p *= 1e-6
     b_m = ge.matched_plasma_beta_function(ene, n_p, k_x)
-    return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_m, b_m, ene, 
+    return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_m, b_m, ene,
                                          ene_sp, s_t, xi_c, q_tot, n_part,
                                          x_off, y_off, theta_x, theta_y)
 

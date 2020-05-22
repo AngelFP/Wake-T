@@ -5,7 +5,7 @@ import numpy as np
 
 def convert_to_ocelot_matrix(bunch_matrix, q, gamma_ref=None):
     """
-    Produces a matrix with the phase space coordinates 
+    Produces a matrix with the phase space coordinates
     (x, x', y, y', xi, dp) from a matrix containing (x, px, y, py, xi, pz).
     """
     x = bunch_matrix[0]
@@ -25,7 +25,7 @@ def convert_to_ocelot_matrix(bunch_matrix, q, gamma_ref=None):
 
 def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
     """
-    Produces a matrix with the phase space coordinates 
+    Produces a matrix with the phase space coordinates
     (x, px, y, py, xi, pz) from a matrix containing (x, x', y, y', xi, dp).
 
     Parameters:
@@ -39,7 +39,7 @@ def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
 
     gamma_ref : float
         Reference energy with respect to which the particle momentum dp is
-        calculated. 
+        calculated.
 
     """
     dp = beam_matrix[5]

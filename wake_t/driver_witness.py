@@ -27,15 +27,15 @@ class LaserPulse():
         a_0 : float
             Peak normalized vector potential.
         tau : float
-            Longitudinal pulse length (FWHM in intentisy) in units of s.
+            Longitudinal pulse length (FWHM in intensity) in units of s.
         prop_distance : float
             Propagation distance of the bunch along the beamline.
 
         """
         self.xi_c = xi_c
         self.l_0 = l_0
-        #self.x_c = x_c
-        #self.y_c = y_c
+        # self.x_c = x_c
+        # self.y_c = y_c
         self.a_0 = a_0
         self.tau = tau
         self.w_0 = w_0
@@ -50,7 +50,7 @@ class LaserPulse():
     def get_group_velocity(self, n_p):
         """
         Get group velocity of the laser pulse for a given plasma density.
-        
+
         Parameters:
         -----------
         n_p : float
@@ -59,11 +59,10 @@ class LaserPulse():
         Returns:
         --------
         A float containing the group velocity.
-            
+
         """
         w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
         k = 2*np.pi/self.l_0
-        w = np.sqrt(w_p**2+k**2*ct.c**2)
         v_g = k*ct.c**2/np.sqrt(w_p**2+k**2*ct.c**2)/ct.c
         return v_g
 
@@ -128,8 +127,8 @@ class ParticleBunch():
             Momentum of each particle in the z-plane in non-dimensional units
             (beta*gamma).
         bunch_matrix : array
-            6 x N matrix, where N is the number of partciles, containing the
-            phase-space information of the bunch. If provided, the argumets x
+            6 x N matrix, where N is the number of particles, containing the
+            phase-space information of the bunch. If provided, the arguments x
             to pz are not considered. The matrix contains (x, px, y, py, z, pz)
             if matrix_type='standard' or (x, x', y, y', xi, dp) if
             matrix_type='alternative'.
@@ -162,7 +161,7 @@ class ParticleBunch():
             self.py = py
             self.pz = pz
         self.q = q
-        #self.mu = 0
+        # self.mu = 0
         self.tags = tags
         self.prop_distance = prop_distance
         self.t_flight = t_flight
@@ -182,7 +181,7 @@ class ParticleBunch():
         """
         Sets the phase space coordinates from a matrix with the values of
         (x, px, y, py, xi, pz).
-        
+
         """
         self.x = beam_matrix[0]
         self.y = beam_matrix[2]
@@ -207,7 +206,7 @@ class ParticleBunch():
 
         gamma_ref : float
             Reference energy with respect to which the particle momentum dp is
-            calculated. 
+            calculated.
 
         """
         dp = beam_matrix[5]
@@ -268,7 +267,7 @@ class ParticleBunch():
         self.prop_distance += dist
 
     def reposition_xi(self, xi_c):
-        """Recenter bunch along xi arounf the specified xi_c"""
+        """Recenter bunch along xi around the specified xi_c"""
         current_xi_c = np.average(self.xi, weights=self.q)
         dxi = xi_c - current_xi_c
         self.xi += dxi

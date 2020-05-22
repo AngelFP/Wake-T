@@ -22,29 +22,29 @@ def analyze_bunch(bunch, n_slices=50, len_slice=None):
 
 def analyze_bunch_list(bunch_list, n_slices=50, len_slice=None):
     # preallocate arrays
-    l = len(bunch_list)
-    a_x = np.zeros(l)
-    a_y = np.zeros(l)
-    b_x = np.zeros(l)
-    b_y = np.zeros(l)
-    g_x = np.zeros(l)
-    g_y = np.zeros(l)
-    ene = np.zeros(l)
-    dist = np.zeros(l)
-    ene_sp = np.zeros(l)
-    ene_sp_sl_avg = np.zeros(l)
-    em_x = np.zeros(l)
-    em_y = np.zeros(l)
-    em_x_sl_avg = np.zeros(l)
-    em_y_sl_avg = np.zeros(l)
-    s_x = np.zeros(l)
-    s_y = np.zeros(l)
-    x_avg = np.zeros(l)
-    y_avg = np.zeros(l)
-    i_peak = np.zeros(l)
-    theta_x = np.zeros(l)
-    theta_y = np.zeros(l)
-    s_z = np.zeros(l)
+    list_len = len(bunch_list)
+    a_x = np.zeros(list_len)
+    a_y = np.zeros(list_len)
+    b_x = np.zeros(list_len)
+    b_y = np.zeros(list_len)
+    g_x = np.zeros(list_len)
+    g_y = np.zeros(list_len)
+    ene = np.zeros(list_len)
+    dist = np.zeros(list_len)
+    ene_sp = np.zeros(list_len)
+    ene_sp_sl_avg = np.zeros(list_len)
+    em_x = np.zeros(list_len)
+    em_y = np.zeros(list_len)
+    em_x_sl_avg = np.zeros(list_len)
+    em_y_sl_avg = np.zeros(list_len)
+    s_x = np.zeros(list_len)
+    s_y = np.zeros(list_len)
+    x_avg = np.zeros(list_len)
+    y_avg = np.zeros(list_len)
+    i_peak = np.zeros(list_len)
+    theta_x = np.zeros(list_len)
+    theta_y = np.zeros(list_len)
+    s_z = np.zeros(list_len)
 
     # perform analysis
     for i, bunch in enumerate(bunch_list):
@@ -53,9 +53,9 @@ def analyze_bunch_list(bunch_list, n_slices=50, len_slice=None):
             bunch.x, bunch.y, bunch.xi, bunch.px, bunch.py, bunch.pz, bunch.q,
             n_slices, len_slice)
         (theta_x[i], theta_y[i], x_avg[i], y_avg[i], s_x[i], s_y[i], a_x[i],
-        a_y[i], b_x[i], b_y[i], g_x[i], g_y[i], em_x[i], em_y[i],
-        em_x_sl_avg[i], em_y_sl_avg[i], ene[i], ene_sp[i], ene_sp_sl_avg[i],
-        i_peak[i], s_z[i]) = params_analysis
+         a_y[i], b_x[i], b_y[i], g_x[i], g_y[i], em_x[i], em_y[i],
+         em_x_sl_avg[i], em_y_sl_avg[i], ene[i], ene_sp[i], ene_sp_sl_avg[i],
+         i_peak[i], s_z[i]) = params_analysis
 
     # store into dictionary
     bunch_list_params = _store_bunch_parameters_into_dict(
@@ -129,9 +129,9 @@ def _get_distribution_parameters(x, y, z, px, py, pz, q, n_slices, len_slice):
 
 
 def _store_bunch_parameters_into_dict(
-    dist, theta_x, theta_y, x_avg, y_avg, s_x, s_y,a_x, a_y, b_x, b_y, g_x,
-    g_y, em_x, em_y, em_x_sl_avg, em_y_sl_avg, ene, ene_sp, ene_sp_sl_avg,
-    i_peak, s_z):
+        dist, theta_x, theta_y, x_avg, y_avg, s_x, s_y, a_x, a_y, b_x, b_y,
+        g_x, g_y, em_x, em_y, em_x_sl_avg, em_y_sl_avg, ene, ene_sp,
+        ene_sp_sl_avg, i_peak, s_z):
     params_dict = {
         'prop_dist': dist,
         'theta_x': theta_x,

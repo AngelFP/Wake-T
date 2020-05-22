@@ -2,7 +2,6 @@
 
 import numpy as np
 import scipy.constants as ct
-#from numba import jit, njit
 
 
 def runge_kutta_4(beam_matrix, WF, t0, dt, iterations):
@@ -33,7 +32,7 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
                             order=2):
     """
     Track beam distribution throwgh beamline element by using a transfer map.
-    This function was initially based on code from Ocelot (see 
+    This function was initially based on code from Ocelot (see
     https://github.com/ocelot-collab/ocelot) written by S. Tomin.
 
     Parameters:
@@ -55,12 +54,12 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
         Bending angle of the beamline element
 
     k1 : float
-        Quadrupole gradient of the beamline element in units of 1/m^2. A 
+        Quadrupole gradient of the beamline element in units of 1/m^2. A
         positive value implies focusing on the 'x' plane, while a negative
         gradient corresponds to focusing on 'y'
 
     k2 : float
-        Sextupole gradient of the beamline element in units of 1/m^3. A 
+        Sextupole gradient of the beamline element in units of 1/m^3. A
         positive value implies focusing on the 'x' plane, while a negative
         gradient corresponds to focusing on 'y'
 
@@ -85,7 +84,7 @@ def first_order_matrix(z, L, theta, k1, gamma_ref):
     """
     Calculate the first order matrix for the transfer map.
     This function is an adaptation of the one found in the particle tracking
-    code Ocelot (see https://github.com/ocelot-collab/ocelot) written by 
+    code Ocelot (see https://github.com/ocelot-collab/ocelot) written by
     S. Tomin.
 
     Parameters:
@@ -100,12 +99,12 @@ def first_order_matrix(z, L, theta, k1, gamma_ref):
         Bending angle of the beamline element
 
     k1 : float
-        Quadrupole gradient of the beamline element in units of 1/m^2. A 
+        Quadrupole gradient of the beamline element in units of 1/m^2. A
         positive value implies focusing on the 'x' plane, while a negative
         gradient corresponds to focusing on 'y'
 
     k2 : float
-        Sextupole gradient of the beamline element in units of 1/m^3. A 
+        Sextupole gradient of the beamline element in units of 1/m^3. A
         positive value implies focusing on the 'x' plane, while a negative
         gradient corresponds to focusing on 'y'
 
@@ -149,7 +148,7 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     """
     Calculate the second order matrix for the transfer map.
     This function is an adaptation of the one found in the particle tracking
-    code Ocelot (see https://github.com/ocelot-collab/ocelot) written by 
+    code Ocelot (see https://github.com/ocelot-collab/ocelot) written by
     S. Tomin.
 
     Parameters:
@@ -171,12 +170,12 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
         Bending angle of the beamline element
 
     k1 : float
-        Quadrupole gradient of the beamline element in units of 1/m^2. A 
+        Quadrupole gradient of the beamline element in units of 1/m^2. A
         positive value implies focusing on the 'x' plane, while a negative
         gradient corresponds to focusing on 'y'
 
     k2 : float
-        Sextupole gradient of the beamline element in units of 1/m^3. A 
+        Sextupole gradient of the beamline element in units of 1/m^3. A
         positive value implies focusing on the 'x' plane, while a negative
         gradient corresponds to focusing on 'y'
 
@@ -193,7 +192,7 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
 
     beta = np.sqrt(1. - igamma2)
     h = theta/L
-    L = z # Easy fix for the calculation below, where L should actually be z.
+    L = z  # Easy fix for the calculation below, where L should actually be z.
     h2 = h*h
     h3 = h2*h
     kx2 = (k1 + h*h)
@@ -222,70 +221,70 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     I111 = 1./3.*(sx2 + dx_h)
     I122 = dx_h*dx_h/3.
     I112 = sx*dx_h/3.
-    I11  = L*sx/2.
-    I10  = dx_h
-    I33  = L*sy/2.
-    I34  = (sy - L*cy)/(2.*ky2) if ky !=0. else L3/6.
+    I11 = L*sx/2.
+    I10 = dx_h
+    I33 = L*sy/2.
+    I34 = (sy - L*cy)/(2.*ky2) if ky != 0. else L3/6.
     I211 = sx/3.*(1. + 2.*cx)
     I222 = 2.*dx_h*sx/3.
     I212 = 1./3.*(2*sx2 - dx_h)
-    I21  = 1./2.*(L*cx + sx)
-    I22  = I11
-    I20  = sx
-    I43  = 0.5*(L*cy + sy)
-    I44  = I33
+    I21 = 1./2.*(L*cx + sx)
+    I22 = I11
+    I20 = sx
+    I43 = 0.5*(L*cy + sy)
+    I44 = I33
     I512 = h*dx_h*dx_h/6
-    I51  = L*dx/2.
+    I51 = L*dx/2.
 
     if kx != 0:
         I116 = h/kx2*(I11 - I111)
-        I12  = 0.5/kx2*(sx - L*cx)
+        I12 = 0.5/kx2*(sx - L*cx)
         I126 = h/kx2*(I12 - I112)
-        I16  = h/kx2*(dx_h - L*sx/2.)
+        I16 = h/kx2*(dx_h - L*sx/2.)
         I166 = h2/kx4*(I10 - 2*I11 + I111)
         I216 = h/kx2*(I21 - I211)
         I226 = h/kx2*(I22 - I212)
-        I26  = h /(2.*kx2)*(sx - L*cx)
+        I26 = h / (2.*kx2)*(sx - L*cx)
         I266 = h2/kx4*(I20 - 2.*I21 + I211)
 
         I511 = h*(3.*L - 2.*sx - sx*cx)/(6.*kx2)
         I522 = h*(3.*L - 4*sx + sx*cx)/(6.*kx4)
         I516 = h/kx2*(I51 - I511)
-        I52  =  (2.*dx - h*L*sx)/(2.*kx2)
+        I52 = (2.*dx - h*L*sx)/(2.*kx2)
         I526 = h/kx2*(I52 - I512)
-        I50  = h*(L - sx)/kx2
+        I50 = h*(L - sx)/kx2
         I566 = h2/kx4*(I50 - 2*I51 + I511)
-        I56  = (h2*(L*(1. + cx) - 2.*sx))/(2.*kx4)
+        I56 = (h2*(L*(1. + cx) - 2.*sx))/(2.*kx4)
 
     else:
         I116 = h*L4/24.
-        I12  = L3/6.
+        I12 = L3/6.
         I126 = h*L5/40.
-        I16  = h*L4/24.
+        I16 = h*L4/24.
         I166 = h2*L5*L/120.
         I216 = h*L3/6.
         I226 = h*L4/8.
-        I26  = h*L3/6.
+        I26 = h*L3/6.
         I266 = h2*L5/20.
 
         I511 = h*L3/6.
         I522 = h*L5/60.
         I516 = h2*L5/120.
-        I52  = h*L4/24.
+        I52 = h*L4/24.
         I526 = h2*L5*L/240.
-        I50  = h*L3/6.
+        I50 = h*L3/6.
         I566 = h2*h*L5*L2/840.
-        I56  = h2*L5/120.
+        I56 = h2*L5/120.
 
     if kx != 0 and ky != 0:
-        I144 = (sy2 - 2.*dx_h)/denom                         
-        I133 = dx_h - ky2*(sy2 - 2.*dx_h)/denom              
-        I134 = (sy*cy - sx)/denom                            
-        I313 = (kx2*cy*dx_h - 2.*ky2*sx*sy)/denom            
-        I324 = (2.*cy*dx_h - sx*sy)/denom                    
-        I314 = (2.*cy*sx - (1. + cx)*sy)/denom               
-        I323 = (sy - cy*sx - 2.*ky2*sy*dx_h)/denom           
-        #derivative of Integrals
+        I144 = (sy2 - 2.*dx_h)/denom
+        I133 = dx_h - ky2*(sy2 - 2.*dx_h)/denom
+        I134 = (sy*cy - sx)/denom
+        I313 = (kx2*cy*dx_h - 2.*ky2*sx*sy)/denom
+        I324 = (2.*cy*dx_h - sx*sy)/denom
+        I314 = (2.*cy*sx - (1. + cx)*sy)/denom
+        I323 = (sy - cy*sx - 2.*ky2*sy*dx_h)/denom
+        # derivative of Integrals
         I244 = 2.*(cy*sy - sx)/denom
         I233 = sx - 2.*ky2*(cy*sy - sx)/denom
         I234 = (kx2*dx_h - 2.*ky2*sy2)/denom
@@ -311,13 +310,13 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
         I233 = sx
         I234 = (1. - cx)/kx2
     else:
-        I144 = L4/12.                                          
-        I133 = L2/2.                                           
-        I134 = L3/6.                                           
-        I313 = L2/2.                                           
-        I324 = L4/12.                                          
-        I314 = L3/6.                                           
-        I323 = L3/6.                                           
+        I144 = L4/12.
+        I133 = L2/2.
+        I134 = L3/6.
+        I313 = L2/2.
+        I324 = L4/12.
+        I314 = L3/6.
+        I323 = L3/6.
         I244 = L3/3.
         I233 = L
         I234 = L2/2.
@@ -347,13 +346,13 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
         I544 = h*L5/60.
 
     else:
-        I336 = h/kx2*(I33 - I313)                                  
-        I346 = h/kx2*(I34 - I314)                                  
+        I336 = h/kx2*(I33 - I313)
+        I346 = h/kx2*(I34 - I314)
         I436 = h/kx2*(I43 - I413)
         I446 = h/kx2*(I44 - I414)
 
         I533 = ((h*(denom*L - 2.*(denom + 2.*ky2)*sx + kx2*cy*sy))
-                /(2.*denom*kx2))
+                / (2.*denom*kx2))
         I534 = (h*sy2 - 2*dx)/(2*denom)
         I544 = (sy2 - 2*dx_h)/denom
 
@@ -361,25 +360,25 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     coef1 = 2.*ky2*h - h3 - K2
     coef3 = 2.*h2 - ky2
 
-    t111 =    coef1*I111 + h*kx4*I122/2.
+    t111 = coef1*I111 + h*kx4*I122/2.
     t112 = 2.*coef1*I112 - h*kx2*I112
     t116 = 2.*coef1*I116 + coef3*I11 - h2*kx2*I122
-    t122 =    coef1*I122 + 0.5*h*I111
+    t122 = coef1*I122 + 0.5*h*I111
     t126 = 2.*coef1*I126 + coef3*I12 + h2*I112
-    t166 =    coef1*I166 + coef3*I16 + 0.5*h3*I122 - h*I10
-    t133 =       K2*I133 - ky2*h*I10/2.
-    t134 =    2.*K2*I134
-    t144 =       K2*I144 - h*I10/2.
+    t166 = coef1*I166 + coef3*I16 + 0.5*h3*I122 - h*I10
+    t133 = K2*I133 - ky2*h*I10/2.
+    t134 = 2.*K2*I134
+    t144 = K2*I144 - h*I10/2.
 
-    t211 =    coef1*I211 + h*kx4*I222/2.
+    t211 = coef1*I211 + h*kx4*I222/2.
     t212 = 2.*coef1*I212 - h*kx2*I212
     t216 = 2.*coef1*I216 + coef3*I21 - h2*kx2*I222
-    t222 =    coef1*I222 + 0.5*h*I211
+    t222 = coef1*I222 + 0.5*h*I211
     t226 = 2.*coef1*I226 + coef3*I22 + h2*I212
-    t266 =    coef1*I266 + coef3*I26 + 0.5*h3*I222 - h*I20
-    t233 =       K2*I233 - ky2*h*I20/2.
-    t234 =    2.*K2*I234
-    t244 =       K2*I244 - h*I20/2.
+    t266 = coef1*I266 + coef3*I26 + 0.5*h3*I222 - h*I20
+    t233 = K2*I233 - ky2*h*I20/2.
+    t234 = 2.*K2*I234
+    t244 = K2*I244 - h*I20/2.
 
     coef2 = 2*(K2 - ky2*h)
 
@@ -437,15 +436,15 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     T[3, 2, 5] = t436 - h*dx*cy_1
     T[3, 3, 5] = t446 - h*dx*sy_1
 
-    t511 =    coef1*I511 + h*kx4*I522/2.
+    t511 = coef1*I511 + h*kx4*I522/2.
     t512 = 2.*coef1*I512 - h*kx2*I512
     t516 = 2.*coef1*I516 + coef3*I51 - h2*kx2*I522
-    t522 =    coef1*I522 + 0.5*h*I511
+    t522 = coef1*I522 + 0.5*h*I511
     t526 = 2.*coef1*I526 + coef3*I52 + h2*I512
-    t566 =    coef1*I566 + coef3*I56 + 0.5*h3*I522 - h*I50
-    t533 =       K2*I533 - ky2*h*I50/2.
-    t534 =    2.*K2*I534
-    t544 =       K2*I544 - h*I50/2.
+    t566 = coef1*I566 + coef3*I56 + 0.5*h3*I522 - h*I50
+    t533 = K2*I533 - ky2*h*I50/2.
+    t534 = 2.*K2*I534
+    t544 = K2*I544 - h*I50/2.
     i566 = h2*(L - sx*cx)/(4.*kx2) if kx != 0 else h2*L3/6.
 
     T511 = t511 + 1/4.*kx2*(L - cx*sx)
@@ -455,7 +454,7 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     T522 = t522 + (L + sx*cx)/4.
     T526 = t526 + h*sx2/2.
     T566 = t566 + i566
-    T533 = t533 + 1/4.*ky2*(L - sy*cy )
+    T533 = t533 + 1/4.*ky2*(L - sy*cy)
     T534 = t534 - 1/2.*ky2*sy2
     T544 = t544 + (L + sy*cy)/4.
 

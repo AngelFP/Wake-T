@@ -2,7 +2,7 @@
 This module contains the definition of the CSRCalculator class.
 
 As indicated below, the methods for computing the reference trajectory and
-the CSR effects on the bunch are strongly based on the 1D CSR model from OCELOT 
+the CSR effects on the bunch are strongly based on the 1D CSR model from OCELOT
 (https://github.com/ocelot-collab/ocelot) written by S. Tomin and M. Dohlus.
 
 """
@@ -49,7 +49,7 @@ class CSRCalculator():
 
         Calling this method allows for a new CSR calculation to be started
         without being affected by the previous beamline.
-        
+
         """
         self._ref_traj = None
         self._lattice_elements = []
@@ -60,7 +60,7 @@ class CSRCalculator():
         Apply the CSR kick to the specified particle bunch at a certain
         lattice location.
 
-        The implementation of this method is an adaptation of code from OCELOT 
+        The implementation of this method is an adaptation of code from OCELOT
         (https://github.com/ocelot-collab/ocelot) written by S. Tomin and
         M. Dohlus.
 
@@ -82,8 +82,8 @@ class CSRCalculator():
 
         element_pos : float
             Current position (longitudinal) of the bunch in the lattice
-            element.                
-        
+            element.
+
         """
         el_idx = self._lattice_elements.index(element)
         ds_csr, ds_traj = self._lattice_element_traj_steps[el_idx]
@@ -127,7 +127,7 @@ class CSRCalculator():
         # Convolve kernel with line charge
         lam_K1 = np.convolve(bunch_hist, K1[::-1]) / bin_size * ds_csr
 
-        # Calcuate and apply energy kick
+        # Calculate and apply energy kick
         z_norm = z * (1./bin_size) - bin_center_0/bin_size
         dE = np.interp(z_norm, np.arange(len(lam_K1)), lam_K1)
         pc_ref = np.sqrt(gamma**2 - 1) * 0.511e-3
@@ -138,7 +138,7 @@ class CSRCalculator():
         """
         Calculate and store the csr and trajectory step size for the
         given element.
-        
+
         """
         n_out = element.n_out
         ds_csr = self._csr_step
@@ -156,11 +156,11 @@ class CSRCalculator():
     def _calculate_trajectory(self, element):
         """
         Calculate the reference trajectory along the given element.
-        
-        The implementation of this method is an adaptation of code from OCELOT 
+
+        The implementation of this method is an adaptation of code from OCELOT
         (https://github.com/ocelot-collab/ocelot) written by S. Tomin and
         M. Dohlus.
-        
+
         """
         el_idx = self._lattice_elements.index(element)
         ds_csr, ds_traj = self._lattice_element_traj_steps[el_idx]
@@ -171,8 +171,8 @@ class CSRCalculator():
             self._ref_traj = np.transpose([[0, 0, 0, 0, 0, 0, 1.]])
         traj_start = self._ref_traj[:, [-1]]
         e1 = traj_start[4:]
-        l = np.linspace(ds_traj, element.length, n_steps)
-        traj[0,:] = traj_start[0] + l
+        l_traj = np.linspace(ds_traj, element.length, n_steps)
+        traj[0, :] = traj_start[0] + l_traj
         if element.theta != 0:
             rho = element.length / element.theta
             # to support element tilt in the future
@@ -183,17 +183,17 @@ class CSRCalculator():
 
             n_vect = rho_vect/rho
             e2 = np.cross(n_vect, e1.T).T
-            si = np.sin(l / rho)
-            co = np.cos(l / rho)
-            omco = 2 * np.sin(l / (2*rho))**2
+            si = np.sin(l_traj / rho)
+            co = np.cos(l_traj / rho)
+            omco = 2 * np.sin(l_traj / (2*rho))**2
 
             traj[1:4, :] = traj_start[1:4] + rho * (e1*si + e2*omco)
             traj[4:, :] = e1*co + e2*si
 
         else:
-            traj[1:4, :] = traj_start[1:4] + e1 * l
+            traj[1:4, :] = traj_start[1:4] + e1 * l_traj
             traj[4:, :] = e1
-        
+
         self._ref_traj = np.append(self._ref_traj, traj, axis=1)
         self._lattice_element_steps.append(n_steps)
 
@@ -201,7 +201,7 @@ class CSRCalculator():
         """
         Calculate CSR kernel.
 
-        The implementation of this method is an adaptation of code from OCELOT 
+        The implementation of this method is an adaptation of code from OCELOT
         (https://github.com/ocelot-collab/ocelot) written by S. Tomin and
         M. Dohlus.
 
@@ -213,7 +213,7 @@ class CSRCalculator():
 
         traj : ndarray
             Reference trajectory along which CSR forces are calculated
-        
+
         n_bins : int
             Number of bins of the longitudinal bunch histogram.
 
@@ -248,7 +248,7 @@ class CSRCalculator():
 
     def _calculate_kernel_long_range(self, i, traj, wmin, gamma):
         """
-        The implementation of this method is an adaptation of code from OCELOT 
+        The implementation of this method is an adaptation of code from OCELOT
         (https://github.com/ocelot-collab/ocelot) written by S. Tomin and
         M. Dohlus.
 
@@ -264,7 +264,7 @@ class CSRCalculator():
 
         traj: ndarray
             Reference trajectory along which CSR forces are calculated.
-        
+
         wmin: float
             Leftmost edge of the longitudinal bunch histogram.
 
@@ -272,14 +272,14 @@ class CSRCalculator():
             reference gamma to calculate CSR kernel.
 
         """
-    
+
         # Relativistic parameters
         gamma_sq_inv = 1. / gamma ** 2
         beta_sq = 1. - gamma_sq_inv
         beta = np.sqrt(beta_sq)
 
         i_0 = self._estimate_start_index(i, traj, wmin, beta)
-        #i_0 = 0
+        # i_0 = 0
 
         # Reference trajectory positions with respect to the current one.
         s = traj[0, i_0:i] - traj[0, i]
@@ -324,7 +324,6 @@ class CSRCalculator():
         n2 *= R_inv
 
         x = n0 * t4 + n1 * t5 + n2 * t6
-        y = traj[4:, [i]]
         K = ((beta * (x - n0 * t4_i - n1 * t5_i - n2 * t6_i) -
               beta_sq * (1. - t4 * t4_i - t5 * t5_i - t6 * t6_i) -
               gamma_sq_inv) * R_inv -
@@ -341,7 +340,7 @@ class CSRCalculator():
         """
         Calculate short-range contributions to CSR kernel.
 
-        The implementation of this method is an adaptation of code from OCELOT 
+        The implementation of this method is an adaptation of code from OCELOT
         (https://github.com/ocelot-collab/ocelot) written by S. Tomin and
         M. Dohlus.
 
@@ -353,7 +352,7 @@ class CSRCalculator():
 
         traj: ndarray
             Reference trajectory along which CSR forces are calculated.
-        
+
         wrange: ndarray
             Region of beam < w_min.
 
@@ -369,7 +368,7 @@ class CSRCalculator():
 
         # winf
         Rv1 = traj[1:4, i] - traj[1:4, 0]
-        s1 =  traj[0, 0] - traj[0, i]
+        s1 = traj[0, 0] - traj[0, i]
         ev1 = traj[4:, 0]
         evo = traj[4:, i]
         winfms1 = np.dot(Rv1, ev1)
@@ -394,7 +393,8 @@ class CSRCalculator():
                    (np.arctan((s[0] - winf)/a) - np.arctan((s-winf)/a)))
         return KS
 
-    def _estimate_start_index(self, i, traj, w_min, beta, i_min=1000, n_test=10):
+    def _estimate_start_index(
+            self, i, traj, w_min, beta, i_min=1000, n_test=10):
         """
         This method estimates the index of the first trajectory point from
         which CSR effects should be computed.
@@ -422,8 +422,8 @@ class CSRCalculator():
             Relativistic factor.
 
         i_min : int
-            Minimum iteration index. When i<i_min, no estimation of the starting
-            index is performed (0 is returned).
+            Minimum iteration index. When i<i_min, no estimation of the
+            starting index is performed (0 is returned).
 
         n_test : int
             Number of points along the trajectory in which to test whether they
@@ -432,7 +432,7 @@ class CSRCalculator():
         Returns
         -------
         The estimated start index, which is always <= than the real one.
-        
+
         """
         i_0 = 0
         if i > i_min:
@@ -448,7 +448,7 @@ class CSRCalculator():
                 i_0 = idx[j[-1]]
         return i_0
 
-        
+
 _csr_calculator = CSRCalculator()
 
 
@@ -460,7 +460,7 @@ def get_csr_calculator():
 def set_csr_settings(csr_step=0.1, csr_traj_step=0.0005, n_bins=2000):
     """
     Set the setting for CSR calculation.
-    
+
     Parameters:
     -----------
 
@@ -469,11 +469,11 @@ def set_csr_settings(csr_step=0.1, csr_traj_step=0.0005, n_bins=2000):
 
     csr_traj_step : float
         Reference trajectory along which CSR forces are calculated.
-        
+
     n_bins : int
         Number of bins used for determining the longitudinal charge profile
         of the bunch.
-            
+
     """
     _csr_calculator.set_settings(csr_step, csr_traj_step, n_bins)
 
@@ -483,7 +483,6 @@ def reset_csr_calculator():
     Reset CSR calculator by clearing the stored reference trajectory and
     lattice elements. Needed to start a new, independent calculation after
     a previous one.
-    
+
     """
     _csr_calculator.clear()
-
