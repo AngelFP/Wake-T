@@ -1,11 +1,11 @@
-# Wake-T: A fast tracking code for plasma wakefield accelerators.
+# Wake-T: A fast tracking code for plasma-based accelerators.
 
 <p align="center">
   <img alt="Wake-T logo" src="other/WakeT_logo_dot.png" width="300px" />
 </p>
 
 ## Overview
- `Wake-T` (**Wake**field particle **T**racker) is a tracking code for plasma wakefield accelerators which aims at providing a fast alternative to Particle-in-Cell (PIC) simulations. Instead of relying on the computationally-expensive PIC algorithm for simulating the plasma wakefields and the beam evolution, `Wake-T` uses an analytical or numerical (Runge-Kutta) solver to track the evolution of the beam electrons in the wakefields, which, at the same time, are computed from reduced models. This allows for a significant speed-up of the simulations, which can be performed in a matter of seconds instead or hours/days. An overview of this computation strategy can be seen in the following figure:
+ `Wake-T` (**Wake**field particle **T**racker) is a tracking code for plasma wakefield accelerators which aims at providing a fast alternative to Particle-in-Cell (PIC) simulations. Instead of relying on the computationally-expensive PIC algorithm for simulating the plasma wakefields and the beam evolution, `Wake-T` uses an analytical or numerical (Runge-Kutta) solver to track the evolution of the beam electrons in the wakefields, which, at the same time, are computed from reduced models. This allows for a significant speed-up of the simulations, which can be performed in a matter of seconds instead or hours/days. An overview of this strategy can be seen in the following figure:
 <p align="center">
   <img alt="Wake-T logo" src="other/plasma_tracking.png" width="600px" />
 </p>
