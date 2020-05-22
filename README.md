@@ -1,4 +1,4 @@
-# Wake-T: A fast particle tracking code for plasma wakefield accelerators.
+# Wake-T: A fast tracking code for plasma wakefield accelerators.
 
 <p align="center">
   <img alt="Wake-T logo" src="other/WakeT_logo_dot.png" width="300px" />
