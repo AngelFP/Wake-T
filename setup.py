@@ -1,6 +1,9 @@
 from setuptools import setup, find_packages
 
-import wake_t
+# Read version number
+version = {}
+with open("./wake_t/__version__.py") as fp:
+    exec(fp.read(), version)
 
 # Read long description
 with open("README.md", "r") as fh:
@@ -15,7 +18,7 @@ def read_requirements():
 # Main setup command
 setup(
     name='Wake-T',
-    version=wake_t.__version__,
+    version=version['__version__'],
     author='Angel Ferran Pousa',
     author_email="angel.ferran.pousa@desy.de",
     description=('A fast particle tracking code for plasma wakefield '
