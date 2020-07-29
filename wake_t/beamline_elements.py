@@ -57,7 +57,7 @@ class PlasmaStage():
 
     """ Defines a plasma stage. """
 
-    def __init__(self, length, n_p, driver=None, tracking_mode='numerical',
+    def __init__(self, length, n_p, laser=None, tracking_mode='numerical',
                  wakefield_model='simple_blowout', n_out=None, **model_params):
         """
         Initialize plasma stage.
@@ -70,8 +70,8 @@ class PlasmaStage():
         n_p : float
             Plasma density in units of m^{-3}.
 
-        driver : LaserPulse
-            Driver of the plasma stage. Currently only lasers are supported.
+        laser : LaserPulse
+            Laser driver of the plasma stage.
 
         tracking_mode : str
             Tracking algorithm used for the bunch particles. Can be 'numerical'
@@ -184,7 +184,7 @@ class PlasmaStage():
         """
         self.length = length
         self.n_p = n_p
-        self.driver = driver
+        self.laser = laser
         self.tracking_mode = tracking_mode
         self.wakefield_model = wakefield_model
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
@@ -233,10 +233,10 @@ class PlasmaStage():
         """Create and return corresponding wakefield."""
         if wakefield_model == "simple_blowout":
             WF = wf.SimpleBlowoutWakefield(
-                self.n_p, driver=self.driver, **model_params)
+                self.n_p, driver=self.laser, **model_params)
         if wakefield_model == "custom_blowout":
             WF = wf.CustomBlowoutWakefield(
-                self.n_p, driver=self.driver, **model_params)
+                self.n_p, driver=self.laser, **model_params)
         elif wakefield_model == "from_pic_code":
             raise NotImplementedError('Needs to be updated for new VisualPIC')
             # if vpic_installed:
@@ -245,10 +245,10 @@ class PlasmaStage():
             #    raise ImportError('VisualPIC is not installed.')
         elif wakefield_model == 'cold_fluid_1d':
             WF = wf.NonLinearColdFluidWakefield(
-                self.calculate_density, driver=self.driver, **model_params)
+                self.calculate_density, driver=self.laser, **model_params)
         elif wakefield_model == 'quasistatic_2d':
             WF = wf.Quasistatic2DWakefield(
-                self.calculate_density, driver=self.driver, **model_params)
+                self.calculate_density, laser=self.laser, **model_params)
         return WF
 
     def _gamma(self, px, py, pz):
@@ -338,7 +338,7 @@ class PlasmaStage():
 
     def _track_analytically(self, bunch, parallel, n_proc):
         # Group velocity of driver
-        v_w = self.wakefield.driver.get_group_velocity(self.n_p)*ct.c
+        v_w = self.wakefield.laser.get_group_velocity(self.n_p)*ct.c
 
         # Main bunch quantities [SI units]
         x_0 = bunch.x

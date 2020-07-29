@@ -427,11 +427,11 @@ class NonLinearColdFluidWakefield(Wakefield):
 
 class Quasistatic2DWakefield(Wakefield):
 
-    def __init__(self, density_function, driver, laser_evolution=False,
+    def __init__(self, density_function, laser=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, n_part=1000, dz_fields=0):
         self.density_function = density_function
-        self.driver = driver
+        self.laser = laser
         self.laser_evolution = laser_evolution
         self.laser_z_foc = laser_z_foc
         self.r_max = r_max
@@ -491,7 +491,7 @@ class Quasistatic2DWakefield(Wakefield):
         else:
             dist_z_foc = 0
             
-        flds = calculate_wakefield(self.driver, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max, self.n_r, self.n_xi, self.n_part, n_p, dist_z_foc)
+        flds = calculate_wakefield(self.laser, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max, self.n_r, self.n_xi, self.n_part, n_p, dist_z_foc)
         n_p_mesh, W_r, E_z, E_z_p, K_r, psi_mesh, xi_arr, r_arr = flds
 
         # For debugging
