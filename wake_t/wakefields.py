@@ -3,14 +3,16 @@
 import numpy as np
 import scipy.constants as ct
 from scipy import ndimage
-from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 import aptools.plasma_accel.general_equations as ge
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 try:
     from VisualPIC.DataHandling.dataContainer import DataContainer
     vpic_installed = True
 except ImportError:
     vpic_installed = False
+
+from wake_t.quasistatic_2d import calculate_wakefield
 
 
 class Wakefield():
@@ -20,19 +22,19 @@ class Wakefield():
     def __init__(self):
         pass
 
-    def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wx(self, x, y, xi, px, py, pz, q, t):
         raise NotImplementedError
 
-    def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wy(self, x, y, xi, px, py, pz, q, t):
         raise NotImplementedError
 
-    def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wz(self, x, y, xi, px, py, pz, q, t):
         raise NotImplementedError
 
-    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Kx(self, x, y, xi, px, py, pz, q, t):
         raise NotImplementedError
 
-    def Ez_p(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Ez_p(self, x, y, xi, px, py, pz, q, t):
         raise NotImplementedError
 
 
@@ -54,20 +56,20 @@ class SimpleBlowoutWakefield(Wakefield):
         self.l_c = self.driver.xi_c
         self.b_w = self.driver.get_group_velocity(self.n_p)
 
-    def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wx(self, x, y, xi, px, py, pz, q, t):
         return ct.c * self.g_x*x
 
-    def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wy(self, x, y, xi, px, py, pz, q, t):
         return ct.c * self.g_x*y
 
-    def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wz(self, x, y, xi, px, py, pz, q, t):
         return self.E_z_p * (self.l_p/2 + xi - self.l_c - self.field_off +
                              (1-self.b_w)*ct.c*t)
 
-    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Kx(self, x, y, xi, px, py, pz, q, t):
         return self.g_x*np.ones_like(x)
 
-    def Ez_p(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Ez_p(self, x, y, xi, px, py, pz, q, t):
         return self.E_z_p*np.ones_like(x)
 
 
@@ -91,22 +93,22 @@ class CustomBlowoutWakefield(Wakefield):
         self.l_c = self.driver.xi_c
         self.b_w = self.driver.get_group_velocity(self.n_p)
 
-    def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wx(self, x, y, xi, px, py, pz, q, t):
         return ct.c*self.g_x*x
 
-    def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wy(self, x, y, xi, px, py, pz, q, t):
         return ct.c*self.g_x*y
 
-    def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wz(self, x, y, xi, px, py, pz, q, t):
         if self.xi_fields is None:
             self.xi_fields = np.average(xi, weights=q)
         return self.E_z_0 + self.E_z_p*(xi - self.xi_fields
                                         + (1-self.b_w)*ct.c*t)
 
-    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Kx(self, x, y, xi, px, py, pz, q, t):
         return self.g_x*np.ones_like(x)
 
-    def Kz(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Kz(self, x, y, xi, px, py, pz, q, t):
         return self.E_z_p*np.ones_like(x)
 
 
@@ -237,7 +239,7 @@ class WakefieldFromPICSimulation(Wakefield):
                     :current_ts_index+1]
                 self.timesteps_in_sec = self.timesteps_in_sec[::-1]
 
-    def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wx(self, x, y, xi, px, py, pz, q, t):
         geom = self.dc.GetSimulationDimension()
         # matrix of coordinate points
         if geom == "3D":
@@ -248,7 +250,7 @@ class WakefieldFromPICSimulation(Wakefield):
             theta = np.arctan2(x, y)
         return self.W_x(R)*np.sin(theta)
 
-    def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wy(self, x, y, xi, px, py, pz, q, t):
         geom = self.dc.GetSimulationDimension()
         if geom == "3D":
             R = np.array([y, x, xi + (1-self.b_w)*ct.c*t]).T
@@ -258,7 +260,7 @@ class WakefieldFromPICSimulation(Wakefield):
             theta = np.arctan2(x, y)
         return self.W_x(R)*np.cos(theta)
 
-    def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wz(self, x, y, xi, px, py, pz, q, t):
         geom = self.dc.GetSimulationDimension()
         if geom == "3D":
             R = np.array([x, y, xi + (1-self.b_w)*ct.c*t]).T
@@ -267,7 +269,7 @@ class WakefieldFromPICSimulation(Wakefield):
                           xi + (1-self.b_w)*ct.c*t]).T
         return self.E_z(R)
 
-    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Kx(self, x, y, xi, px, py, pz, q, t):
         geom = self.dc.GetSimulationDimension()
         # matrix of coordinate points
         if geom == "3D":
@@ -299,7 +301,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         # return np.array([u_2, laser_a0**2/2 - u_1]) # linear regime
         return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) - 1/2])
 
-    def __calculate_wakefields(self, x, y, xi, px, py, pz, q, gamma, t):
+    def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
         if self.current_t != t:
             self.current_t = t
         else:
@@ -395,50 +397,156 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.E_z_p = RegularGridInterpolator(
             (z_arr*s_d, r), E_z_p*E_0/s_d, fill_value=0, bounds_error=False)
 
-    def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, gamma, t)
+    def Wx(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
         theta = np.arctan2(x, y)
         return self.W_x(R) * np.sin(theta)
 
-    def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, gamma, t)
+    def Wy(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
         theta = np.arctan2(x, y)
         return self.W_x(R)*np.cos(theta)
 
-    def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, gamma, t)
+    def Wz(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
         return self.E_z(R)
 
-    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, gamma, t)
+    def Kx(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
         return self.K_x(R)
 
-    def Ez_p(self, x, y, xi, px, py, pz, q, gamma, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, gamma, t)
+    def Ez_p(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
         return self.E_z_p(R)
+
+
+class Quasistatic2DWakefield(Wakefield):
+
+    def __init__(self, density_function, driver, laser_evolution=False,
+                 laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
+                 n_xi=100, n_part=1000, dz_fields=0):
+        self.density_function = density_function
+        self.driver = driver
+        self.laser_evolution = laser_evolution
+        self.laser_z_foc = laser_z_foc
+        self.r_max = r_max
+        self.xi_min = xi_min
+        self.xi_max = xi_max
+        self.n_r = n_r
+        self.n_xi = n_xi
+        self.n_part = n_part
+        self.dz_fields = dz_fields
+        self.current_t = -1
+        self.current_n_p = None
+
+    def Wx(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
+        r = np.sqrt(x*x + y*y)
+        sin = x / r
+        return self.W_x(xi, r, grid=False) * sin
+
+    def Wy(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
+        r = np.sqrt(x*x + y*y)
+        cos = y / r
+        return self.W_x(xi, r, grid=False) * cos
+
+    def Wz(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
+        r = np.sqrt(x*x + y*y)
+        return self.E_z(xi, r, grid=False)
+
+    def Kx(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
+        r = np.sqrt(x*x + y*y)
+        return self.K_x(xi, r, grid=False)
+
+    def Ez_p(self, x, y, xi, px, py, pz, q, t):
+        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
+        r = np.sqrt(x*x + y*y)
+        return self.E_z_p(xi, r, grid=False)
+
+    def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
+        if self.current_t != t and t >= self.current_t + self.dz_fields/ct.c:
+            self.current_t = t
+        else:
+            return
+        z_beam = t*ct.c + np.average(xi)  # z postion of beam center
+        n_p = self.density_function(z_beam)
+
+        if n_p == self.current_n_p and not self.laser_evolution:
+            # If density has not changed and driver does not evolve, it is
+            # not necessary to recompute fields.
+            return
+        self.current_n_p = n_p
+
+        # calculate distance to laser focus
+        if self.laser_evolution:
+            dist_z_foc = self.laser_z_foc - ct.c*t
+        else:
+            dist_z_foc = 0
+            
+        flds = calculate_wakefield(self.driver, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max, self.n_r, self.n_xi, self.n_part, n_p, dist_z_foc)
+        n_p_mesh, W_r, E_z, E_z_p, K_r, psi_mesh, xi_arr, r_arr = flds
+
+        # For debugging
+        # plt.plot(E_z[:,0])
+        # plt.plot(K_r[:,0])
+        # plt.plot(a0_0[:,0])
+        # plt.show()
+
+        # plt.subplot(411)
+        # plt.imshow(E_z.T*E_0, aspect='auto',
+        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
+        # plt.plot(E_z[:,0]*E_0)
+        # plt.subplot(412)
+        # plt.imshow(K_r.T*E_0/s_d, aspect='auto',
+        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
+        # plt.subplot(413)
+        # plt.imshow(E_z_p.T*E_0/s_d, aspect='auto',
+        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
+        # plt.subplot(414)
+        # plt.imshow(beam_hist.T, aspect='auto',
+        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
+        # plt.show()
+        E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
+        s_d = ge.plasma_skin_depth(n_p*1e-6)
+        # self.E_z = RegularGridInterpolator(
+        #     (xi_arr*s_d, r_arr*s_d), E_z.T*E_0, fill_value=0, bounds_error=False)
+        # self.W_x = RegularGridInterpolator(
+        #     (xi_arr*s_d, r_arr*s_d), W_r.T*E_0, fill_value=0, bounds_error=False)
+        # self.K_x = RegularGridInterpolator(
+        #     (xi_arr*s_d, r_arr*s_d), K_r.T*E_0/s_d, fill_value=0, bounds_error=False)
+        # self.E_z_p = RegularGridInterpolator(
+        #     (xi_arr*s_d, r_arr*s_d), E_z_p.T*E_0/s_d, fill_value=0, bounds_error=False)
+
+        self.E_z = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, E_z.T*E_0, kx=2, ky=2)
+        self.W_x = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, W_r.T*E_0, kx=2, ky=2)
+        self.K_x = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, K_r.T*E_0/s_d, kx=2, ky=2)
+        self.E_z_p = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, E_z_p.T*E_0/s_d, kx=2, ky=2)
 
 
 class PlasmaRampBlowoutField(Wakefield):
     def __init__(self, density_function):
         self.density_function = density_function
 
-    def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wx(self, x, y, xi, px, py, pz, q, t):
         kx = self.calculate_focusing(xi, t)
         return ct.c*kx*x
 
-    def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wy(self, x, y, xi, px, py, pz, q, t):
         kx = self.calculate_focusing(xi, t)
         return ct.c*kx*y
 
-    def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wz(self, x, y, xi, px, py, pz, q, t):
         return np.zeros(len(xi))
 
-    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Kx(self, x, y, xi, px, py, pz, q, t):
         kx = self.calculate_focusing(xi, t)
         return np.ones(len(xi))*kx
 
@@ -453,18 +561,21 @@ class PlasmaLensField(Wakefield):
     def __init__(self, dB_r):
         self.dB_r = dB_r  # [T/m]
 
-    def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wx(self, x, y, xi, px, py, pz, q, t):
         # By = -x*self.dB_r
+        gamma = np.sqrt(1 + px*px + py*py + pz*pz)
         return - pz*ct.c/gamma * (-x*self.dB_r)
 
-    def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wy(self, x, y, xi, px, py, pz, q, t):
         # Bx = y*self.dB_r
+        gamma = np.sqrt(1 + px*px + py*py + pz*pz)
         return pz*ct.c/gamma * y*self.dB_r
 
-    def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wz(self, x, y, xi, px, py, pz, q, t):
+        gamma = np.sqrt(1 + px*px + py*py + pz*pz)
         return (px*(-x*self.dB_r) - py*y*self.dB_r)*ct.c/gamma
 
-    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Kx(self, x, y, xi, px, py, pz, q, t):
         # not really important
         return np.ones(len(x))*self.dB_r
 
@@ -473,14 +584,14 @@ class PlasmaLensFieldRelativistic(Wakefield):
     def __init__(self, k_x):
         self.k_x = k_x  # [T/m]
 
-    def Wx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wx(self, x, y, xi, px, py, pz, q, t):
         return ct.c*self.k_x*x
 
-    def Wy(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wy(self, x, y, xi, px, py, pz, q, t):
         return ct.c*self.k_x*y
 
-    def Wz(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Wz(self, x, y, xi, px, py, pz, q, t):
         return np.zeros(len(x))
 
-    def Kx(self, x, y, xi, px, py, pz, q, gamma, t):
+    def Kx(self, x, y, xi, px, py, pz, q, t):
         return np.ones(len(x))*self.k_x
