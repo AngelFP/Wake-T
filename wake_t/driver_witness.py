@@ -93,8 +93,8 @@ class LaserPulse():
         avg_amplitude = self.a_0
         if self.polarization == 'linear':
             avg_amplitude /= np.sqrt(2)
-        return avg_amplitude/w_fac * (np.exp(-(r)**2/(2*s_r**2))
-                                      * np.exp(-(xi-self.xi_c)**2/(2*s_z**2)))
+        return avg_amplitude/w_fac * (np.exp(-(r)**2/(2*s_r**2)) *
+                                      np.exp(-(xi-self.xi_c)**2/(2*s_z**2)))
 
 
 class ParticleBunch():
