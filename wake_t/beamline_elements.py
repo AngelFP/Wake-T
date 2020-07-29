@@ -246,6 +246,9 @@ class PlasmaStage():
         elif wakefield_model == 'cold_fluid_1d':
             WF = wf.NonLinearColdFluidWakefield(
                 self.calculate_density, driver=self.driver, **model_params)
+        elif wakefield_model == 'quasistatic_2d':
+            WF = wf.Quasistatic2DWakefield(
+                self.calculate_density, driver=self.driver, **model_params)
         return WF
 
     def _gamma(self, px, py, pz):
@@ -674,6 +677,9 @@ class PlasmaRamp():
                 model_params['laser_z_foc'] = (
                     self.length - model_params['laser_z_foc'])
             WF = wf.NonLinearColdFluidWakefield(
+                self.calculate_density, **model_params)
+        elif wakefield_model == 'quasistatic_2d':
+            WF = wf.Quasistatic2DWakefield(
                 self.calculate_density, **model_params)
         return WF
 
