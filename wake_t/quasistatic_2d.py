@@ -17,6 +17,12 @@ def calculate_wakefield(laser, beam_part, r_max, xi_min, xi_max, nr, nxi, n_part
     xi_min= xi_min / s_d
     xi_max = xi_max / s_d
 
+    # Laser parameters
+    if laser is not None:
+        laser_params = [laser.a_0, laser.l_0, laser.w_0, laser.tau, laser.xi_c, laser.polarization, laser_z_foc]
+    else:
+        laser_params = None
+
     # Initialize plasma particles
     dr = r_max / n_part
     r_part = np.linspace(dr, r_max, n_part)
@@ -47,7 +53,7 @@ def calculate_wakefield(laser, beam_part, r_max, xi_min, xi_max, nr, nxi, n_part
         # print(step)
         xi = xi_max - dxi * step
 
-        r_part, pr_part = evolve_plasma_rk4(r_part, pr_part, q_part, xi, dxi, laser, beam_profile, laser_z_foc, s_d)
+        r_part, pr_part = evolve_plasma_rk4(r_part, pr_part, q_part, xi, dxi, laser_params, beam_profile, s_d)
         if step == 0:
             t_comp = time() - t0
         idx_keep = np.where(r_part<=r_max+0.1)
@@ -56,7 +62,7 @@ def calculate_wakefield(laser, beam_part, r_max, xi_min, xi_max, nr, nxi, n_part
         gamma_part = gamma_part[idx_keep]
         q_part = q_part[idx_keep]
         
-        psi_mesh[:,-1-step], dr_psi_mesh[:,-1-step], dxi_psi_mesh[:,-1-step], b_theta_bar_mesh[:,-1-step], b_theta_0_mesh[:,-1-step] = calculate_fields_at_mesh(xi, r_mesh, r_part, pr_part, q_part, laser, beam_profile, laser_z_foc, s_d)
+        psi_mesh[:,-1-step], dr_psi_mesh[:,-1-step], dxi_psi_mesh[:,-1-step], b_theta_bar_mesh[:,-1-step], b_theta_0_mesh[:,-1-step] = calculate_fields_at_mesh(xi, r_mesh, r_part, pr_part, q_part, laser_params, beam_profile, s_d)
     dr = r_max / nr
     dr_psi_mesh, dxi_psi_mesh = np.gradient(psi_mesh, dr, dxi)
     dxi_psi_mesh *= -1
@@ -73,16 +79,22 @@ def calculate_wakefield(laser, beam_part, r_max, xi_min, xi_max, nr, nxi, n_part
     return n_p, dr_psi_mesh, dxi_psi_mesh, e_z_p_mesh, k_r_mesh, psi_mesh, xi_mesh, r_mesh
 
 
-def evolve_plasma_rk4(r, pr, q, xi, dxi, laser, beam_profile, laser_z_foc, s_d):
-    Ar, Apr = equations_of_motion(dxi, xi, r, pr, q, laser, beam_profile, laser_z_foc, s_d)
-    Br, Bpr = equations_of_motion(dxi, xi-dxi/2, r + Ar/2, pr + Apr/2, q, laser, beam_profile, laser_z_foc, s_d)
-    Cr, Cpr = equations_of_motion(dxi, xi-dxi/2, r + Br/2, pr + Bpr/2, q, laser, beam_profile, laser_z_foc, s_d)
-    Dr, Dpr = equations_of_motion(dxi, xi-dxi, r + Cr, pr + Cpr, q, laser, beam_profile, laser_z_foc, s_d)
+def evolve_plasma_rk4(r, pr, q, xi, dxi, laser_params, beam_profile, s_d):
+    Ar, Apr = equations_of_motion(dxi, xi, r, pr, q, laser_params, beam_profile, s_d)
+    Br, Bpr = equations_of_motion(dxi, xi-dxi/2, r + Ar/2, pr + Apr/2, q, laser_params, beam_profile, s_d)
+    Cr, Cpr = equations_of_motion(dxi, xi-dxi/2, r + Br/2, pr + Bpr/2, q, laser_params, beam_profile, s_d)
+    Dr, Dpr = equations_of_motion(dxi, xi-dxi, r + Cr, pr + Cpr, q, laser_params, beam_profile, s_d)
     return update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr)
 
 
 @njit()
 def update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr):
+    """
+    Jittable method for updating the particle coordinates in the RK4 algorithm.
+
+    It also checks and corrects for any particles with r < 0.
+    
+    """
     inv_6 = 1./6.
     for i in range(r.shape[0]):
         r[i] += (Ar[i] + 2.*(Br[i] + Cr[i]) + Dr[i]) * inv_6
@@ -93,7 +105,7 @@ def update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr):
     return r, pr
 
 
-def equations_of_motion(dxi, xi, r_p, pr_p, q_p, laser, beam_profile, laser_z_foc, s_d):
+def equations_of_motion(dxi, xi, r_p, pr_p, q_p, laser_params, beam_profile, s_d):
     r_p= r_p.copy()
     pr_p = pr_p.copy()
     idx_neg = np.where(r_p < 0)
@@ -103,8 +115,12 @@ def equations_of_motion(dxi, xi, r_p, pr_p, q_p, laser, beam_profile, laser_z_fo
     xi_si = xi*s_d
     r_p_si = r_p*s_d
     
-    nabla_a = get_nabla_a(xi_si, r_p_si, laser.a_0, laser.l_0, laser.w_0, laser.tau, laser.xi_c, laser_z_foc, laser.polarization) * s_d
-    a2 = get_a2(xi_si, r_p_si, laser.a_0, laser.l_0, laser.w_0, laser.tau, laser.xi_c, laser_z_foc, laser.polarization)
+    if laser_params is not None:
+        nabla_a = get_nabla_a(xi_si, r_p_si, *laser_params) * s_d
+        a2 = get_a2(xi_si, r_p_si, *laser_params)
+    else:
+        nabla_a = np.zeros(r_p.shape)
+        a2 = np.zeros(r_p.shape)
     b_theta_0_p = beam_profile(r_p, xi)#, grid=False)
     # psi_p, dr_psi_p, dxi_psi_p = calculate_psi_and_derivatives_at_particles(r_p, pr_p, q_p)
     # gamma_p = (1 + pr_p**2 + a2 + (1+psi_p)**2)/(2*(1+psi_p))
@@ -135,13 +151,15 @@ def calculate_derivatives(dxi, r_p, pr_p, q_p, b_theta_0_p, nabla_a, a2):
     return dr, dpr
 
 
-def calculate_fields_at_mesh(xi, r_vals, r_p, pr_p, q_p, laser, beam_profile, laser_z_foc, s_d):
+def calculate_fields_at_mesh(xi, r_vals, r_p, pr_p, q_p, laser_params, beam_profile, s_d):
     xi_si = xi*s_d
     r_p_si = r_p*s_d
-    nabla_a = get_nabla_a(xi_si, r_p_si, laser.a_0, laser.l_0, laser.w_0, laser.tau, laser.xi_c, laser_z_foc, laser.polarization) * s_d
-    # nabla_a = laser.get_nabla_a(r_p*s_d, xi*s_d, dz_foc=laser_z_foc) * s_d
-    a2 = get_a2(xi_si, r_p_si, laser.a_0, laser.l_0, laser.w_0, laser.tau, laser.xi_c, laser_z_foc, laser.polarization)
-    # a2 = laser.get_a0_profile(r_p*s_d, xi*s_d, dz_foc=laser_z_foc) ** 2
+    if laser_params is not None:
+        nabla_a = get_nabla_a(xi_si, r_p_si, *laser_params) * s_d
+        a2 = get_a2(xi_si, r_p_si, *laser_params)
+    else:
+        nabla_a = np.zeros(r_p.shape)
+        a2 = np.zeros(r_p.shape)
     b_theta_0_p = beam_profile(r_p, xi)#, grid=False)
     b_theta_0_vals = beam_profile(r_vals, xi)#, grid=False)
     psi_p, dr_psi_p, dxi_psi_p = calculate_psi_and_derivatives_at_particles(r_p, pr_p, q_p)
@@ -501,7 +519,7 @@ def get_beam_function(beam_part, r_max, xi_min, xi_max, n_r, n_xi, n_p):
 
 
 @njit()
-def get_nabla_a(xi, r, a_0, l_0, w_0, tau, xi_c, dz_foc=0, pol='linear'):
+def get_nabla_a(xi, r, a_0, l_0, w_0, tau, xi_c, pol='linear', dz_foc=0):
     z_r = np.pi * w_0**2 / l_0
     w_fac = np.sqrt(1 + (dz_foc/z_r)**2)
     s_r = w_0 * w_fac / np.sqrt(2)
@@ -514,7 +532,7 @@ def get_nabla_a(xi, r, a_0, l_0, w_0, tau, xi_c, dz_foc=0, pol='linear'):
 
 
 @njit()
-def get_a2(xi, r, a_0, l_0, w_0, tau, xi_c, dz_foc=0, pol='linear'):
+def get_a2(xi, r, a_0, l_0, w_0, tau, xi_c, pol='linear', dz_foc=0):
     z_r = np.pi * w_0**2 / l_0
     w_fac = np.sqrt(1 + (dz_foc/z_r)**2)
     s_r = w_0 * w_fac / np.sqrt(2)
