@@ -440,8 +440,8 @@ class Quasistatic2DWakefield(Wakefield):
         self.n_r = n_r
         self.n_xi = n_xi
         self.n_part = n_part
-        self.dz_fields = dz_fields
-        self.current_t = -1
+        self.dz_fields = np.inf if dz_fields is None else dz_fields
+        self.current_t = None
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
@@ -471,7 +471,9 @@ class Quasistatic2DWakefield(Wakefield):
         return self.E_z_p(xi, r, grid=False)
 
     def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
-        if self.current_t != t and t >= self.current_t + self.dz_fields/ct.c:
+        if self.current_t is None:
+            self.current_t = t
+        elif self.current_t != t and t >= self.current_t + self.dz_fields/ct.c:
             self.current_t = t
         else:
             return
