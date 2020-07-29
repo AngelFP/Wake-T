@@ -442,7 +442,6 @@ class Quasistatic2DWakefield(Wakefield):
         self.n_part = n_part
         self.dz_fields = dz_fields
         self.current_t = -1
-        self.current_n_p = None
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
@@ -478,12 +477,6 @@ class Quasistatic2DWakefield(Wakefield):
             return
         z_beam = t*ct.c + np.average(xi)  # z postion of beam center
         n_p = self.density_function(z_beam)
-
-        if n_p == self.current_n_p and not self.laser_evolution:
-            # If density has not changed and driver does not evolve, it is
-            # not necessary to recompute fields.
-            return
-        self.current_n_p = n_p
 
         # calculate distance to laser focus
         if self.laser_evolution:
