@@ -522,7 +522,7 @@ class Quasistatic2DWakefield(Wakefield):
 
         self.E_z = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, E_z.T*E_0, kx=2, ky=2)
         self.W_x = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, W_r.T*E_0, kx=2, ky=2)
-        self.K_x = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, K_r.T*E_0/s_d, kx=2, ky=2)
+        self.K_x = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, K_r.T*E_0/s_d/ct.c, kx=2, ky=2)
         self.E_z_p = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, E_z_p.T*E_0/s_d, kx=2, ky=2)
 
 
@@ -590,3 +590,33 @@ class PlasmaLensFieldRelativistic(Wakefield):
 
     def Kx(self, x, y, xi, px, py, pz, q, t):
         return np.ones(len(x))*self.k_x
+
+
+class CombinedWakefield(Wakefield):
+    def __init__(self, wakefield_list):
+        self.wakefield_list = wakefield_list
+
+    def Wx(self, x, y, xi, px, py, pz, q, t):
+        wx = np.zeros(x.shape[0])
+        for wf in self.wakefield_list:
+            wx += wf.Wx(x, y, xi, px, py, pz, q, t)
+        return wx
+
+    def Wy(self, x, y, xi, px, py, pz, q, t):
+        wy = np.zeros(x.shape[0])
+        for wf in self.wakefield_list:
+            wy += wf.Wy(x, y, xi, px, py, pz, q, t)
+        return wy
+
+    def Wz(self, x, y, xi, px, py, pz, q, t):
+        wz = np.zeros(x.shape[0])
+        for wf in self.wakefield_list:
+            wz += wf.Wz(x, y, xi, px, py, pz, q, t)
+        return wz
+
+    def Kx(self, x, y, xi, px, py, pz, q, t):
+        kx = np.zeros(x.shape[0])
+        for wf in self.wakefield_list:
+            kx += wf.Kx(x, y, xi, px, py, pz, q, t)
+        return kx
+
