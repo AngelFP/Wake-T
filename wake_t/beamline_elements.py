@@ -733,7 +733,9 @@ class PlasmaLens():
 
     """Defines an active plasma lens"""
 
-    def __init__(self, length, foc_strength, relativistic=True, n_out=None):
+    def __init__(self, length, foc_strength, relativistic=True,
+                 wakefields=False, wakefield_model='quasistatic_2d', n_p=None,
+                 n_out=None, **model_params):
         """
         Initialize plasma lens.
 
@@ -757,11 +759,36 @@ class PlasmaLens():
         """
         self.length = length
         self.foc_strength = foc_strength
-        if relativistic:
-            self.field = wf.PlasmaLensFieldRelativistic(self.foc_strength)
-        else:
-            self.field = wf.PlasmaLensField(self.foc_strength)
+        # if relativistic:
+        #     self.field = wf.PlasmaLensFieldRelativistic(self.foc_strength)
+        # else:
+        #     self.field = wf.PlasmaLensField(self.foc_strength)
         self.n_out = n_out
+        self.n_p = n_p
+        self.field = self._get_wakefield(relativistic, wakefields, wakefield_model, model_params)
+
+    def _get_wakefield(self, relativistic, wakefields, wakefield_model, model_params):
+        if relativistic:
+            lens_field = wf.PlasmaLensFieldRelativistic(self.foc_strength)
+        else:
+            lens_field = wf.PlasmaLensField(self.foc_strength)
+        if wakefields:
+            if wakefield_model == 'cold_fluid_1d':
+                raise NotImplementedError
+                # WF = wf.NonLinearColdFluidWakefield(
+                # self.calculate_density, driver=self.laser, **model_params)
+            elif wakefield_model == 'quasistatic_2d':
+                plasma_wf = wf.Quasistatic2DWakefield(
+                    self.calculate_density, **model_params)
+            else:
+                raise ValueError
+            WF = wf.CombinedWakefield([lens_field, plasma_wf])
+        else:
+            WF = lens_field
+        return WF
+
+    def calculate_density(self, z):
+        return self.n_p
 
     def track(self, bunch, parallel=False, n_proc=None, out_initial=False):
         """
@@ -868,7 +895,7 @@ class PlasmaLens():
         gamma = self._gamma(beam.px, beam.py, beam.pz)
         mean_gamma = np.average(gamma, weights=beam.q)
         Kx = WF.Kx(
-            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, beam.q, gamma,
+            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, beam.q,
             0)
         mean_Kx = np.average(Kx, weights=beam.q)
         w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
