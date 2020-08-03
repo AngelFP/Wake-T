@@ -281,9 +281,9 @@ class WakefieldFromPICSimulation(Wakefield):
 
 
 class NonLinearColdFluidWakefield(Wakefield):
-    def __init__(self, density_function, driver, laser_evolution=False,
+    def __init__(self, density_function, driver=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
-                 n_xi=100):
+                 n_xi=100, beam_wakefields=False):
         self.density_function = density_function
         self.driver = driver
         self.laser_evolution = laser_evolution
@@ -293,13 +293,16 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.xi_max = xi_max
         self.n_r = n_r
         self.n_xi = n_xi
+        self.beam_wakefields = beam_wakefields
         self.current_t = -1
         self.current_n_p = None
 
     def __wakefield_ode_system(self, u_1, u_2, r, z, laser_a0, n_beam):
-        # return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) + n_beam - 1/2])
+        if self.beam_wakefields:
+            return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) + n_beam - 1/2])
         # return np.array([u_2, laser_a0**2/2 - u_1]) # linear regime
-        return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) - 1/2])
+        else:
+            return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) - 1/2])
 
     def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
         if self.current_t != t:
@@ -343,9 +346,14 @@ class NonLinearColdFluidWakefield(Wakefield):
         for i in np.arange(n_iter):
             z = z_arr[-1] - i*dz
             # get laser a0 at z, z+dz/2 and z+dz
-            a0_0 = self.driver.get_a0_profile(r, z*s_d, dist_z_foc)
-            a0_1 = self.driver.get_a0_profile(r, (z - dz/2)*s_d, dist_z_foc)
-            a0_2 = self.driver.get_a0_profile(r, (z - dz)*s_d, dist_z_foc)
+            if self.driver is not None:
+                a0_0 = self.driver.get_a0_profile(r, z*s_d, dist_z_foc)
+                a0_1 = self.driver.get_a0_profile(r, (z - dz/2)*s_d, dist_z_foc)
+                a0_2 = self.driver.get_a0_profile(r, (z - dz)*s_d, dist_z_foc)
+            else:
+                a0_0 = np.zeros(r.shape[0])
+                a0_1 = np.zeros(r.shape[0])
+                a0_2 = np.zeros(r.shape[0])
             # perform runge-kutta
             A = dz*self.__wakefield_ode_system(
                 u_1[-1-i], u_2[-1-i], r, z*s_d, a0_0, beam_hist[-(i+1)])
@@ -378,7 +386,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
         # plt.plot(E_z[:,0]*E_0)
         # plt.subplot(412)
-        # plt.imshow(K_r.T*E_0/s_d, aspect='auto',
+        # plt.imshow(W_r.T*E_0, aspect='auto',
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
         # plt.subplot(413)
         # plt.imshow(E_z_p.T*E_0/s_d, aspect='auto',
@@ -393,7 +401,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.W_x = RegularGridInterpolator(
             (z_arr*s_d, r), W_r*E_0, fill_value=0, bounds_error=False)
         self.K_x = RegularGridInterpolator(
-            (z_arr*s_d, r), K_r*E_0/s_d, fill_value=0, bounds_error=False)
+            (z_arr*s_d, r), K_r*E_0/s_d/ct.c, fill_value=0, bounds_error=False)
         self.E_z_p = RegularGridInterpolator(
             (z_arr*s_d, r), E_z_p*E_0/s_d, fill_value=0, bounds_error=False)
 
