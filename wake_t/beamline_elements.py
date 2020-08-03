@@ -774,9 +774,8 @@ class PlasmaLens():
             lens_field = wf.PlasmaLensField(self.foc_strength)
         if wakefields:
             if wakefield_model == 'cold_fluid_1d':
-                raise NotImplementedError
-                # WF = wf.NonLinearColdFluidWakefield(
-                # self.calculate_density, driver=self.laser, **model_params)
+                plasma_wf = wf.NonLinearColdFluidWakefield(
+                    self.calculate_density, beam_wakefields=True, **model_params)
             elif wakefield_model == 'quasistatic_2d':
                 plasma_wf = wf.Quasistatic2DWakefield(
                     self.calculate_density, **model_params)
