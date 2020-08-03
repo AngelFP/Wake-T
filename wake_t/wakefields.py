@@ -3,7 +3,7 @@
 import numpy as np
 import scipy.constants as ct
 from scipy import ndimage
-from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
+from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline, interp2d
 import aptools.plasma_accel.general_equations as ge
 import matplotlib.pyplot as plt
 try:
@@ -396,41 +396,37 @@ class NonLinearColdFluidWakefield(Wakefield):
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
         # plt.show()
 
-        self.E_z = RegularGridInterpolator(
-            (z_arr*s_d, r), E_z*E_0, fill_value=0, bounds_error=False)
-        self.W_x = RegularGridInterpolator(
-            (z_arr*s_d, r), W_r*E_0, fill_value=0, bounds_error=False)
-        self.K_x = RegularGridInterpolator(
-            (z_arr*s_d, r), K_r*E_0/s_d/ct.c, fill_value=0, bounds_error=False)
-        self.E_z_p = RegularGridInterpolator(
-            (z_arr*s_d, r), E_z_p*E_0/s_d, fill_value=0, bounds_error=False)
+        self.E_z = RectBivariateSpline(z_arr*s_d, r, E_z*E_0, kx=2, ky=2)
+        self.W_x = RectBivariateSpline(z_arr*s_d, r, W_r*E_0, kx=2, ky=2)
+        self.K_x = RectBivariateSpline(z_arr*s_d, r, K_r*E_0/s_d/ct.c, kx=2, ky=2)
+        self.E_z_p = RectBivariateSpline(z_arr*s_d, r, E_z_p*E_0/s_d, kx=2, ky=2)
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
-        theta = np.arctan2(x, y)
-        return self.W_x(R) * np.sin(theta)
+        r = np.sqrt(x*x + y*y)
+        sin = x / r
+        return self.W_x(xi, r, grid=False) * sin
 
     def Wy(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
-        theta = np.arctan2(x, y)
-        return self.W_x(R)*np.cos(theta)
+        r = np.sqrt(x*x + y*y)
+        cos = y / r
+        return self.W_x(xi, r, grid=False) * cos
 
     def Wz(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
-        return self.E_z(R)
+        r = np.sqrt(x*x + y*y)
+        return self.E_z(xi, r, grid=False)
 
     def Kx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
-        return self.K_x(R)
+        r = np.sqrt(x*x + y*y)
+        return self.K_x(xi, r, grid=False)
 
     def Ez_p(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        R = np.array([xi, np.sqrt(np.square(x)+np.square(y))]).T
-        return self.E_z_p(R)
+        r = np.sqrt(x*x + y*y)
+        return self.E_z_p(xi, r, grid=False)
 
 
 class Quasistatic2DWakefield(Wakefield):
