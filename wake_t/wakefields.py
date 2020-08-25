@@ -3,9 +3,9 @@
 import numpy as np
 import scipy.constants as ct
 from scipy import ndimage
-from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline, interp2d
+from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 import aptools.plasma_accel.general_equations as ge
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 try:
     from VisualPIC.DataHandling.dataContainer import DataContainer
     vpic_installed = True
@@ -299,7 +299,8 @@ class NonLinearColdFluidWakefield(Wakefield):
 
     def __wakefield_ode_system(self, u_1, u_2, r, z, laser_a0, n_beam):
         if self.beam_wakefields:
-            return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) + n_beam - 1/2])
+            return np.array(
+                [u_2, (1+laser_a0**2)/(2*(1+u_1)**2) + n_beam - 1/2])
         # return np.array([u_2, laser_a0**2/2 - u_1]) # linear regime
         else:
             return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) - 1/2])
@@ -340,16 +341,16 @@ class NonLinearColdFluidWakefield(Wakefield):
         z_arr[-1] = self.xi_max / s_d
         # calculate distance to laser focus
         if self.laser_evolution:
-            dist_z_foc = self.laser_z_foc - ct.c*t
+            dz_foc = self.laser_z_foc - ct.c*t
         else:
-            dist_z_foc = 0
+            dz_foc = 0
         for i in np.arange(n_iter):
             z = z_arr[-1] - i*dz
             # get laser a0 at z, z+dz/2 and z+dz
             if self.driver is not None:
-                a0_0 = self.driver.get_a0_profile(r, z*s_d, dist_z_foc)
-                a0_1 = self.driver.get_a0_profile(r, (z - dz/2)*s_d, dist_z_foc)
-                a0_2 = self.driver.get_a0_profile(r, (z - dz)*s_d, dist_z_foc)
+                a0_0 = self.driver.get_a0_profile(r, z*s_d, dz_foc)
+                a0_1 = self.driver.get_a0_profile(r, (z - dz/2)*s_d, dz_foc)
+                a0_2 = self.driver.get_a0_profile(r, (z - dz)*s_d, dz_foc)
             else:
                 a0_0 = np.zeros(r.shape[0])
                 a0_1 = np.zeros(r.shape[0])
@@ -396,10 +397,14 @@ class NonLinearColdFluidWakefield(Wakefield):
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
         # plt.show()
 
-        self.E_z = RectBivariateSpline(z_arr*s_d, r, E_z*E_0, kx=2, ky=2)
-        self.W_x = RectBivariateSpline(z_arr*s_d, r, W_r*E_0, kx=2, ky=2)
-        self.K_x = RectBivariateSpline(z_arr*s_d, r, K_r*E_0/s_d/ct.c, kx=2, ky=2)
-        self.E_z_p = RectBivariateSpline(z_arr*s_d, r, E_z_p*E_0/s_d, kx=2, ky=2)
+        self.E_z = RectBivariateSpline(
+            z_arr*s_d, r, E_z*E_0, kx=2, ky=2)
+        self.W_x = RectBivariateSpline(
+            z_arr*s_d, r, W_r*E_0, kx=2, ky=2)
+        self.K_x = RectBivariateSpline(
+            z_arr*s_d, r, K_r*E_0/s_d/ct.c, kx=2, ky=2)
+        self.E_z_p = RectBivariateSpline(
+            z_arr*s_d, r, E_z_p*E_0/s_d, kx=2, ky=2)
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
@@ -486,11 +491,13 @@ class Quasistatic2DWakefield(Wakefield):
 
         # calculate distance to laser focus
         if self.laser_evolution:
-            dist_z_foc = self.laser_z_foc - ct.c*t
+            dz_foc = self.laser_z_foc - ct.c*t
         else:
-            dist_z_foc = 0
-            
-        flds = calculate_wakefield(self.laser, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max, self.n_r, self.n_xi, self.n_part, n_p, dist_z_foc)
+            dz_foc = 0
+
+        flds = calculate_wakefield(
+            self.laser, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
+            self.n_r, self.n_xi, self.n_part, n_p, dz_foc)
         n_p_mesh, W_r, E_z, E_z_p, K_r, psi_mesh, xi_arr, r_arr = flds
 
         # For debugging
@@ -515,19 +522,15 @@ class Quasistatic2DWakefield(Wakefield):
         # plt.show()
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
         s_d = ge.plasma_skin_depth(n_p*1e-6)
-        # self.E_z = RegularGridInterpolator(
-        #     (xi_arr*s_d, r_arr*s_d), E_z.T*E_0, fill_value=0, bounds_error=False)
-        # self.W_x = RegularGridInterpolator(
-        #     (xi_arr*s_d, r_arr*s_d), W_r.T*E_0, fill_value=0, bounds_error=False)
-        # self.K_x = RegularGridInterpolator(
-        #     (xi_arr*s_d, r_arr*s_d), K_r.T*E_0/s_d, fill_value=0, bounds_error=False)
-        # self.E_z_p = RegularGridInterpolator(
-        #     (xi_arr*s_d, r_arr*s_d), E_z_p.T*E_0/s_d, fill_value=0, bounds_error=False)
 
-        self.E_z = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, E_z.T*E_0, kx=2, ky=2)
-        self.W_x = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, W_r.T*E_0, kx=2, ky=2)
-        self.K_x = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, K_r.T*E_0/s_d/ct.c, kx=2, ky=2)
-        self.E_z_p = RectBivariateSpline(xi_arr*s_d, r_arr*s_d, E_z_p.T*E_0/s_d, kx=2, ky=2)
+        self.E_z = RectBivariateSpline(
+            xi_arr*s_d, r_arr*s_d, E_z.T*E_0, kx=2, ky=2)
+        self.W_x = RectBivariateSpline(
+            xi_arr*s_d, r_arr*s_d, W_r.T*E_0, kx=2, ky=2)
+        self.K_x = RectBivariateSpline(
+            xi_arr*s_d, r_arr*s_d, K_r.T*E_0/s_d/ct.c, kx=2, ky=2)
+        self.E_z_p = RectBivariateSpline(
+            xi_arr*s_d, r_arr*s_d, E_z_p.T*E_0/s_d, kx=2, ky=2)
 
 
 class PlasmaRampBlowoutField(Wakefield):
@@ -623,4 +626,3 @@ class CombinedWakefield(Wakefield):
         for wf in self.wakefield_list:
             kx += wf.Kx(x, y, xi, px, py, pz, q, t)
         return kx
-
