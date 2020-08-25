@@ -220,13 +220,13 @@ class PlasmaStage():
         dz_fields : float (optional)
             Determines how often the plasma wakefields should be updated. If
             dz_fields=0 (default value), the wakefields are calculated at every
-            step of the Runge-Kutta solver for the beam particle evolution (most
-            expensive option). If specified, the wakefields are only updated in
-            steps determined by dz_fields. For example, if dz_fields=10e-6,
-            the plasma wakefields are only updated every time the simulation
-            window advances by 10 micron. If dz_fields=None, the wakefields
-            are only computed once (at the start of the plasma) and never
-            updated throughout the simulation.
+            step of the Runge-Kutta solver for the beam particle evolution
+            (most expensive option). If specified, the wakefields are only
+            updated in steps determined by dz_fields. For example, if
+            dz_fields=10e-6, the plasma wakefields are only updated every time
+            the simulation window advances by 10 micron. If dz_fields=None, the
+            wakefields are only computed once (at the start of the plasma) and
+            never updated throughout the simulation.
 
         """
         self.length = length
@@ -638,13 +638,13 @@ class PlasmaRamp():
         dz_fields : float (optional)
             Determines how often the plasma wakefields should be updated. If
             dz_fields=0 (default value), the wakefields are calculated at every
-            step of the Runge-Kutta solver for the beam particle evolution (most
-            expensive option). If specified, the wakefields are only updated in
-            steps determined by dz_fields. For example, if dz_fields=10e-6,
-            the plasma wakefields are only updated every time the simulation
-            window advances by 10 micron. If dz_fields=None, the wakefields
-            are only computed once (at the start of the plasma) and never
-            updated throughout the simulation.
+            step of the Runge-Kutta solver for the beam particle evolution
+            (most expensive option). If specified, the wakefields are only
+            updated in steps determined by dz_fields. For example, if
+            dz_fields=10e-6, the plasma wakefields are only updated every time
+            the simulation window advances by 10 micron. If dz_fields=None, the
+            wakefields are only computed once (at the start of the plasma) and
+            never updated throughout the simulation.
 
         """
         self.length = length
@@ -862,7 +862,7 @@ class PlasmaLens():
             Number of times along the lens in which the particle distribution
             should be returned (A list with all output bunches is returned
             after tracking).
-            
+
         Model 'cold_fluid_1d'
         ---------------------
         laser_evolution : bool
@@ -932,26 +932,24 @@ class PlasmaLens():
         dz_fields : float (optional)
             Determines how often the plasma wakefields should be updated. If
             dz_fields=0 (default value), the wakefields are calculated at every
-            step of the Runge-Kutta solver for the beam particle evolution (most
-            expensive option). If specified, the wakefields are only updated in
-            steps determined by dz_fields. For example, if dz_fields=10e-6,
-            the plasma wakefields are only updated every time the simulation
-            window advances by 10 micron. If dz_fields=None, the wakefields
-            are only computed once (at the start of the plasma) and never
-            updated throughout the simulation.
+            step of the Runge-Kutta solver for the beam particle evolution
+            (most expensive option). If specified, the wakefields are only
+            updated in steps determined by dz_fields. For example, if
+            dz_fields=10e-6, the plasma wakefields are only updated every time
+            the simulation window advances by 10 micron. If dz_fields=None, the
+            wakefields are only computed once (at the start of the plasma) and
+            never updated throughout the simulation.
 
         """
         self.length = length
         self.foc_strength = foc_strength
-        # if relativistic:
-        #     self.field = wf.PlasmaLensFieldRelativistic(self.foc_strength)
-        # else:
-        #     self.field = wf.PlasmaLensField(self.foc_strength)
         self.n_out = n_out
         self.n_p = n_p
-        self.field = self._get_wakefield(relativistic, wakefields, wakefield_model, model_params)
+        self.field = self._get_wakefield(
+            relativistic, wakefields, wakefield_model, model_params)
 
-    def _get_wakefield(self, relativistic, wakefields, wakefield_model, model_params):
+    def _get_wakefield(self, relativistic, wakefields, wakefield_model,
+                       model_params):
         if relativistic:
             lens_field = wf.PlasmaLensFieldRelativistic(self.foc_strength)
         else:
@@ -959,7 +957,8 @@ class PlasmaLens():
         if wakefields:
             if wakefield_model == 'cold_fluid_1d':
                 plasma_wf = wf.NonLinearColdFluidWakefield(
-                    self.calculate_density, beam_wakefields=True, **model_params)
+                    self.calculate_density, beam_wakefields=True,
+                    **model_params)
             elif wakefield_model == 'quasistatic_2d':
                 plasma_wf = wf.Quasistatic2DWakefield(
                     self.calculate_density, **model_params)
