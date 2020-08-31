@@ -571,6 +571,9 @@ class PlasmaRamp():
 
         Model 'cold_fluid_1d'
         ---------------------
+        laser : LaserPulse
+            Laser driver of the plasma stage.
+
         laser_evolution : bool
             If True, the laser pulse transverse profile evolves as a Gaussian
             in vacuum. If False, the pulse envelope stays fixed throughout
@@ -602,6 +605,9 @@ class PlasmaRamp():
 
         Model 'quasistatic_2d'
         ---------------------
+        laser : LaserPulse
+            Laser driver of the plasma stage.
+            
         laser_evolution : bool
             If True, the laser pulse transverse profile evolves as a Gaussian
             in vacuum. If False, the pulse envelope stays fixed throughout
