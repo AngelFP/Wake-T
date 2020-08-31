@@ -12,7 +12,7 @@ try:
 except ImportError:
     vpic_installed = False
 
-from wake_t.quasistatic_2d import calculate_wakefield
+from wake_t.quasistatic_2d import calculate_wakefields
 
 
 class Wakefield():
@@ -495,7 +495,7 @@ class Quasistatic2DWakefield(Wakefield):
         else:
             dz_foc = 0
 
-        flds = calculate_wakefield(
+        flds = calculate_wakefields(
             self.laser, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.n_part, n_p, dz_foc)
         n_p_mesh, W_r, E_z, E_z_p, K_r, psi_mesh, xi_arr, r_arr = flds
