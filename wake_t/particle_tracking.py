@@ -26,13 +26,13 @@ def equations_of_motion(beam_matrix, t, WF, dt):
 
 
 @njit()
-def update_beam_matrix(beam_matrix, A, B, C, D):
+def update_beam_matrix(bm, A, B, C, D):
     inv_6 = 1 / 6.
-    for i in prange(beam_matrix.shape[0]):
-        for j in prange(beam_matrix.shape[1]):
-            beam_matrix[i, j] += (A[i, j] + 2.*(B[i, j] + C[i, j]) + D[i, j]) * inv_6
+    for i in prange(bm.shape[0]):
+        for j in prange(bm.shape[1]):
+            bm[i, j] += (A[i, j] + 2.*(B[i, j] + C[i, j]) + D[i, j]) * inv_6
 
-        
+
 @njit()
 def calculate_derivatives(px, py, pz, wx, wy, wz, dt):
     n_part = px.shape[0]
@@ -50,7 +50,7 @@ def calculate_derivatives(px, py, pz, wx, wy, wz, dt):
         der[5, i] = dt * wz[i]
         der[6, i] = 0.
     return der
-    
+
 
 def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
                             order=2):

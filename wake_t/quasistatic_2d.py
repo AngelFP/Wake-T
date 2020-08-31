@@ -69,7 +69,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     """
     s_d = ge.plasma_skin_depth(n_p * 1e-6)
     r_max = r_max / s_d
-    xi_min= xi_min / s_d
+    xi_min = xi_min / s_d
     xi_max = xi_max / s_d
 
     # Laser parameters.
@@ -119,7 +119,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
         pr = pr[idx_keep]
         gamma = gamma[idx_keep]
         q = q[idx_keep]
-        
+
         # Calculate fields at specified r locations.
         fields = calculate_fields(r_arr, xi, r, pr, q,
                                   laser_params, beam_source, s_d)
@@ -134,7 +134,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     dr_psi_mesh, dxi_psi_mesh = np.gradient(psi_mesh, dr, dxi)
     dxi_psi_mesh *= -1
     dr_psi_mesh *= -1
-    e_r_mesh = b_theta_bar_mesh +  b_theta_0_mesh - dr_psi_mesh
+    e_r_mesh = b_theta_bar_mesh + b_theta_0_mesh - dr_psi_mesh
     r_arr_v = np.vstack(r_arr)
     n_p = (np.gradient(r_arr_v * e_r_mesh, dr, axis=0, edge_order=2)/r_arr_v
            - np.gradient(dxi_psi_mesh, dxi, axis=1) - 1)
@@ -148,7 +148,7 @@ def evolve_plasma(r, pr, q, xi, dxi, laser_params, beam_source, s_d):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
     using a Runge-Kutta method of 4th order.
-    
+
     This means that the transverse coordinates are updated as:
     r += (Ar + 2*Br + 2*Cr) + Dr) / 6
     pr += (Apr + 2*Bpr + 2*Cpr) + Dpr) / 6
@@ -222,7 +222,7 @@ def motion_derivatives(dxi, xi, r, pr, q, laser_params, beam_source, s_d):
     # Convert xi and r from normalized to SI units.
     xi_si = xi*s_d
     r_si = r*s_d
-    
+
     # Calculate source terms from laser and beam particles.
     if laser_params is not None:
         nabla_a = get_nabla_a(xi_si, r_si, *laser_params) * s_d
@@ -266,7 +266,7 @@ def calculate_derivatives(dxi, r, pr, q, b_theta_0, nabla_a, a2):
 
     a2 : ndarray
         Array containing the value of the square of the laser normalized
-        vector potential at the position of each particle.    
+        vector potential at the position of each particle.
 
     """
     # Preallocate arrays.
@@ -305,7 +305,7 @@ def update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr):
     algorithm is outsourced.
 
     It also checks and corrects for any particles with r < 0.
-    
+
     """
     # Push particles
     inv_6 = 1. / 6.
@@ -330,7 +330,7 @@ def calculate_fields(r_arr, xi, r, pr, q, laser_params, beam_source, s_d):
     -----------
     r_arr : ndarray
         1D array containing the radial positions at which to evaluate the
-        fields. This array should be sorted.    
+        fields. This array should be sorted.
 
     xi : float
         Longitudinal position (speed-of-light frame) at which to evaluate the
@@ -375,7 +375,7 @@ def calculate_fields(r_arr, xi, r, pr, q, laser_params, beam_source, s_d):
     # Calculate wakefield potential and derivatives at plasma particles.
     psi, dr_psi, dxi_psi = calculate_psi_and_derivatives_at_particles(r, pr, q)
     gamma = (1 + pr**2 + a2/2 + (1+psi)**2) / (2*(1+psi))
-    
+
     # Calculate all fields at the specified r_arr locations.
     b_theta_0_r = beam_source(r_arr, xi)
     psi_r, dr_psi_r, dxi_psi_r = calculate_psi_and_derivatives(r_arr, r, pr, q)
@@ -546,7 +546,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
     -----------
     r_arr : ndarray
         1D array containing the radial positions at which to evaluate the
-        fields. This array should be sorted.  
+        fields. This array should be sorted.
 
     r, pr, q, gamma : arrays
         Arrays containing, respectively, the radial position, radial momentum,
@@ -564,7 +564,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
     """
     # Calculate a_i and b_i, as well as a_0 and the sorted particle indices.
     a_i, b_i, a_0, idx = calculate_ai_bi(
-        r, pr, q, gamma, psi, dr_psi, dxi_psi,b_theta_0, nabla_a)
+        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a)
 
     # Calculate field at particles as average between neighboring values.
     n_part = r.shape[0]
@@ -579,7 +579,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
         a_im1 = a_i[i]
         b_im1 = b_i[i]
     b_theta_bar = a_i_avg * r + b_i_avg / r
-    return b_theta_bar        
+    return b_theta_bar
 
 
 @njit()
@@ -608,7 +608,7 @@ def calculate_b_theta(r_arr, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     """
     # Calculate a_i and b_i, as well as a_0 and the sorted particle indices.
     a_i, b_i, a_0, idx = calculate_ai_bi(
-        r, pr, q, gamma, psi, dr_psi, dxi_psi,b_theta_0, nabla_a)
+        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a)
 
     # Calculate fields at r_arr
     n_part = r.shape[0]
@@ -648,7 +648,7 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
 
         Write a_i and b_i as linear system of a_0:
 
-            a_i = K_i * a_0 + O_i
+            a_i = K_i * a_0 + T_i
             b_i = U_i * a_0 + P_i
 
 
@@ -657,9 +657,9 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
             K_i = (1 + A_i*r_i/2) * K_im1  +  A_i/(2*r_i)     * U_im1
             U_i = (-A_i*r_i**3/2) * K_im1  +  (1 - A_i*r_i/2) * U_im1
 
-            O_i = ( (1 + A_i*r_i/2) * O_im1  +  A_i/(2*r_i)     * P_im1  +
+            T_i = ( (1 + A_i*r_i/2) * T_im1  +  A_i/(2*r_i)     * P_im1  +
                     (2*Bi + Ai*Ci)/4 )
-            P_i = ( (-A_i*r_i**3/2) * O_im1  +  (1 - A_i*r_i/2) * P_im1  +
+            P_i = ( (-A_i*r_i**3/2) * T_im1  +  (1 - A_i*r_i/2) * P_im1  +
                     r_i*(4*Ci - 2*Bi*r_i - Ai*Ci*r_i)/4 )
 
         With initial conditions:
@@ -679,13 +679,13 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
     # Preallocate arrays
     K = np.zeros(n_part)
     U = np.zeros(n_part)
-    O = np.zeros(n_part)
+    T = np.zeros(n_part)
     P = np.zeros(n_part)
 
     # Establish initial conditions (K_0 = 1, U_0 = 0, O_0 = 0, P_0 = 0)
     K_im1 = 1.
     U_im1 = 0.
-    O_im1 = 0.
+    T_im1 = 0.
     P_im1 = 0.
 
     # Iterate over particles
@@ -716,8 +716,8 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
                      + pr_i2 / (r_i*r_i * a2)
                      + b_theta_0_i * b
                      + nabla_a_i * c * 0.5)
-        C_i = q_i * (pr_i2 * c - (gamma_i/a - 1.)/ r_i)
-        
+        C_i = q_i * (pr_i2*c - (gamma_i/a-1.)/r_i)
+
         l_i = (1. + 0.5*A_i*r_i)
         m_i = 0.5 * A_i / r_i
         n_i = -0.5 * A_i * r_i**3
@@ -725,24 +725,24 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
 
         K_i = l_i*K_im1 + m_i*U_im1
         U_i = n_i*K_im1 + o_i*U_im1
-        O_i = l_i*O_im1 + m_i*P_im1 + 0.5*B_i + 0.25*A_i*C_i
-        P_i = n_i*O_im1 + o_i*P_im1 + r_i*(C_i-0.5*B_i*r_i-0.25*A_i*C_i*r_i)
+        T_i = l_i*T_im1 + m_i*P_im1 + 0.5*B_i + 0.25*A_i*C_i
+        P_i = n_i*T_im1 + o_i*P_im1 + r_i*(C_i-0.5*B_i*r_i-0.25*A_i*C_i*r_i)
 
         K[i] = K_i
         U[i] = U_i
-        O[i] = O_i
+        T[i] = T_i
         P[i] = P_i
 
         K_im1 = K_i
         U_im1 = U_i
-        O_im1 = O_i
+        T_im1 = T_i
         P_im1 = P_i
 
     # Calculate a_0.
-    a_0 = - O_im1 / K_im1
+    a_0 = - T_im1 / K_im1
 
     # Calculate a_i and b_i as functions of a_0.
-    a_i = K * a_0 + O
+    a_i = K * a_0 + T
     b_i = U * a_0 + P
     return a_i, b_i, a_0, idx
 
