@@ -213,9 +213,9 @@ class PlasmaStage():
         n_xi : int
             Number of grid elements along xi to calculate the wakefields.
 
-        n_part : int (optional)
-            Number of plasma particles along the radial direction. By default
-            n_part=1000.
+        ppc : int (optional)
+            Number of plasma particles per 1d cell along the radial direction.
+            By default ppc=2.
 
         dz_fields : float (optional)
             Determines how often the plasma wakefields should be updated. If

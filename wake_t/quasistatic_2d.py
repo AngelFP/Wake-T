@@ -54,8 +54,8 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     n_xi : int
         Number of grid elements along xi in which to calculate the wakefields.
 
-    n_part : int
-        Number of plasma particles along the radial direction.
+    ppc : int (optional)
+        Number of plasma particles per 1d cell along the radial direction.
 
     n_p : float
         Plasma density in units of m^{-3}.
