@@ -438,7 +438,7 @@ class Quasistatic2DWakefield(Wakefield):
 
     def __init__(self, density_function, laser=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
-                 n_xi=100, n_part=1000, dz_fields=0):
+                 n_xi=100, ppc=2, dz_fields=0):
         self.density_function = density_function
         self.laser = laser
         self.laser_evolution = laser_evolution
@@ -448,7 +448,7 @@ class Quasistatic2DWakefield(Wakefield):
         self.xi_max = xi_max
         self.n_r = n_r
         self.n_xi = n_xi
-        self.n_part = n_part
+        self.ppc = ppc
         self.dz_fields = np.inf if dz_fields is None else dz_fields
         self.current_t = None
 
@@ -497,7 +497,7 @@ class Quasistatic2DWakefield(Wakefield):
 
         flds = calculate_wakefields(
             self.laser, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
-            self.n_r, self.n_xi, self.n_part, n_p, dz_foc)
+            self.n_r, self.n_xi, self.ppc, n_p, dz_foc)
         n_p_mesh, W_r, E_z, E_z_p, K_r, psi_mesh, xi_arr, r_arr = flds
 
         # For debugging
