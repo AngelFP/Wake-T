@@ -164,6 +164,12 @@ class PlasmaStage():
             value implies that the focal point is located before the
             PlasmaStage.
 
+        beam_wakefields : bool
+            Whether to take into account beam-driven wakefields (False by
+            default). This should be set to True for any beam-driven case or
+            in order to take into account the beam-loading of the witness in
+            a laser-driven case.
+
         r_max : float
             Maximum radial position up to which plasma wakefield will be
             calculated.
@@ -584,6 +590,12 @@ class PlasmaRamp():
             the distance from the beginning of the PlasmaStage. A negative
             value implies that the focal point is located before the
             PlasmaStage. Required only if laser_evolution=True.
+
+        beam_wakefields : bool
+            Whether to take into account beam-driven wakefields (False by
+            default). This should be set to True for any beam-driven case or
+            in order to take into account the beam-loading of the witness in
+            a laser-driven case.
 
         r_max : float
             Maximum radial position up to which plasma wakefield will be
