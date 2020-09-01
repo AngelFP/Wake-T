@@ -57,7 +57,7 @@ class PlasmaStage():
 
     """ Defines a plasma stage. """
 
-    def __init__(self, length, n_p, driver=None, tracking_mode='numerical',
+    def __init__(self, length, n_p, laser=None, tracking_mode='numerical',
                  wakefield_model='simple_blowout', n_out=None, **model_params):
         """
         Initialize plasma stage.
@@ -70,8 +70,8 @@ class PlasmaStage():
         n_p : float
             Plasma density in units of m^{-3}.
 
-        driver : LaserPulse
-            Driver of the plasma stage. Currently only lasers are supported.
+        laser : LaserPulse
+            Laser driver of the plasma stage.
 
         tracking_mode : str
             Tracking algorithm used for the bunch particles. Can be 'numerical'
@@ -80,7 +80,8 @@ class PlasmaStage():
 
         wakefield_model : str
             Wakefield model to be used. Possible values are 'simple_blowout',
-            'custom_blowout', 'from_pic_code' and 'cold_fluid_1d'.
+            'custom_blowout', 'from_pic_code', 'cold_fluid_1d' and
+            'quasistatic_2d'.
 
         n_out : int
             Number of times along the stage in which the particle distribution
@@ -161,11 +162,17 @@ class PlasmaStage():
             Focal position of the laser along z in meters. It is measured as
             the distance from the beginning of the PlasmaStage. A negative
             value implies that the focal point is located before the
-            PlasmaStage. Required only if laser_evolution=True.
+            PlasmaStage.
+
+        beam_wakefields : bool
+            Whether to take into account beam-driven wakefields (False by
+            default). This should be set to True for any beam-driven case or
+            in order to take into account the beam-loading of the witness in
+            a laser-driven case.
 
         r_max : float
             Maximum radial position up to which plasma wakefield will be
-            calculated. Required only if mode='cold_fluid_1d'.
+            calculated.
 
         xi_min : float
             Minimum longitudinal (speed of light frame) position up to which
@@ -181,10 +188,56 @@ class PlasmaStage():
         n_xi : int
             Number of grid elements along xi to calculate the wakefields.
 
+        Model 'quasistatic_2d'
+        ---------------------
+        laser_evolution : bool
+            If True, the laser pulse transverse profile evolves as a Gaussian
+            in vacuum. If False, the pulse envelope stays fixed throughout
+            the computation.
+
+        laser_z_foc : float
+            Focal position of the laser along z in meters. It is measured as
+            the distance from the beginning of the PlasmaStage. A negative
+            value implies that the focal point is located before the
+            PlasmaStage.
+
+        r_max : float
+            Maximum radial position up to which plasma wakefield will be
+            calculated.
+
+        xi_min : float
+            Minimum longitudinal (speed of light frame) position up to which
+            plasma wakefield will be calculated.
+
+        xi_max : float
+            Maximum longitudinal (speed of light frame) position up to which
+            plasma wakefield will be calculated.
+
+        n_r : int
+            Number of grid elements along r to calculate the wakefields.
+
+        n_xi : int
+            Number of grid elements along xi to calculate the wakefields.
+
+        ppc : int (optional)
+            Number of plasma particles per 1d cell along the radial direction.
+            By default ppc=2.
+
+        dz_fields : float (optional)
+            Determines how often the plasma wakefields should be updated. If
+            dz_fields=0 (default value), the wakefields are calculated at every
+            step of the Runge-Kutta solver for the beam particle evolution
+            (most expensive option). If specified, the wakefields are only
+            updated in steps determined by dz_fields. For example, if
+            dz_fields=10e-6, the plasma wakefields are only updated every time
+            the simulation window advances by 10 micron. If dz_fields=None, the
+            wakefields are only computed once (at the start of the plasma) and
+            never updated throughout the simulation.
+
         """
         self.length = length
         self.n_p = n_p
-        self.driver = driver
+        self.laser = laser
         self.tracking_mode = tracking_mode
         self.wakefield_model = wakefield_model
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
@@ -233,10 +286,10 @@ class PlasmaStage():
         """Create and return corresponding wakefield."""
         if wakefield_model == "simple_blowout":
             WF = wf.SimpleBlowoutWakefield(
-                self.n_p, driver=self.driver, **model_params)
+                self.n_p, driver=self.laser, **model_params)
         if wakefield_model == "custom_blowout":
             WF = wf.CustomBlowoutWakefield(
-                self.n_p, driver=self.driver, **model_params)
+                self.n_p, driver=self.laser, **model_params)
         elif wakefield_model == "from_pic_code":
             raise NotImplementedError('Needs to be updated for new VisualPIC')
             # if vpic_installed:
@@ -245,7 +298,10 @@ class PlasmaStage():
             #    raise ImportError('VisualPIC is not installed.')
         elif wakefield_model == 'cold_fluid_1d':
             WF = wf.NonLinearColdFluidWakefield(
-                self.calculate_density, driver=self.driver, **model_params)
+                self.calculate_density, driver=self.laser, **model_params)
+        elif wakefield_model == 'quasistatic_2d':
+            WF = wf.Quasistatic2DWakefield(
+                self.calculate_density, laser=self.laser, **model_params)
         return WF
 
     def _gamma(self, px, py, pz):
@@ -335,7 +391,7 @@ class PlasmaStage():
 
     def _track_analytically(self, bunch, parallel, n_proc):
         # Group velocity of driver
-        v_w = self.wakefield.driver.get_group_velocity(self.n_p)*ct.c
+        v_w = self.wakefield.laser.get_group_velocity(self.n_p)*ct.c
 
         # Main bunch quantities [SI units]
         x_0 = bunch.x
@@ -502,8 +558,8 @@ class PlasmaRamp():
             'linear', 'inverse square' and 'exponential'.
 
         wakefield_model : str
-            Wakefield model to be used. Possible values are 'blowout'
-            and 'cold_fluid_1d'.
+            Wakefield model to be used. Possible values are 'blowout',
+            'cold_fluid_1d' and 'quasistatic_2d'.
 
         n_out : int
             Number of times along the stage in which the particle distribution
@@ -521,6 +577,9 @@ class PlasmaRamp():
 
         Model 'cold_fluid_1d'
         ---------------------
+        laser : LaserPulse
+            Laser driver of the plasma stage.
+
         laser_evolution : bool
             If True, the laser pulse transverse profile evolves as a Gaussian
             in vacuum. If False, the pulse envelope stays fixed throughout
@@ -531,6 +590,12 @@ class PlasmaRamp():
             the distance from the beginning of the PlasmaStage. A negative
             value implies that the focal point is located before the
             PlasmaStage. Required only if laser_evolution=True.
+
+        beam_wakefields : bool
+            Whether to take into account beam-driven wakefields (False by
+            default). This should be set to True for any beam-driven case or
+            in order to take into account the beam-loading of the witness in
+            a laser-driven case.
 
         r_max : float
             Maximum radial position up to which plasma wakefield will be
@@ -549,6 +614,55 @@ class PlasmaRamp():
 
         n_xi : int
             Number of grid elements along xi to calculate the wakefields.
+
+        Model 'quasistatic_2d'
+        ---------------------
+        laser : LaserPulse
+            Laser driver of the plasma stage.
+
+        laser_evolution : bool
+            If True, the laser pulse transverse profile evolves as a Gaussian
+            in vacuum. If False, the pulse envelope stays fixed throughout
+            the computation.
+
+        laser_z_foc : float
+            Focal position of the laser along z in meters. It is measured as
+            the distance from the beginning of the PlasmaStage. A negative
+            value implies that the focal point is located before the
+            PlasmaStage.
+
+        r_max : float
+            Maximum radial position up to which plasma wakefield will be
+            calculated.
+
+        xi_min : float
+            Minimum longitudinal (speed of light frame) position up to which
+            plasma wakefield will be calculated.
+
+        xi_max : float
+            Maximum longitudinal (speed of light frame) position up to which
+            plasma wakefield will be calculated.
+
+        n_r : int
+            Number of grid elements along r to calculate the wakefields.
+
+        n_xi : int
+            Number of grid elements along xi to calculate the wakefields.
+
+        n_part : int (optional)
+            Number of plasma particles along the radial direction. By default
+            n_part=1000.
+
+        dz_fields : float (optional)
+            Determines how often the plasma wakefields should be updated. If
+            dz_fields=0 (default value), the wakefields are calculated at every
+            step of the Runge-Kutta solver for the beam particle evolution
+            (most expensive option). If specified, the wakefields are only
+            updated in steps determined by dz_fields. For example, if
+            dz_fields=10e-6, the plasma wakefields are only updated every time
+            the simulation window advances by 10 micron. If dz_fields=None, the
+            wakefields are only computed once (at the start of the plasma) and
+            never updated throughout the simulation.
 
         """
         self.length = length
@@ -675,6 +789,9 @@ class PlasmaRamp():
                     self.length - model_params['laser_z_foc'])
             WF = wf.NonLinearColdFluidWakefield(
                 self.calculate_density, **model_params)
+        elif wakefield_model == 'quasistatic_2d':
+            WF = wf.Quasistatic2DWakefield(
+                self.calculate_density, **model_params)
         return WF
 
     def _get_optimized_dt(self, beam, wakefield):
@@ -725,9 +842,11 @@ class PlasmaRamp():
 
 class PlasmaLens():
 
-    """Defines an active plasma lens"""
+    """Defines an active plasma lens (APL)"""
 
-    def __init__(self, length, foc_strength, relativistic=True, n_out=None):
+    def __init__(self, length, foc_strength, relativistic=True,
+                 wakefields=False, wakefield_model='quasistatic_2d', n_p=None,
+                 n_out=None, **model_params):
         """
         Initialize plasma lens.
 
@@ -743,19 +862,133 @@ class PlasmaLens():
             Determines whether to use the relativistic approximation of the
             fields experienced by the bunch.
 
+        wakefields : bool
+            If True, the beam-induced wakefields in the plasma lens will be
+            computed using the model specified in 'wakefield_model' and
+            taken into account for the beam evolution.
+
+        wakefield_model : str
+            Name of the model which should be used for computing the
+            beam-induced wakefields. Possible values are 'cold_fluid_1d' and
+            'quasistatic_2d'.
+
+        n_p : float
+            Plasma density in the APL in units of m^{-3}. Required only if
+            wakefields=True.
+
         n_out : int
             Number of times along the lens in which the particle distribution
             should be returned (A list with all output bunches is returned
             after tracking).
 
+        Model 'cold_fluid_1d'
+        ---------------------
+        laser_evolution : bool
+            If True, the laser pulse transverse profile evolves as a Gaussian
+            in vacuum. If False, the pulse envelope stays fixed throughout
+            the computation.
+
+        laser_z_foc : float
+            Focal position of the laser along z in meters. It is measured as
+            the distance from the beginning of the PlasmaStage. A negative
+            value implies that the focal point is located before the
+            PlasmaStage. Required only if laser_evolution=True.
+
+        r_max : float
+            Maximum radial position up to which plasma wakefield will be
+            calculated. Required only if mode='cold_fluid_1d'.
+
+        xi_min : float
+            Minimum longitudinal (speed of light frame) position up to which
+            plasma wakefield will be calculated.
+
+        xi_max : float
+            Maximum longitudinal (speed of light frame) position up to which
+            plasma wakefield will be calculated.
+
+        n_r : int
+            Number of grid elements along r to calculate the wakefields.
+
+        n_xi : int
+            Number of grid elements along xi to calculate the wakefields.
+
+        Model 'quasistatic_2d'
+        ---------------------
+        laser_evolution : bool
+            If True, the laser pulse transverse profile evolves as a Gaussian
+            in vacuum. If False, the pulse envelope stays fixed throughout
+            the computation.
+
+        laser_z_foc : float
+            Focal position of the laser along z in meters. It is measured as
+            the distance from the beginning of the PlasmaStage. A negative
+            value implies that the focal point is located before the
+            PlasmaStage.
+
+        r_max : float
+            Maximum radial position up to which plasma wakefield will be
+            calculated.
+
+        xi_min : float
+            Minimum longitudinal (speed of light frame) position up to which
+            plasma wakefield will be calculated.
+
+        xi_max : float
+            Maximum longitudinal (speed of light frame) position up to which
+            plasma wakefield will be calculated.
+
+        n_r : int
+            Number of grid elements along r to calculate the wakefields.
+
+        n_xi : int
+            Number of grid elements along xi to calculate the wakefields.
+
+        n_part : int (optional)
+            Number of plasma particles along the radial direction. By default
+            n_part=1000.
+
+        dz_fields : float (optional)
+            Determines how often the plasma wakefields should be updated. If
+            dz_fields=0 (default value), the wakefields are calculated at every
+            step of the Runge-Kutta solver for the beam particle evolution
+            (most expensive option). If specified, the wakefields are only
+            updated in steps determined by dz_fields. For example, if
+            dz_fields=10e-6, the plasma wakefields are only updated every time
+            the simulation window advances by 10 micron. If dz_fields=None, the
+            wakefields are only computed once (at the start of the plasma) and
+            never updated throughout the simulation.
+
         """
         self.length = length
         self.foc_strength = foc_strength
-        if relativistic:
-            self.field = wf.PlasmaLensFieldRelativistic(self.foc_strength)
-        else:
-            self.field = wf.PlasmaLensField(self.foc_strength)
         self.n_out = n_out
+        self.n_p = n_p
+        self.field = self._get_wakefield(
+            relativistic, wakefields, wakefield_model, model_params)
+
+    def _get_wakefield(self, relativistic, wakefields, wakefield_model,
+                       model_params):
+        if relativistic:
+            lens_field = wf.PlasmaLensFieldRelativistic(self.foc_strength)
+        else:
+            lens_field = wf.PlasmaLensField(self.foc_strength)
+        if wakefields:
+            if wakefield_model == 'cold_fluid_1d':
+                plasma_wf = wf.NonLinearColdFluidWakefield(
+                    self.calculate_density, beam_wakefields=True,
+                    **model_params)
+            elif wakefield_model == 'quasistatic_2d':
+                plasma_wf = wf.Quasistatic2DWakefield(
+                    self.calculate_density, **model_params)
+            else:
+                raise ValueError
+            WF = wf.CombinedWakefield([lens_field, plasma_wf])
+        else:
+            WF = lens_field
+        return WF
+
+    def calculate_density(self, z):
+        return self.n_p
 
     def track(self, bunch, parallel=False, n_proc=None, out_initial=False):
         """
@@ -862,7 +1095,7 @@ class PlasmaLens():
         gamma = self._gamma(beam.px, beam.py, beam.pz)
         mean_gamma = np.average(gamma, weights=beam.q)
         Kx = WF.Kx(
-            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, beam.q, gamma,
+            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, beam.q,
             0)
         mean_Kx = np.average(Kx, weights=beam.q)
         w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)

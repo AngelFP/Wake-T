@@ -1,5 +1,6 @@
 """ This module contains the numerical trackers and equations of motion """
 
+from numba import njit, prange
 import numpy as np
 import scipy.constants as ct
 
@@ -7,25 +8,48 @@ import scipy.constants as ct
 def runge_kutta_4(beam_matrix, WF, t0, dt, iterations):
     for i in np.arange(iterations):
         t = t0 + i*dt
-        A = dt*equations_of_motion(beam_matrix, t, WF)
-        B = dt*equations_of_motion(beam_matrix + A/2, t+dt/2, WF)
-        C = dt*equations_of_motion(beam_matrix + B/2, t+dt/2, WF)
-        D = dt*equations_of_motion(beam_matrix + C, t+dt, WF)
-        beam_matrix += 1/6*(A + 2*B + 2*C + D)
+        A = equations_of_motion(beam_matrix, t, WF, dt)
+        B = equations_of_motion(beam_matrix + A/2., t+dt/2., WF, dt)
+        C = equations_of_motion(beam_matrix + B/2., t+dt/2., WF, dt)
+        D = equations_of_motion(beam_matrix + C, t+dt, WF, dt)
+        update_beam_matrix(beam_matrix, A, B, C, D)
     return beam_matrix
 
 
-def equations_of_motion(beam_matrix, t, WF):
+def equations_of_motion(beam_matrix, t, WF, dt):
     K = -ct.e/(ct.m_e*ct.c)
     x, px, y, py, xi, pz, q = beam_matrix
-    gamma = np.sqrt(1 + np.square(px) + np.square(py) + np.square(pz))
-    return np.array([px*ct.c/gamma,
-                     K*WF.Wx(x, y, xi, px, py, pz, q, gamma, t),
-                     py*ct.c/gamma,
-                     K*WF.Wy(x, y, xi, px, py, pz, q, gamma, t),
-                     (pz/gamma-1)*ct.c,
-                     K*WF.Wz(x, y, xi, px, py, pz, q, gamma, t),
-                     np.zeros_like(q)])
+    wx = K * WF.Wx(x, y, xi, px, py, pz, q, t)
+    wy = K * WF.Wy(x, y, xi, px, py, pz, q, t)
+    wz = K * WF.Wz(x, y, xi, px, py, pz, q, t)
+    return calculate_derivatives(px, py, pz, wx, wy, wz, dt)
+
+
+@njit()
+def update_beam_matrix(bm, A, B, C, D):
+    inv_6 = 1 / 6.
+    for i in prange(bm.shape[0]):
+        for j in prange(bm.shape[1]):
+            bm[i, j] += (A[i, j] + 2.*(B[i, j] + C[i, j]) + D[i, j]) * inv_6
+
+
+@njit()
+def calculate_derivatives(px, py, pz, wx, wy, wz, dt):
+    n_part = px.shape[0]
+    der = np.empty((7, n_part))
+    for i in prange(n_part):
+        px_i = px[i]
+        py_i = py[i]
+        pz_i = pz[i]
+        inv_gamma_i = 1 / np.sqrt(1 + px_i*px_i + py_i*py_i + pz_i*pz_i)
+        der[0, i] = dt * px_i * ct.c * inv_gamma_i
+        der[1, i] = dt * wx[i]
+        der[2, i] = dt * py_i * ct.c * inv_gamma_i
+        der[3, i] = dt * wy[i]
+        der[4, i] = dt * (pz_i*inv_gamma_i - 1) * ct.c
+        der[5, i] = dt * wz[i]
+        der[6, i] = 0.
+    return der
 
 
 def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
