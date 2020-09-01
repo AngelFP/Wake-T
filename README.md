@@ -1,4 +1,4 @@
-# Wake-T: A fast tracking code for plasma-based accelerators.
+# Wake-T: A fast tracking code for plasma accelerators.
 [![Build Status](https://travis-ci.org/AngelFP/Wake-T.svg?branch=master)](https://travis-ci.org/AngelFP/Wake-T)
 [![CodeFactor](https://www.codefactor.io/repository/github/angelfp/wake-t/badge)](https://www.codefactor.io/repository/github/angelfp/wake-t)
 [![License](https://img.shields.io/badge/license-LGPLv3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
