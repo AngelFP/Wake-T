@@ -35,4 +35,6 @@ python setup.py install
 
 [1] - A. Ferran Pousa et al., *Intrinsic energy spread and bunch length growth in plasma-based accelerators due to betatron motion*, [Sci. Rep. **9**, 17690 ](https://doi.org/10.1038/s41598-019-53887-8) (2019).
 
-[2] - A. Ferran Pousa et al., *Wake-T: a fast particle tracking code for plasma-based accelerators*, [J. Phys.: Conf. Ser. **1350** 012056](https://iopscience.iop.org/article/10.1088/1742-6596/1350/1/012056) (2019).
+[2] - P. Baxevanis and G. Stupakov, *Novel fast simulation technique for axisymmetric plasma wakefield acceleration configurations in the blowout regime*, [Phys. Rev. Accel. Beams **21**, 071301](https://journals.aps.org/prab/abstract/10.1103/PhysRevAccelBeams.21.071301) (2018).
+
+[3] - A. Ferran Pousa et al., *Wake-T: a fast particle tracking code for plasma-based accelerators*, [J. Phys.: Conf. Ser. **1350** 012056](https://iopscience.iop.org/article/10.1088/1742-6596/1350/1/012056) (2019).
