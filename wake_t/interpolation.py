@@ -52,7 +52,7 @@ def interpolate_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
 
         # Interpolate in r
         dr_u = ir_upper - r_i_cell
-        dr_l = r_i_cell - ir_lower
+        dr_l = 1 - dr_u
 
         w = dr_u*wx_z_1 + dr_l*wx_z_2
         wx_part[i] = w * x_i * inv_r_i
