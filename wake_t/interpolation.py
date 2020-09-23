@@ -27,12 +27,14 @@ def interpolate_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
         ir_upper = ir_lower + 1
         iz_lower = int(math.floor(z_i_cell))
         iz_upper = iz_lower + 1
+        wx_corr = 1
         if ir_lower < 0:
             ir_lower = 0
+            wx_corr = -1
 
-        wx_ll = wx[iz_lower, ir_lower]
+        wx_ll = wx[iz_lower, ir_lower] * wx_corr
         wx_lu = wx[iz_lower, ir_upper]
-        wx_ul = wx[iz_upper, ir_lower]
+        wx_ul = wx[iz_upper, ir_lower] * wx_corr
         wx_uu = wx[iz_upper, ir_upper]
 
         ez_ll = ez[iz_lower, ir_lower]
