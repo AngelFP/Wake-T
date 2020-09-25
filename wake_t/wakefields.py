@@ -297,6 +297,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.n_xi = n_xi
         self.beam_wakefields = beam_wakefields
         self.current_t = -1
+        self.current_t_interp = None
         self.current_n_p = None
 
     def __wakefield_ode_system(self, u_1, u_2, r, z, laser_a0, n_beam):
@@ -399,41 +400,44 @@ class NonLinearColdFluidWakefield(Wakefield):
         #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
         # plt.show()
 
-        self.E_z = RectBivariateSpline(
-            z_arr*s_d, r, E_z*E_0, kx=2, ky=2)
-        self.W_x = RectBivariateSpline(
-            z_arr*s_d, r, W_r*E_0, kx=2, ky=2)
-        self.K_x = RectBivariateSpline(
-            z_arr*s_d, r, K_r*E_0/s_d/ct.c, kx=2, ky=2)
-        self.E_z_p = RectBivariateSpline(
-            z_arr*s_d, r, E_z_p*E_0/s_d, kx=2, ky=2)
+        self.E_z = E_z*E_0
+        self.W_x = W_r*E_0
+        self.K_x = K_r*E_0/s_d/ct.c
+        self.E_z_p = E_z_p*E_0/s_d
+        self.xi_fld = z_arr
+        self.r_fld = r
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        r = np.sqrt(x*x + y*y)
-        sin = x / r
-        return self.W_x(xi, r, grid=False) * sin
+        self.__interpolate_fields_to_particles(x, y, xi, t)
+        return self.wx_part
 
     def Wy(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        r = np.sqrt(x*x + y*y)
-        cos = y / r
-        return self.W_x(xi, r, grid=False) * cos
+        self.__interpolate_fields_to_particles(x, y, xi, t)
+        return self.wy_part
 
     def Wz(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        r = np.sqrt(x*x + y*y)
-        return self.E_z(xi, r, grid=False)
+        self.__interpolate_fields_to_particles(x, y, xi, t)
+        return self.ez_part
 
     def Kx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        r = np.sqrt(x*x + y*y)
-        return self.K_x(xi, r, grid=False)
+        return interpolate_field_cyl_linear(
+            self.K_x, self.xi_fld, self.r_fld, x, y, xi)
 
     def Ez_p(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        r = np.sqrt(x*x + y*y)
-        return self.E_z_p(xi, r, grid=False)
+        return interpolate_field_cyl_linear(
+            self.E_z_p, self.xi_fld, self.r_fld, x, y, xi)
+
+    def __interpolate_fields_to_particles(self, x, y, xi, t):
+        if (self.current_t_interp is None) or (self.current_t != t):
+            self.current_t_interp = t
+            interp_flds = interpolate_main_fields_cyl_linear(
+                self.W_x, self.E_z, self.xi_fld, self.r_fld, x, y, xi)
+            self.wx_part, self.wy_part, self.ez_part = interp_flds
 
 
 class Quasistatic2DWakefield(Wakefield):
@@ -534,7 +538,10 @@ class Quasistatic2DWakefield(Wakefield):
     def __interpolate_fields_to_particles(self, x, y, xi, t):
         if (self.current_t_interp is None) or (self.current_t != t):
             self.current_t_interp = t
-            self.wx_part, self.wy_part, self.ez_part = interpolate_main_fields_cyl_linear(self.W_x, self.E_z, self.xi_fld, self.r_fld, x, y, xi)
+            interp_flds = interpolate_main_fields_cyl_linear(
+                self.W_x, self.E_z, self.xi_fld, self.r_fld, x, y, xi)
+            self.wx_part, self.wy_part, self.ez_part = interp_flds
+
 
 class PlasmaRampBlowoutField(Wakefield):
     def __init__(self, density_function):
