@@ -13,7 +13,8 @@ except ImportError:
     vpic_installed = False
 
 from wake_t.quasistatic_2d import calculate_wakefields
-from wake_t.interpolation import interpolate_cyl_linear
+from wake_t.interpolation import (interpolate_field_cyl_linear,
+                                  interpolate_main_fields_cyl_linear)
 
 
 class Wakefield():
@@ -471,13 +472,13 @@ class Quasistatic2DWakefield(Wakefield):
 
     def Kx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        self.__interpolate_fields_to_particles(x, y, xi, t)
-        return self.kx_part
+        return interpolate_field_cyl_linear(
+            self.K_x, self.xi_fld, self.r_fld, x, y, xi)
 
     def Ez_p(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        self.__interpolate_fields_to_particles(x, y, xi, t)
-        return self.ez_p_part
+        return interpolate_field_cyl_linear(
+            self.E_z_p, self.xi_fld, self.r_fld, x, y, xi)
 
     def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
         if self.current_t is None:
@@ -533,7 +534,7 @@ class Quasistatic2DWakefield(Wakefield):
     def __interpolate_fields_to_particles(self, x, y, xi, t):
         if (self.current_t_interp is None) or (self.current_t != t):
             self.current_t_interp = t
-            self.wx_part, self.wy_part, self.ez_part = interpolate_cyl_linear(self.W_x, self.E_z, self.xi_fld, self.r_fld, x, y, xi)
+            self.wx_part, self.wy_part, self.ez_part = interpolate_main_fields_cyl_linear(self.W_x, self.E_z, self.xi_fld, self.r_fld, x, y, xi)
 
 class PlasmaRampBlowoutField(Wakefield):
     def __init__(self, density_function):
