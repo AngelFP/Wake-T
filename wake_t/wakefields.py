@@ -404,7 +404,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.W_x = W_r*E_0
         self.K_x = K_r*E_0/s_d/ct.c
         self.E_z_p = E_z_p*E_0/s_d
-        self.xi_fld = z_arr
+        self.xi_fld = z_arr * s_d
         self.r_fld = r
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
