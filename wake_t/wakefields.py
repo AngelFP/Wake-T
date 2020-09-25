@@ -458,43 +458,26 @@ class Quasistatic2DWakefield(Wakefield):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         self.__interpolate_fields_to_particles(x, y, xi, t)
         return self.wx_part
-        # r = np.sqrt(x*x + y*y)
-        # sin = x / r
-        # return interpolate_cyl_linear(self.W_x, self.xi_fld, self.r_fld, x, y, xi) * sin
-        # return self.W_x(xi, r, grid=False) * sin
 
     def Wy(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         self.__interpolate_fields_to_particles(x, y, xi, t)
         return self.wy_part
-        # r = np.sqrt(x*x + y*y)
-        # cos = y / r
-        # return interpolate_cyl_linear(self.W_x, self.xi_fld, self.r_fld, x, y, xi) * cos
-        # return self.W_x(xi, r, grid=False) * cos
 
     def Wz(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         self.__interpolate_fields_to_particles(x, y, xi, t)
         return self.ez_part
-        # r = np.sqrt(x*x + y*y)
-        # return interpolate_cyl_linear(self.E_z, self.xi_fld, self.r_fld, x, y, xi)
-        # return self.E_z(xi, r, grid=False)
 
     def Kx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         self.__interpolate_fields_to_particles(x, y, xi, t)
         return self.kx_part
-        # r = np.sqrt(x*x + y*y)
-        # return interpolate_cyl_linear(self.K_x, self.xi_fld, self.r_fld, x, y, xi)
-        # return self.K_x(xi, r, grid=False)
 
     def Ez_p(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         self.__interpolate_fields_to_particles(x, y, xi, t)
         return self.ez_p_part
-        # r = np.sqrt(x*x + y*y)
-        # return interpolate_cyl_linear(self.E_z_p, self.xi_fld, self.r_fld, x, y, xi)
-        # return self.E_z_p(xi, r, grid=False)
 
     def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
         if self.current_t is None:
@@ -546,15 +529,6 @@ class Quasistatic2DWakefield(Wakefield):
         self.E_z_p = E_z_p.T*E_0/s_d
         self.xi_fld = xi_arr*s_d
         self.r_fld = r_arr*s_d
-
-        # self.E_z = RectBivariateSpline(
-        #     xi_arr*s_d, r_arr*s_d, E_z.T*E_0, kx=2, ky=2)
-        # self.W_x = RectBivariateSpline(
-        #     xi_arr*s_d, r_arr*s_d, W_r.T*E_0, kx=2, ky=2)
-        # self.K_x = RectBivariateSpline(
-        #     xi_arr*s_d, r_arr*s_d, K_r.T*E_0/s_d/ct.c, kx=2, ky=2)
-        # self.E_z_p = RectBivariateSpline(
-        #     xi_arr*s_d, r_arr*s_d, E_z_p.T*E_0/s_d, kx=2, ky=2)
 
     def __interpolate_fields_to_particles(self, x, y, xi, t):
         if (self.current_t_interp is None) or (self.current_t != t):
