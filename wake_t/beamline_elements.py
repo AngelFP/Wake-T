@@ -406,11 +406,11 @@ class PlasmaStage():
 
         # Fields
         E_p = -ct.e/(ct.m_e*ct.c) * self.wakefield.Ez_p(
-            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, None, 0)
+            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, 0)
         E = -ct.e/(ct.m_e*ct.c) * self.wakefield.Wz(
-            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, None, 0)
+            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, 0)
         K = ct.e/ct.m_e * self.wakefield.Kx(
-            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, None, 0)
+            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, 0)
 
         if any(K <= 0):
             raise ValueError(
