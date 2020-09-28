@@ -182,7 +182,7 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
         phase-space information of the bunch as (x, x', y, y', xi, dp) in
         units of (m, rad, m, rad, m, -). dp is defined as
         dp = (g-g_ref)/g_ref, while x' = px/p_kin and y' = py/p_kin, where
-        p_kin is the kinetic momentum of each particle.
+        p_kin is the reference kinetic momentum.
 
     z : float
         Longitudinal position in which to obtain the bunch distribution
@@ -215,6 +215,8 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
         igamma2 = 1./gamma2
 
     beta = np.sqrt(1. - igamma2)
+    beta2 = beta * beta
+    beta3 = beta2*beta
     h = theta/L
     L = z  # Easy fix for the calculation below, where L should actually be z.
     h2 = h*h
@@ -224,7 +226,7 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     kx4 = kx2*kx2
     ky4 = ky2*ky2
     kx = np.sqrt(kx2 + 0.j)
-    ky = np.sqrt(ky2 + 0.j)
+    ky = np.sqrt(-k1 + 0.j)
     cx = np.cos(kx*L).real
     sx = (np.sin(kx*L)/kx).real if kx != 0 else L
     cy = np.cos(ky*L).real
@@ -237,258 +239,122 @@ def second_order_matrix(z, L, theta, k1, k2, gamma_ref):
     L3 = L2*L
     L4 = L3*L
     L5 = L4*L
-    dx = h/kx2*(1. - cx) if kx != 0. else L*L*h/2.
-    dx_h = (1. - cx)/kx2 if kx != 0. else L*L/2.
+    dx = (1. - cx)/kx2 if kx != 0. else L*L/2.
+    dx2 = dx * dx
+    K1 = k1
+    K2 = k2
 
-    # Integrals
-    denom = kx2 - 4.*ky2
-    I111 = 1./3.*(sx2 + dx_h)
-    I122 = dx_h*dx_h/3.
-    I112 = sx*dx_h/3.
-    I11 = L*sx/2.
-    I10 = dx_h
-    I33 = L*sy/2.
-    I34 = (sy - L*cy)/(2.*ky2) if ky != 0. else L3/6.
-    I211 = sx/3.*(1. + 2.*cx)
-    I222 = 2.*dx_h*sx/3.
-    I212 = 1./3.*(2*sx2 - dx_h)
-    I21 = 1./2.*(L*cx + sx)
-    I22 = I11
-    I20 = sx
-    I43 = 0.5*(L*cy + sy)
-    I44 = I33
-    I512 = h*dx_h*dx_h/6
-    I51 = L*dx/2.
+    d2y = 0.5 * sy * sy
+    s2y = sy * cy
+    c2x = np.cos(2 * kx * L).real
+    c2y = np.cos(2 * ky * L).real
+    fx = (L - sx) / kx2 if kx2 != 0 else L3 / 6.
+    f2y = (L - s2y) / ky2 if ky2 != 0 else L3 / 6
+    J1 = (L - sx) / kx2 if kx2 != 0 else L3 / 6.
+    J2 = (3. * L - 4. * sx + sx * cx) / (2 * kx4) if kx != 0 else L ** 5 / 20.
+    J3 = (15 * L - 22.5 * sx + 9 * sx * cx - 1.5 * sx * cx * cx + kx2 * sx2 * sx) / (
+                6 * kx4 * kx2) if kx != 0 else L ** 7 / 56.
+    #J3 = (15 * L - 22 * sx + 9 * sx * cx - 2 * sx * cx * cx ) / (
+    #        6 * kx4 * kx2) if kx != 0 else L ** 7 / 56.
+    J_denom = kx2 - 4 * ky2
+    Jc = (c2y - cx) / J_denom if J_denom != 0 else 0.5 * L2
+    Js = (cy * sy - sx) / J_denom if J_denom != 0 else L3 / 6
+    Jd = (d2y - dx) / J_denom if J_denom != 0 else L4 / 24
+    Jf = (f2y - fx) / J_denom if J_denom != 0 else L5 / 120
 
-    if kx != 0:
-        I116 = h/kx2*(I11 - I111)
-        I12 = 0.5/kx2*(sx - L*cx)
-        I126 = h/kx2*(I12 - I112)
-        I16 = h/kx2*(dx_h - L*sx/2.)
-        I166 = h2/kx4*(I10 - 2*I11 + I111)
-        I216 = h/kx2*(I21 - I211)
-        I226 = h/kx2*(I22 - I212)
-        I26 = h / (2.*kx2)*(sx - L*cx)
-        I266 = h2/kx4*(I20 - 2.*I21 + I211)
+    khk = K2 + 2*h*K1
+    T = np.zeros((6,6,6))
 
-        I511 = h*(3.*L - 2.*sx - sx*cx)/(6.*kx2)
-        I522 = h*(3.*L - 4*sx + sx*cx)/(6.*kx4)
-        I516 = h/kx2*(I51 - I511)
-        I52 = (2.*dx - h*L*sx)/(2.*kx2)
-        I526 = h/kx2*(I52 - I512)
-        I50 = h*(L - sx)/kx2
-        I566 = h2/kx4*(I50 - 2*I51 + I511)
-        I56 = (h2*(L*(1. + cx) - 2.*sx))/(2.*kx4)
+    T111 = -1/6*khk*(sx2 + dx) - 0.5*h*kx2*sx2
+    T112 = -1/6*khk*sx*dx + 0.5*h*sx*cx
+    T122 = -1 / 6 * khk * dx2 + 0.5 * h * dx * cx
+    T116 = -h / 12/beta * khk * (3*sx*J1 - dx2) + 0.5 * h2/beta * sx2 + 0.25/beta*K1*L*sx
+    T126 = -h / 12 / beta * khk * (
+                sx*dx2 - 2*cx*J2) + 0.25 * h2 / beta * (sx*dx + cx*J1) - 0.25 / beta * (sx + L*cx)
+    T166 = -h2 / 6 / beta2 * khk * (
+                dx2*dx - 2*sx*J2) + 0.5 * h3 / beta2 * sx*J1 - 0.5*h / beta2 * L*sx  - 0.5*h/(beta2)*igamma2*dx
+    T133 = K1*K2*Jd + 0.5*(K2 + h * K1)*dx
+    T134 = 0.5*K2*Js
+    T144 = K2*Jd - 0.5*h*dx
 
-    else:
-        I116 = h*L4/24.
-        I12 = L3/6.
-        I126 = h*L5/40.
-        I16 = h*L4/24.
-        I166 = h2*L5*L/120.
-        I216 = h*L3/6.
-        I226 = h*L4/8.
-        I26 = h*L3/6.
-        I266 = h2*L5/20.
+    T211 = -1/6*khk*sx*(1 + 2*cx)
+    T212 = -1 / 6 * khk * dx * (1 + 2 * cx)
+    T222 = -1 / 3 * khk * sx*dx  - 0.5*h*sx
+    T216 = -h / 12/beta * khk * (3*cx * J1 + sx*dx) - 0.25/beta * K1 * (sx - L*cx)
+    T226 = -h / 12/beta * khk * (3*sx * J1 + dx2) + 0.25/beta * K1 *L*sx
+    T266 = -h2 / 6 / beta2 * khk * (sx * dx2 - 2*cx*J2) - 0.5 *h/ beta2 * K1 * (cx*J1 - sx*dx) - 0.5*h/beta2*igamma2*sx
+    T233 = K1*K2*Js + 0.5*(K2 + h*K1)*sx
+    T234 = 0.5*K2*Jc
+    T244 = K2 * Js - 0.5*h*sx
 
-        I511 = h*L3/6.
-        I522 = h*L5/60.
-        I516 = h2*L5/120.
-        I52 = h*L4/24.
-        I526 = h2*L5*L/240.
-        I50 = h*L3/6.
-        I566 = h2*h*L5*L2/840.
-        I56 = h2*L5/120.
+    T313 = 0.5*K2*(cy*Jc - 2*K1*sy*Js) + 0.5*h*K1*sx*sy
+    T314 = 0.5 * K2 * (sy * Jc - 2* cy * Js) + 0.5 * h * sx * cy
+    T323 = 0.5 * K2 * (cy * Js - 2 *K1* sy * Jd) + 0.5 * h *K1 * dx * sy
+    T324 = 0.5 * K2 * (sy * Js - 2 * cy * Jd) + 0.5 * h * dx * cy
+    T336 = 0.5 * h/beta * K2 * (cy * Jd - 2 * K1 * sy * Jf) + 0.5 * h2/beta * K1 * J1 * sy - 0.25/beta*K1*L*sy
+    T346 = 0.5 * h / beta * K2 * (sy * Jd - 2 * cy * Jf) + 0.5 * h2 / beta * J1 * cy - 0.25 / beta * (sy + L * cy)
 
-    if kx != 0 and ky != 0:
-        I144 = (sy2 - 2.*dx_h)/denom
-        I133 = dx_h - ky2*(sy2 - 2.*dx_h)/denom
-        I134 = (sy*cy - sx)/denom
-        I313 = (kx2*cy*dx_h - 2.*ky2*sx*sy)/denom
-        I324 = (2.*cy*dx_h - sx*sy)/denom
-        I314 = (2.*cy*sx - (1. + cx)*sy)/denom
-        I323 = (sy - cy*sx - 2.*ky2*sy*dx_h)/denom
-        # derivative of Integrals
-        I244 = 2.*(cy*sy - sx)/denom
-        I233 = sx - 2.*ky2*(cy*sy - sx)/denom
-        I234 = (kx2*dx_h - 2.*ky2*sy2)/denom
-        I413 = ((kx2 - 2.*ky2)*cy*sx - ky2*sy*(1. + cx))/denom
-        I424 = (cy*sx - cx*sy - 2.*ky2*sy*dx_h)/denom
-        I414 = ((kx2 - 2.*ky2)*sx*sy - (1. - cx)*cy)/denom
-        I423 = (cy*dx_h*(kx2 - 2*ky2) - ky2*sx*sy)/denom
+    T413 = 0.5*K1*K2*(2*cy*Js - sy*Jc) + 0.5*(K2 + h*K1)*sx*cy
+    T414 = 0.5 * K2 * (2 * K1*sy * Js - cy * Jc) + 0.5 * (K2 + h * K1) * sx * sy
+    T423 = 0.5*K1*K2*(2*cy*Jd - sy*Js) + 0.5*(K2 + h*K1)*dx*cy
+    T424 = 0.5 * K2 * (2 * K1 * sy * Jd - cy * Js) + 0.5 * (K2 + h * K1) * dx * sy
+    T436 = 0.5 * h/beta * K1 * K2 * (2 * cy * Jf - sy * Jd) + 0.5 *h/beta* (K2 + h * K1) * J1 * cy + 0.25/beta*K1*(sy - L*cy)
+    T446 = 0.5 *h/beta * K2 * (2 * K1 * sy * Jf - cy * Jd) + 0.5 *h/beta* (K2 + h * K1) * J1 * sy - 0.25/beta*K1*L*sy
 
-    elif kx != 0 and ky == 0:
-        I323 = (L - sx)/kx2
-        I324 = 2.*(1. - cx)/kx4 - L*sx/kx2
-        I314 = (2.*sx - L*(1. + cx))/kx2
-        I313 = (1. - cx)/kx2
-        I144 = (-2. + kx2*L2 + 2.*cx)/kx4
-        I133 = (1. - cx)/kx2
-        I134 = (L - sx)/kx2
-        # derivative of Integrals
-        I423 = (1. - cx)/kx2
-        I424 = (sx - L*cx)/kx2
-        I414 = (cx - 1.)/kx2 + L*sx
-        I413 = sx
-        I244 = (2.*L - 2.*sx)/kx2
-        I233 = sx
-        I234 = (1. - cx)/kx2
-    else:
-        I144 = L4/12.
-        I133 = L2/2.
-        I134 = L3/6.
-        I313 = L2/2.
-        I324 = L4/12.
-        I314 = L3/6.
-        I323 = L3/6.
-        I244 = L3/3.
-        I233 = L
-        I234 = L2/2.
-        I413 = L
-        I424 = L3/3.
-        I414 = L2/2.
-        I423 = L2/2.
+    T511 = h/12/beta*khk*(sx*dx + 3*J1) - 0.25/beta*K1*(L - sx*cx)
+    T512 = h / 12 / beta * khk * dx2 + 0.25 / beta * K1 * sx2
+    T522 = h/6/beta*khk*J2 - 0.5/beta*sx - 0.25/beta*K1*(J1 - sx*dx)
 
-    if kx == 0 and ky != 0:
-        I336 = (h*L*(3.*L*cy + (2.*ky2*L2 - 3.)*sy))/(24.*ky2)
-        I346 = (h*((3. - 2.*ky2*L2)*L*cy + 3.*(ky2*L2 - 1.)*sy))/(24.*ky4)
-        I436 = I346
-        I446 = (h*L*(-3.*L*cy + (3. + 2.*ky2*L2)*sy))/(24.*ky2)
+    T516 = h2/12/beta2*khk*(3*dx*J1 - 4*J2) + 0.25*h/beta2*K1*J1*(1 + cx) + 0.5*h/beta2*igamma2*sx
 
-        I533 = (h*(3.*L + 2.*ky2*L3 - 3.*sy*cy))/(24.*ky2)
-        I534 = (h*(L2 - sy2))/(8.*ky2)
-        I544 = (h*(-3.*L + 2.*ky2*L3 + 3.*sy*cy))/(24.*ky4)
+    T526 = h2 / 12 / beta2 * khk * (dx * dx2 - 2 *sx * J2) + 0.25 * h / beta2 * K1*sx * J1 + 0.5 * h / beta2 * igamma2 * dx
+    T566 = h3 / 6 / beta3 * khk * (3*J3 - 2 *dx * J2) + h2/6 / beta3 * K1*(sx*dx2 - J2*(1 + 2*cx)) + 1.5 / beta3 * igamma2 * (h2*J1 - L)
+    T533 = - h/beta*K1*K2*Jf - 0.5*h/beta*(K2 + h*K1)*J1 + 0.25/beta*K1*(L - cy*sy)
+    T534 = - 0.5*h/beta*K2*Jd - 0.25/beta*K1*sy2
+    T544 = -h/beta * K2*Jf + 0.5*h2/beta*J1  - 0.25/beta*(L + cy*sy)
 
-    elif kx == 0 and ky == 0:
-        I336 = (h*L4)/24.
-        I346 = (h*L5)/40.
-        I436 = (h*L3)/6.
-        I446 = (h*L4)/8.
+    T[0, 0, 0] = T111
+    T[0, 0, 1] = T112*2
+    T[0, 1, 1] = T122
+    T[0, 0, 5] = T116*2
+    T[0, 1, 5] = T126*2
+    T[0, 5, 5] = T166
+    T[0, 2, 2] = T133
+    T[0, 2, 3] = T134*2
+    T[0, 3, 3] = T144
 
-        I533 = h*L3/6.
-        I534 = h*L4/24.
-        I544 = h*L5/60.
+    T[1, 0, 0] = T211
+    T[1, 0, 1] = T212*2
+    T[1, 1, 1] = T222
+    T[1, 0, 5] = T216*2
+    T[1, 1, 5] = T226*2
+    T[1, 5, 5] = T266
+    T[1, 2, 2] = T233
+    T[1, 2, 3] = T234*2
+    T[1, 3, 3] = T244
 
-    else:
-        I336 = h/kx2*(I33 - I313)
-        I346 = h/kx2*(I34 - I314)
-        I436 = h/kx2*(I43 - I413)
-        I446 = h/kx2*(I44 - I414)
+    T[2, 0, 2] = T313*2
+    T[2, 0, 3] = T314*2
+    T[2, 1, 2] = T323*2
+    T[2, 1, 3] = T324*2
+    T[2, 2, 5] = T336*2
+    T[2, 3, 5] = T346*2
 
-        I533 = ((h*(denom*L - 2.*(denom + 2.*ky2)*sx + kx2*cy*sy))
-                / (2.*denom*kx2))
-        I534 = (h*sy2 - 2*dx)/(2*denom)
-        I544 = (sy2 - 2*dx_h)/denom
 
-    K2 = k2/2.
-    coef1 = 2.*ky2*h - h3 - K2
-    coef3 = 2.*h2 - ky2
+    T[3, 0, 2] = T413*2
+    T[3, 0, 3] = T414*2
+    T[3, 1, 2] = T423*2
+    T[3, 1, 3] = T424*2
+    T[3, 2, 5] = T436*2
+    T[3, 3, 5] = T446*2
 
-    t111 = coef1*I111 + h*kx4*I122/2.
-    t112 = 2.*coef1*I112 - h*kx2*I112
-    t116 = 2.*coef1*I116 + coef3*I11 - h2*kx2*I122
-    t122 = coef1*I122 + 0.5*h*I111
-    t126 = 2.*coef1*I126 + coef3*I12 + h2*I112
-    t166 = coef1*I166 + coef3*I16 + 0.5*h3*I122 - h*I10
-    t133 = K2*I133 - ky2*h*I10/2.
-    t134 = 2.*K2*I134
-    t144 = K2*I144 - h*I10/2.
-
-    t211 = coef1*I211 + h*kx4*I222/2.
-    t212 = 2.*coef1*I212 - h*kx2*I212
-    t216 = 2.*coef1*I216 + coef3*I21 - h2*kx2*I222
-    t222 = coef1*I222 + 0.5*h*I211
-    t226 = 2.*coef1*I226 + coef3*I22 + h2*I212
-    t266 = coef1*I266 + coef3*I26 + 0.5*h3*I222 - h*I20
-    t233 = K2*I233 - ky2*h*I20/2.
-    t234 = 2.*K2*I234
-    t244 = K2*I244 - h*I20/2.
-
-    coef2 = 2*(K2 - ky2*h)
-
-    t313 = coef2*I313 + h*kx2*ky2*I324
-    t314 = coef2*I314 - h*kx2*I323
-    t323 = coef2*I323 - h*ky2*I314
-    t324 = coef2*I324 + h*I313
-    t336 = coef2*I336 + ky2*I33 - h2*ky2*I324
-    t346 = coef2*I346 + h2*I323 + ky2*I34
-    t413 = coef2*I413 + h*kx2*ky2*I424
-    t414 = coef2*I414 - h*kx2*I423
-    t423 = coef2*I423 - h*ky2*I414
-    t424 = coef2*I424 + h*I413
-    t436 = coef2*I436 - h2*ky2*I424 + ky2*I43
-    t446 = coef2*I446 + h2*I423 + ky2*I44
-    # Coordinates transformation from Curvilinear to a Cartesian
-    cx_1 = -kx2*sx
-    sx_1 = cx
-    cy_1 = -ky2*sy
-    sy_1 = cy
-    dx_1 = h*sx
-    T = np.zeros((6, 6, 6))
-    T[0, 0, 0] = t111
-    T[0, 0, 1] = t112 + h*sx
-    T[0, 0, 5] = t116
-    T[0, 1, 1] = t122
-    T[0, 1, 5] = t126/beta
-    T[0, 5, 5] = t166
-    T[0, 2, 2] = t133
-    T[0, 2, 3] = t134
-    T[0, 3, 3] = t144
-
-    T[1, 0, 0] = t211 - h*cx*cx_1
-    T[1, 0, 1] = t212 + h*sx_1 - h*(sx*cx_1 + cx*sx_1)
-    T[1, 0, 5] = t216 - h*(dx*cx_1 + cx*dx_1)
-    T[1, 1, 1] = t222 - h*sx*sx_1
-    T[1, 1, 5] = t226 - h*(sx*dx_1 + dx*sx_1)
-    T[1, 5, 5] = t266 - dx*h*dx_1
-
-    T[1, 2, 2] = t233
-    T[1, 2, 3] = t234
-    T[1, 3, 3] = t244
-
-    T[2, 0, 2] = t313
-    T[2, 0, 3] = t314 + h*sy
-    T[2, 1, 2] = t323
-    T[2, 1, 3] = t324
-    T[2, 2, 5] = t336
-    T[2, 3, 5] = t346/beta
-
-    T[3, 0, 2] = t413 - h*cx*cy_1
-    T[3, 0, 3] = t414 + (1 - cx)*h*sy_1
-    T[3, 1, 2] = t423 - h*sx*cy_1
-    T[3, 1, 3] = t424 - h*sx*sy_1
-    T[3, 2, 5] = t436 - h*dx*cy_1
-    T[3, 3, 5] = t446 - h*dx*sy_1
-
-    t511 = coef1*I511 + h*kx4*I522/2.
-    t512 = 2.*coef1*I512 - h*kx2*I512
-    t516 = 2.*coef1*I516 + coef3*I51 - h2*kx2*I522
-    t522 = coef1*I522 + 0.5*h*I511
-    t526 = 2.*coef1*I526 + coef3*I52 + h2*I512
-    t566 = coef1*I566 + coef3*I56 + 0.5*h3*I522 - h*I50
-    t533 = K2*I533 - ky2*h*I50/2.
-    t534 = 2.*K2*I534
-    t544 = K2*I544 - h*I50/2.
-    i566 = h2*(L - sx*cx)/(4.*kx2) if kx != 0 else h2*L3/6.
-
-    T511 = t511 + 1/4.*kx2*(L - cx*sx)
-
-    T512 = t512 - (1/2.)*kx2*sx2 + h*dx
-    T516 = t516 + h*(sx*cx - L)/2.
-    T522 = t522 + (L + sx*cx)/4.
-    T526 = t526 + h*sx2/2.
-    T566 = t566 + i566
-    T533 = t533 + 1/4.*ky2*(L - sy*cy)
-    T534 = t534 - 1/2.*ky2*sy2
-    T544 = t544 + (L + sy*cy)/4.
-
-    T[4, 0, 0] = T511/beta
-    T[4, 0, 1] = (T512 + h*dx)/beta
-    T[4, 0, 5] = T516/beta
-    T[4, 1, 1] = T522/beta
-    T[4, 1, 5] = T526/beta
-    T[4, 5, 5] = T566/beta + 1.5*L/(beta*beta*beta)*igamma2
-    T[4, 2, 2] = T533/beta
-    T[4, 2, 3] = T534/beta
-    T[4, 3, 3] = T544/beta
+    T[4, 0, 0] = -T511
+    T[4, 0, 1] = -T512*2
+    T[4, 1, 1] = -T522
+    T[4, 0, 5] = -T516*2
+    T[4, 1, 5] = -T526*2
+    T[4, 5, 5] = -T566
+    T[4, 2, 2] = -T533
+    T[4, 2, 3] = -T534*2
+    T[4, 3, 3] = -T544
     return T
