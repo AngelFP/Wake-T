@@ -19,15 +19,25 @@ The main drawback of this approach is a reduced accuracy of the results, compare
 In addition to plasma-acceleration stages, `Wake-T` can also simulate active plasma lenses, drifts, dipoles, quadrupoles and sextupoles, allowing for the simulation of complex beamlines. The tracking along the drifts and magnets is performed using second-order transfer matrices, and CSR effects can be included by using a 1D model. This matrix approach and the CSR model are based on a streamlined version of the [`Ocelot`](https://github.com/ocelot-collab/ocelot) implementation.
 
 ## Installation
-1) If you don't have Python 3 already installed, download the latest version, for example, from [here](https://www.python.org/downloads/release/python-352/). It is recommended to create a virtual environment for `Wake-T` (you can see how [here](https://docs.python.org/3/library/venv.html), for example). Remember to activate the new environment before proceeding with the installation.
 
-2) Clone this repository to a directory in your computer using `git`
+If you don't have Python 3 already installed, download the latest version, for example, from [here](https://www.python.org/downloads/release/python-352/). It is recommended to create a virtual environment for `Wake-T` (you can see how [here](https://docs.python.org/3/library/venv.html), for example). Remember to activate the new environment before proceeding with the installation.
+
+### Installing from PyPI
+
+Simply type
+```bash
+pip install Wake-T
+```
+in your terminal.
+
+### Manual installation from GitHub
+1) Clone this repository to a directory in your computer using `git`
 ```bash
 git clone https://github.com/AngelFP/Wake-T.git
 ```
 or simply download the code from [here](https://github.com/AngelFP/Wake-T/archive/master.zip) and unzip it.
 
-3) If you haven't already, open a terminal in the newly created folder and perform the installation with
+2) If you haven't already, open a terminal in the newly created folder and perform the installation with
 ```bash
 python setup.py install
 ```
