@@ -3,7 +3,7 @@ import numpy as np
 from numba import njit
 
 
-def charge_distribution_cyl(z, x, y, q, z_min, nz, nr, dz, dr, p_shape='cubic'):
+def charge_distribution_cyl(z, x, y, q, zmin, nz, nr, dz, dr, p_shape='cubic'):
     """
     Deposit the charge of a partice distribution in a 2D grid (cylindrical
     symmetry) to obtain the spatial charge distribution.
@@ -14,7 +14,7 @@ def charge_distribution_cyl(z, x, y, q, z_min, nz, nr, dz, dr, p_shape='cubic'):
         Arrays containing the longitudinal and transverse coordinates of the
         particles as well as their charge.
 
-    z_min : float
+    zmin : float
         Starting position of the 2D grid in the longitudinal direction.
 
     nz, nr : int
@@ -34,13 +34,13 @@ def charge_distribution_cyl(z, x, y, q, z_min, nz, nr, dz, dr, p_shape='cubic'):
 
     """
     if p_shape == 'linear':
-        return charge_distribution_cyl_linear(z, x, y, q, z_min, nz, nr, dz, dr)
+        return charge_distribution_cyl_linear(z, x, y, q, zmin, nz, nr, dz, dr)
     elif p_shape == 'cubic':
-        return charge_distribution_cyl_cubic(z, x, y, q, z_min, nz, nr, dz, dr)
+        return charge_distribution_cyl_cubic(z, x, y, q, zmin, nz, nr, dz, dr)
 
 
 @njit
-def charge_distribution_cyl_linear(z, x, y, q, z_min, nz, nr, dz, dr):
+def charge_distribution_cyl_linear(z, x, y, q, zmin, nz, nr, dz, dr):
     """ Calculate charge distribution assuming linear particle shape. """
     invdr = 1./dr
     invdz = 1./dz
@@ -69,7 +69,7 @@ def charge_distribution_cyl_linear(z, x, y, q, z_min, nz, nr, dz, dr):
 
         # Positions of the particles in cell units.
         r_cell = invdr*r_i - 0.5
-        z_cell = invdz*(z_i - z_min) - 0.5
+        z_cell = invdz*(z_i - zmin) - 0.5
 
         # Index of the lowest cell of the `rho` array that gets modified
         # by this particle (note: `rho` has 2 guard cells)
@@ -97,7 +97,7 @@ def charge_distribution_cyl_linear(z, x, y, q, z_min, nz, nr, dz, dr):
 
 
 @njit
-def charge_distribution_cyl_cubic(z, x, y, q, z_min, nz, nr, dz, dr):
+def charge_distribution_cyl_cubic(z, x, y, q, zmin, nz, nr, dz, dr):
     """ Calculate charge distribution assuming cubic particle shape. """
     invdr = 1./dr
     invdz = 1./dz
@@ -126,7 +126,7 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, nz, nr, dz, dr):
 
         # Positions of the particles in cell units.
         r_cell = invdr*r_i - 0.5
-        z_cell = invdz*(z_i - z_min) - 0.5
+        z_cell = invdz*(z_i - zmin) - 0.5
 
         # Index of the lowest cell of the `rho` array that gets modified
         # by this particle (note: `rho` has 2 guard cells)
@@ -220,11 +220,10 @@ def r_shape_cubic(cell_position, index, beta_n):
         s = (1./6.)*(1.-u)**3
     elif index == 1:
         s = (1./6.)*(3.*u**3 - 6.*u**2 + 4.)
-        s += beta_n*(1.-u)*u # Add Ruyten correction
+        s += beta_n*(1.-u)*u  # Add Ruyten correction
     elif index == 2:
         s = (1./6.)*(3.*(1.-u)**3 - 6.*(1.-u)**2 + 4.)
-        s -= beta_n*(1.-u)*u # Add Ruyten correction
+        s -= beta_n*(1.-u)*u  # Add Ruyten correction
     elif index == 3:
         s = (1./6.)*u**3
     return s
-
