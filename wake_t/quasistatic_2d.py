@@ -13,6 +13,8 @@ from numba import njit
 import scipy.interpolate as scint
 import aptools.plasma_accel.general_equations as ge
 
+from wake_t.charge_deposition import charge_histogram
+
 # For debugging
 # from time import time
 # np.seterr(all='raise')
@@ -103,7 +105,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     # Calculate beam source term (b_theta_0) from particle distribution.
     if beam_part is not None:
         beam_source = get_beam_function(beam_part, r_max, xi_min, xi_max, n_r,
-                                        n_xi, n_p)
+                                        n_xi, n_p, r_arr, xi_arr)
     else:
         beam_source = None
 
@@ -122,6 +124,8 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
         gamma = gamma[idx_keep]
         q = q[idx_keep]
 
+        if r.shape[0] == 0:
+            break
         # Calculate fields at specified r locations.
         fields = calculate_fields(r_arr, xi, r, pr, q,
                                   laser_params, beam_source, s_d)
@@ -748,7 +752,7 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
     return a_i, b_i, a_0, idx
 
 
-def get_beam_function(beam_part, r_max, xi_min, xi_max, n_r, n_xi, n_p):
+def get_beam_function(beam_part, r_max, xi_min, xi_max, n_r, n_xi, n_p, r_arr, xi_arr):
     """
     Return a function of r and xi which gives the azimuthal magnetic field
     from a particle distribution. This is Eq. (18) in the original paper.
@@ -756,21 +760,29 @@ def get_beam_function(beam_part, r_max, xi_min, xi_max, n_r, n_xi, n_p):
     For details about input parameters see method 'calculate_wakefields'.
 
     """
-    x, y, xi, q = beam_part
+    # Plasma skin depth.
     s_d = ge.plasma_skin_depth(n_p/1e6)
+
+    # Grid resolution.
+    dr = r_arr[1] - r_arr[0]
+    dxi = xi_arr[1] - xi_arr[0]
+
+    # Grid arrays with guard cells.
+    r_grid_g = (0.5+np.arange(-2,n_r+2)) *dr
+    xi_grid_g = np.arange(-2,n_xi+2) *dxi
+
+    # Get and normalize particle coordinate arrays.
+    x, y, xi, q = beam_part
     xi_n = xi / s_d
-    r_n = np.sqrt(x**2 + y**2) / s_d
-    x_edges = np.linspace(xi_min, xi_max, n_xi)
-    y_edges = np.linspace(0, r_max, n_r)
-    bins = [x_edges, y_edges]
-    dr = y_edges[1] - y_edges[0]
-    dxi = x_edges[1] - x_edges[0]
+    x_n = x / s_d
+    y_n = y / s_d
+    
     hist_weights = q / ct.e / (2*np.pi*dr*dxi*s_d**3*n_p)
-    bunch_hist, *_ = np.histogram2d(xi_n, r_n, bins=bins, weights=hist_weights)
-    r_b = y_edges[1:] - dr/2
-    xi_b = x_edges[1:] - dxi/2
-    bunch_rint = np.cumsum(bunch_hist, axis=1) / r_b * dr
-    return scint.interp2d(r_b, xi_b, -bunch_rint)
+    
+    bunch_hist = charge_histogram(xi_n, x_n, y_n, hist_weights, xi_min, n_xi, n_r, dxi, dr, r_arr, p_shape='cubic')
+
+    bunch_rint = np.cumsum(bunch_hist, axis=1) / np.abs(r_grid_g) * dr
+    return scint.interp2d(r_grid_g, xi_grid_g, -bunch_rint)
 
 
 @njit()
