@@ -13,7 +13,7 @@ from numba import njit
 import scipy.interpolate as scint
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.charge_deposition import charge_histogram
+from wake_t.charge_deposition import charge_distribution_cyl
 
 # For debugging
 # from time import time
@@ -104,8 +104,8 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
 
     # Calculate beam source term (b_theta_0) from particle distribution.
     if beam_part is not None:
-        beam_source = get_beam_function(beam_part, r_max, xi_min, xi_max, n_r,
-                                        n_xi, n_p, r_arr, xi_arr)
+        beam_source = get_beam_function(beam_part, xi_min, n_r, n_xi, n_p,
+                                        r_arr, xi_arr)
     else:
         beam_source = None
 
@@ -752,7 +752,7 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
     return a_i, b_i, a_0, idx
 
 
-def get_beam_function(beam_part, r_max, xi_min, xi_max, n_r, n_xi, n_p, r_arr, xi_arr):
+def get_beam_function(beam_part, xi_min, n_r, n_xi, n_p, r_arr, xi_arr):
     """
     Return a function of r and xi which gives the azimuthal magnetic field
     from a particle distribution. This is Eq. (18) in the original paper.
@@ -779,7 +779,7 @@ def get_beam_function(beam_part, r_max, xi_min, xi_max, n_r, n_xi, n_p, r_arr, x
     
     hist_weights = q / ct.e / (2*np.pi*dr*dxi*s_d**3*n_p)
     
-    bunch_hist = charge_histogram(xi_n, x_n, y_n, hist_weights, xi_min, n_xi, n_r, dxi, dr, r_arr, p_shape='cubic')
+    bunch_hist = charge_distribution_cyl(xi_n, x_n, y_n, hist_weights, xi_min, n_xi, n_r, dxi, dr, p_shape='cubic')
 
     bunch_rint = np.cumsum(bunch_hist, axis=1) / np.abs(r_grid_g) * dr
     return scint.interp2d(r_grid_g, xi_grid_g, -bunch_rint)
