@@ -769,7 +769,7 @@ def get_beam_function(beam_part, r_max, xi_min, xi_max, n_r, n_xi, n_p, r_arr, x
 
     # Grid arrays with guard cells.
     r_grid_g = (0.5+np.arange(-2,n_r+2)) *dr
-    xi_grid_g = np.arange(-2,n_xi+2) *dxi
+    xi_grid_g = np.arange(-2,n_xi+2) *dxi + xi_min
 
     # Get and normalize particle coordinate arrays.
     x, y, xi, q = beam_part
