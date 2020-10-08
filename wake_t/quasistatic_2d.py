@@ -768,21 +768,27 @@ def get_beam_function(beam_part, xi_min, n_r, n_xi, n_p, r_arr, xi_arr):
     dxi = xi_arr[1] - xi_arr[0]
 
     # Grid arrays with guard cells.
-    r_grid_g = (0.5+np.arange(-2,n_r+2)) *dr
-    xi_grid_g = np.arange(-2,n_xi+2) *dxi + xi_min
+    r_grid_g = (0.5+np.arange(-2, n_r+2)) * dr
+    xi_grid_g = np.arange(-2, n_xi+2) * dxi + xi_min
 
     # Get and normalize particle coordinate arrays.
     x, y, xi, q = beam_part
     xi_n = xi / s_d
     x_n = x / s_d
     y_n = y / s_d
-    
-    hist_weights = q / ct.e / (2*np.pi*dr*dxi*s_d**3*n_p)
-    
-    bunch_hist = charge_distribution_cyl(xi_n, x_n, y_n, hist_weights, xi_min, n_xi, n_r, dxi, dr, p_shape='cubic')
 
-    bunch_rint = np.cumsum(bunch_hist, axis=1) / np.abs(r_grid_g) * dr
-    return scint.interp2d(r_grid_g, xi_grid_g, -bunch_rint)
+    # Calculate particle weights.
+    w = q / ct.e / (2*np.pi*dr*dxi*s_d**3*n_p)
+
+    # Obtain charge distribution (using cubic particle shape by default).
+    q_dist = charge_distribution_cyl(
+        xi_n, x_n, y_n, w, xi_min, n_xi, n_r, dxi, dr)
+
+    # Calculate radial integral (Eq. (18)).
+    r_int = np.cumsum(q_dist, axis=1) / np.abs(r_grid_g) * dr
+
+    # Create and return interpolator.
+    return scint.interp2d(r_grid_g, xi_grid_g, -r_int)
 
 
 @njit()
