@@ -1,3 +1,13 @@
+"""
+This module contains the methods for depositing the charge of a particle
+distribution on a regular grid.
+
+The charge deposition is based on an adaptation of the same algorithm that is
+implemented in FBPIC (https://github.com/fbpic/fbpic).
+
+"""
+
+
 import math
 import numpy as np
 from numba import njit
