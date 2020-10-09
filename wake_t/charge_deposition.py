@@ -42,23 +42,23 @@ def charge_distribution_cyl(z, x, y, q, zmin, nz, nr, dz, dr, p_shape='cubic'):
 @njit
 def charge_distribution_cyl_linear(z, x, y, q, zmin, nz, nr, dz, dr):
     """ Calculate charge distribution assuming linear particle shape. """
-    invdr = 1./dr
-    invdz = 1./dz
 
-    # Calculate Ruyten coefficients.
+    # Precalculate particle shape coefficients needed to satisfy charge
+    # conservation during deposition (see work by W.M. Ruyten
+    # https://doi.org/10.1006/jcph.1993.1070).
     r_grid = (np.arange(nr) + 0.5) * dr
-    vol = np.pi*dz*((r_grid+0.5*dr)**2 - (r_grid-0.5*dr)**2)
-    norm_vol = vol/(2*np.pi*dr**2*dz)
-    nr_vals = np.arange(nr)
-    ruyten_linear_coef = 6./(nr_vals+1)*(
-        np.cumsum(norm_vol) - 0.5*(nr_vals+1.)**2 - 1./24)
+    cell_volume = np.pi*dz*((r_grid+0.5*dr)**2 - (r_grid-0.5*dr)**2)
+    cell_volume_norm = cell_volume / (2*np.pi*dr**2*dz)
+    cell_number = np.arange(nr) + 1
+    ruyten_coef = 6./cell_number*(
+        np.cumsum(cell_volume_norm) - 0.5*cell_number**2 - 1./24)
 
     # Pre-allocate charge density array with 2 guard cells on each side.
-    rho = np.zeros((2+nz+2, 2+nr+2))
+    rho = np.zeros((nz+4, nr+4))
 
     # Loop over particles.
     for i in range(z.shape[0]):
-        # Get particle quantities.
+        # Get particle components.
         x_i = x[i]
         y_i = y[i]
         z_i = z[i]
@@ -68,26 +68,27 @@ def charge_distribution_cyl_linear(z, x, y, q, zmin, nz, nr, dz, dr):
         r_i = math.sqrt(x_i**2 + y_i**2)
 
         # Positions of the particles in cell units.
-        r_cell = invdr*r_i - 0.5
-        z_cell = invdz*(z_i - zmin) - 0.5
+        r_cell = r_i/dr - 0.5
+        z_cell = (z_i - zmin)/dz - 0.5
 
-        # Index of the lowest cell of the `rho` array that gets modified
-        # by this particle (note: `rho` has 2 guard cells)
-        # (`min` function avoids out-of-bounds access at high r).
+        # Indices of the lowest cell in which the particle will deposit charge.
         ir_cell = min(int(math.ceil(r_cell))+1, nr+2)
         iz_cell = int(math.ceil(z_cell)) + 1
 
-        # Ruyten-corrected shape factor coefficient for this particle.
+        # Get corresponding coefficient for corrected shape factor.
         ir = min(int(math.ceil(r_cell)), nr)
-        bn = ruyten_linear_coef[ir]
+        rc = ruyten_coef[ir]
+
+        # Particle position wrt left neighbor gridpoint in r.
+        u = r_cell - int(math.ceil(r_cell)) + 1
 
         # Precalculate quantities.
-        zsl_0 = z_shape_linear(z_cell, 0)
-        zsl_1 = z_shape_linear(z_cell, 1)
-        rsl_0 = r_shape_linear(r_cell, 0, bn)
-        rsl_1 = r_shape_linear(r_cell, 1, bn)
+        zsl_0 = math.ceil(z_cell) - z_cell
+        zsl_1 = 1 - zsl_0
+        rsl_0 = (1.-u) + rc*(1.-u)*u
+        rsl_1 = 1 - rsl_0
 
-        # Add particle contribution to `rho` array.
+        # Add contribution of particle to charge distribution.
         rho[iz_cell+0, ir_cell+0] += zsl_0 * rsl_0 * w_i
         rho[iz_cell+0, ir_cell+1] += zsl_0 * rsl_1 * w_i
         rho[iz_cell+1, ir_cell+0] += zsl_1 * rsl_0 * w_i
@@ -99,23 +100,24 @@ def charge_distribution_cyl_linear(z, x, y, q, zmin, nz, nr, dz, dr):
 @njit
 def charge_distribution_cyl_cubic(z, x, y, q, zmin, nz, nr, dz, dr):
     """ Calculate charge distribution assuming cubic particle shape. """
-    invdr = 1./dr
-    invdz = 1./dz
 
-    # Calculate Ruyten coefficients.
+    # Precalculate particle shape coefficients needed to satisfy charge
+    # conservation during deposition (see work by W.M. Ruyten
+    # https://doi.org/10.1006/jcph.1993.1070).
     r_grid = (np.arange(nr) + 0.5) * dr
-    vol = np.pi*dz*((r_grid+0.5*dr)**2 - (r_grid-0.5*dr)**2)
-    norm_vol = vol/(2*np.pi*dr**2*dz)
-    nr_vals = np.arange(nr)
-    ruyten_cubic_coef = 6./(nr_vals+1)*(
-        np.cumsum(norm_vol) - 0.5*(nr_vals+1.)**2 - 1./8)
+    cell_volume = np.pi*dz*((r_grid+0.5*dr)**2 - (r_grid-0.5*dr)**2)
+    cell_volume_norm = cell_volume / (2*np.pi*dr**2*dz)
+    cell_number = np.arange(nr) + 1
+    ruyten_coef = 6./cell_number*(
+        np.cumsum(cell_volume_norm) - 0.5*cell_number**2 - 0.125)
 
     # Pre-allocate charge density array with 2 guard cells on each side.
-    rho = np.zeros((2+nz+2, 2+nr+2))
+    rho = np.zeros((nz+4, nr+4))
 
     # Loop over particles.
     for i in range(z.shape[0]):
-        # Get particle quantities.
+
+        # Get particle components.
         x_i = x[i]
         y_i = y[i]
         z_i = z[i]
@@ -124,31 +126,38 @@ def charge_distribution_cyl_cubic(z, x, y, q, zmin, nz, nr, dz, dr):
         # Calculate radius.
         r_i = math.sqrt(x_i**2 + y_i**2)
 
-        # Positions of the particles in cell units.
-        r_cell = invdr*r_i - 0.5
-        z_cell = invdz*(z_i - zmin) - 0.5
+        # Positions of the particle in cell units.
+        r_cell = r_i/dr - 0.5
+        z_cell = (z_i - zmin)/dz - 0.5
 
-        # Index of the lowest cell of the `rho` array that gets modified
-        # by this particle (note: `rho` has 2 guard cells)
-        # (`min` function avoids out-of-bounds access at high r).
+        # Indices of the lowest cell in which the particle will deposit charge.
         ir_cell = min(int(math.ceil(r_cell))+1, nr+2)
         iz_cell = int(math.ceil(z_cell)) + 1
 
-        # Ruyten-corrected shape factor coefficient for this particle.
+        # Particle position wrt left neighbor gridpoint.
+        u_z = z_cell - int(math.ceil(z_cell)) + 1
+        u_r = r_cell - int(math.ceil(r_cell)) + 1
+
+        # Precalculate quantities for shape coefficients.
+        inv_6 = 1./6.
+        v_z = 1.-u_z
+        v_r = 1.-u_r
+
+        # Get corresponding coefficient for corrected shape factor.
         ir = min(int(math.ceil(r_cell)), nr)
-        bn = ruyten_cubic_coef[ir]
+        rc = ruyten_coef[ir]
 
-        # Precalculate quantities.
-        zsc_0 = z_shape_cubic(z_cell, 0)
-        zsc_1 = z_shape_cubic(z_cell, 1)
-        zsc_2 = z_shape_cubic(z_cell, 2)
-        zsc_3 = z_shape_cubic(z_cell, 3)
-        rsc_0 = r_shape_cubic(r_cell, 0, bn)
-        rsc_1 = r_shape_cubic(r_cell, 1, bn)
-        rsc_2 = r_shape_cubic(r_cell, 2, bn)
-        rsc_3 = r_shape_cubic(r_cell, 3, bn)
+        # Cubic particle shape coefficients in z and r.
+        zsc_0 = inv_6*v_z**3
+        zsc_1 = inv_6*(3.*u_z**3 - 6.*u_z**2 + 4.)
+        zsc_2 = inv_6*(3.*v_z**3 - 6.*v_z**2 + 4.)
+        zsc_3 = inv_6*u_z**3
+        rsc_0 = inv_6*v_r**3
+        rsc_1 = inv_6*(3.*u_r**3 - 6.*u_r**2 + 4.) + rc*v_r*u_r
+        rsc_2 = inv_6*(3.*v_r**3 - 6.*v_r**2 + 4.) - rc*v_r*u_r
+        rsc_3 = inv_6*u_r**3
 
-        # Add particle contribution to `rho` array.
+        # Add contribution of particle to charge distribution.
         rho[iz_cell+0, ir_cell+0] += zsc_0 * rsc_0 * w_i
         rho[iz_cell+0, ir_cell+1] += zsc_0 * rsc_1 * w_i
         rho[iz_cell+0, ir_cell+2] += zsc_0 * rsc_2 * w_i
@@ -167,63 +176,3 @@ def charge_distribution_cyl_cubic(z, x, y, q, zmin, nz, nr, dz, dr):
         rho[iz_cell+3, ir_cell+3] += zsc_3 * rsc_3 * w_i
 
     return rho
-
-
-@njit
-def z_shape_linear(cell_position, index):
-    s = math.ceil(cell_position) - cell_position
-    if index == 1:
-        s = 1.-s
-    return s
-
-
-@njit
-def r_shape_linear(cell_position, index, beta_n):
-    # Get radial cell index
-    ir = int(math.ceil(cell_position)) - 1
-    # u: position of the particle with respect to its left neighbor gridpoint
-    # (u is between 0 and 1)
-    u = cell_position - ir
-    s = (1.-u) + beta_n*(1.-u)*u
-    if index == 1:
-        s = 1.-s
-    return s
-
-
-@njit
-def z_shape_cubic(cell_position, index):
-    iz = int(math.ceil(cell_position)) - 2
-    # u: position of the particle with respect to its left neighbor gridpoint
-    # (u is between 0 and 1)
-    u = cell_position - iz - 1
-    s = 0.
-    if index == 0:
-        s = (1./6.)*(1.-u)**3
-    elif index == 1:
-        s = (1./6.)*(3.*u**3 - 6.*u**2 + 4.)
-    elif index == 2:
-        s = (1./6.)*(3.*(1.-u)**3 - 6.*(1.-u)**2 + 4.)
-    elif index == 3:
-        s = (1./6.)*u**3
-    return s
-
-
-@njit
-def r_shape_cubic(cell_position, index, beta_n):
-    # Get radial cell index
-    ir = int(math.ceil(cell_position)) - 2
-    # u: position of the particle with respect to its left neighbor gridpoint
-    # (u is between 0 and 1)
-    u = cell_position - ir - 1
-    s = 0.
-    if index == 0:
-        s = (1./6.)*(1.-u)**3
-    elif index == 1:
-        s = (1./6.)*(3.*u**3 - 6.*u**2 + 4.)
-        s += beta_n*(1.-u)*u  # Add Ruyten correction
-    elif index == 2:
-        s = (1./6.)*(3.*(1.-u)**3 - 6.*(1.-u)**2 + 4.)
-        s -= beta_n*(1.-u)*u  # Add Ruyten correction
-    elif index == 3:
-        s = (1./6.)*u**3
-    return s
