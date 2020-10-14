@@ -13,7 +13,8 @@ import numpy as np
 from numba import njit
 
 
-def charge_distribution_cyl(z, x, y, q, zmin, nz, nr, dz, dr, p_shape='cubic'):
+def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
+                            p_shape='cubic'):
     """
     Deposit the charge of a partice distribution in a 2D grid (cylindrical
     symmetry) to obtain the spatial charge distribution.
@@ -24,8 +25,11 @@ def charge_distribution_cyl(z, x, y, q, zmin, nz, nr, dz, dr, p_shape='cubic'):
         Arrays containing the longitudinal and transverse coordinates of the
         particles as well as their charge.
 
-    zmin : float
-        Starting position of the 2D grid in the longitudinal direction.
+    z_min : float
+        Position of the first field value along z.
+
+    r_min : float
+        Position of the first field value along r.
 
     nz, nr : int
         Number of grid cells (excluding guard cells) along the longitudinal
@@ -44,13 +48,15 @@ def charge_distribution_cyl(z, x, y, q, zmin, nz, nr, dz, dr, p_shape='cubic'):
 
     """
     if p_shape == 'linear':
-        return charge_distribution_cyl_linear(z, x, y, q, zmin, nz, nr, dz, dr)
+        return charge_distribution_cyl_linear(
+            z, x, y, q, z_min, r_min, nz, nr, dz, dr)
     elif p_shape == 'cubic':
-        return charge_distribution_cyl_cubic(z, x, y, q, zmin, nz, nr, dz, dr)
+        return charge_distribution_cyl_cubic(
+            z, x, y, q, z_min, r_min, nz, nr, dz, dr)
 
 
 @njit
-def charge_distribution_cyl_linear(z, x, y, q, zmin, nz, nr, dz, dr):
+def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
     """ Calculate charge distribution assuming linear particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -78,8 +84,8 @@ def charge_distribution_cyl_linear(z, x, y, q, zmin, nz, nr, dz, dr):
         r_i = math.sqrt(x_i**2 + y_i**2)
 
         # Positions of the particles in cell units.
-        r_cell = r_i/dr - 0.5
-        z_cell = (z_i - zmin)/dz - 0.5
+        r_cell = (r_i - r_min)/dr
+        z_cell = (z_i - z_min)/dz
 
         # Indices of the lowest cell in which the particle will deposit charge.
         ir_cell = min(int(math.ceil(r_cell))+1, nr+2)
@@ -108,7 +114,7 @@ def charge_distribution_cyl_linear(z, x, y, q, zmin, nz, nr, dz, dr):
 
 
 @njit
-def charge_distribution_cyl_cubic(z, x, y, q, zmin, nz, nr, dz, dr):
+def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
     """ Calculate charge distribution assuming cubic particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -137,8 +143,8 @@ def charge_distribution_cyl_cubic(z, x, y, q, zmin, nz, nr, dz, dr):
         r_i = math.sqrt(x_i**2 + y_i**2)
 
         # Positions of the particle in cell units.
-        r_cell = r_i/dr - 0.5
-        z_cell = (z_i - zmin)/dz - 0.5
+        r_cell = (r_i - r_min)/dr
+        z_cell = (z_i - z_min)/dz
 
         # Indices of the lowest cell in which the particle will deposit charge.
         ir_cell = min(int(math.ceil(r_cell))+1, nr+2)

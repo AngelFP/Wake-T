@@ -104,8 +104,8 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
 
     # Calculate beam source term (b_theta_0) from particle distribution.
     if beam_part is not None:
-        beam_source = get_beam_function(beam_part, xi_min, n_r, n_xi, n_p,
-                                        r_arr, xi_arr)
+        beam_source = get_beam_function(
+            beam_part, n_r, n_xi, n_p, r_arr, xi_arr)
     else:
         beam_source = None
 
@@ -752,7 +752,7 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
     return a_i, b_i, a_0, idx
 
 
-def get_beam_function(beam_part, xi_min, n_r, n_xi, n_p, r_arr, xi_arr):
+def get_beam_function(beam_part, n_r, n_xi, n_p, r_arr, xi_arr):
     """
     Return a function of r and xi which gives the azimuthal magnetic field
     from a particle distribution. This is Eq. (18) in the original paper.
@@ -763,9 +763,11 @@ def get_beam_function(beam_part, xi_min, n_r, n_xi, n_p, r_arr, xi_arr):
     # Plasma skin depth.
     s_d = ge.plasma_skin_depth(n_p/1e6)
 
-    # Grid resolution.
+    # Grid parameters.
     dr = r_arr[1] - r_arr[0]
     dxi = xi_arr[1] - xi_arr[0]
+    r_min = r_arr[0]
+    xi_min = xi_arr[0]
 
     # Grid arrays with guard cells.
     r_grid_g = (0.5+np.arange(-2, n_r+2)) * dr
@@ -782,7 +784,7 @@ def get_beam_function(beam_part, xi_min, n_r, n_xi, n_p, r_arr, xi_arr):
 
     # Obtain charge distribution (using cubic particle shape by default).
     q_dist = charge_distribution_cyl(
-        xi_n, x_n, y_n, w, xi_min, n_xi, n_r, dxi, dr)
+        xi_n, x_n, y_n, w, xi_min, r_min, n_xi, n_r, dxi, dr)
 
     # Calculate radial integral (Eq. (18)).
     r_int = np.cumsum(q_dist, axis=1) / np.abs(r_grid_g) * dr
