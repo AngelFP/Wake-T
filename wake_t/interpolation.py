@@ -45,7 +45,8 @@ def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
     # Calculate needed parameters.
     dr = r_fld[1] - r_fld[0]
     dz = z_fld[1] - z_fld[0]
-    z_min = z_fld[0]
+    z_min_grid = z_fld[0]
+    r_min_grid = r_fld[0]
 
     # Preallocate output array with field values.
     fld_part = np.zeros(n_part)
@@ -60,8 +61,8 @@ def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
         r_i = math.sqrt(x_i**2 + y_i**2)
 
         # Position in cell units.
-        r_i_cell = r_i/dr - 0.5
-        z_i_cell = (z_i - z_min)/dz - 0.5
+        r_i_cell = (r_i - r_min_grid)/dr
+        z_i_cell = (z_i - z_min_grid)/dz
 
         # Indices of upper and lower cells in r and z.
         ir_lower = int(math.floor(r_i_cell))
@@ -132,7 +133,8 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
     # Calculate needed parameters.
     dr = r_fld[1] - r_fld[0]
     dz = z_fld[1] - z_fld[0]
-    z_min = z_fld[0]
+    z_min_grid = z_fld[0]
+    r_min_grid = r_fld[0]
 
     # Preallocate output arrays with field values.
     wx_part = np.zeros(n_part)
@@ -150,8 +152,8 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
         inv_r_i = 1./r_i
 
         # Position in cell units.
-        r_i_cell = r_i/dr - 0.5
-        z_i_cell = (z_i - z_min)/dz - 0.5
+        r_i_cell = (r_i - r_min_grid)/dr
+        z_i_cell = (z_i - z_min_grid)/dz
 
         # Indices of upper and lower cells in r and z.
         ir_lower = int(math.floor(r_i_cell))
