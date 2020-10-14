@@ -22,7 +22,7 @@ def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
     Parameters:
     -----------
 
-    fld : 2darray   
+    fld : 2darray
         The field to be interpolated.
 
     z_fld : 1darray
@@ -105,10 +105,10 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
     Parameters:
     -----------
 
-    wx : 2darray   
+    wx : 2darray
         The transverse wakefield.
 
-    wx : 2darray   
+    wx : 2darray
         The longitudinal wakefield.
 
     z_fld : 1darray
@@ -125,7 +125,7 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
 
     A tuple with three 1darray containing the values of the longitudinal (z)
     and transverse (x and y) fields acting on each particle.
-    
+
     """
     n_part = x.shape[0]
 
