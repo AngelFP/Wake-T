@@ -433,7 +433,7 @@ class NonLinearColdFluidWakefield(Wakefield):
             self.E_z_p, self.xi_fld, self.r_fld, x, y, xi)
 
     def __interpolate_fields_to_particles(self, x, y, xi, t):
-        if (self.current_t_interp is None) or (self.current_t != t):
+        if (self.current_t_interp is None) or (self.current_t_interp != t):
             self.current_t_interp = t
             interp_flds = gather_main_fields_cyl_linear(
                 self.W_x, self.E_z, self.xi_fld, self.r_fld, x, y, xi)
