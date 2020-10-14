@@ -4,7 +4,7 @@ from numba import njit, prange
 
 
 @njit()
-def interpolate_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
+def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
     """
     Interpolate a 2D field defined on an r-z grid to the particle positions
     of a 3D distribution. The interpolation is performed using an adaptation
@@ -85,7 +85,7 @@ def interpolate_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
 
 
 @njit()
-def interpolate_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
+def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
     """
     Convenient method for interpolating at once (more efficient) the transverse
     and longitudinal wakefields. The interpolation is performed using an
