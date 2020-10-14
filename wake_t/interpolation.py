@@ -5,6 +5,33 @@ from numba import njit, prange
 
 @njit()
 def interpolate_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
+    """
+    Interpolate a 2D field defined on an r-z grid to the particle positions
+    of a 3D distribution. The interpolation is performed using an adaptation
+    of the field gathering algorithm from FBPIC assuming linear particle
+    shapes.
+
+    Parameters:
+    -----------
+
+    fld : 2darray   
+        The field to be interpolated.
+
+    z_fld : 1darray
+        The position of the field grid points along z.
+
+    r_fld : 1darray
+        The position of the field grid points along r.
+
+    x, y, z : 1darray
+        Coordinates of the particle distribution.
+
+    Returns:
+    --------
+
+    A 1darray with the field values at the location of each particle.
+
+    """
     n_part = x.shape[0]
     fld_part = np.zeros(n_part)
     dr = r_fld[1] - r_fld[0]
@@ -47,6 +74,37 @@ def interpolate_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
 
 @njit()
 def interpolate_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
+    """
+    Convenient method for interpolating at once (more efficient) the transverse
+    and longitudinal wakefields. The interpolation is performed using an
+    adaptation of the field gathering algorithm from FBPIC assuming linear
+    particle shapes.
+
+    Parameters:
+    -----------
+
+    wx : 2darray   
+        The transverse wakefield.
+
+    wx : 2darray   
+        The longitudinal wakefield.
+
+    z_fld : 1darray
+        The position of the field grid points along z.
+
+    r_fld : 1darray
+        The position of the field grid points along r.
+
+    x, y, z : 1darray
+        Coordinates of the particle distribution.
+
+    Returns:
+    --------
+
+    A tuple with three 1darray containing the values of the longitudinal (z)
+    and transverse (x and y) fields acting on each particle.
+    
+    """
     n_part = x.shape[0]
     wx_part = np.zeros(n_part)
     wy_part = np.zeros(n_part)
