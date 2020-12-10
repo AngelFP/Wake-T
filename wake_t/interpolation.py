@@ -2,7 +2,12 @@
 This module contains methods for performing the interpolation of the fields
 into the particle positions.
 
+The interpolation methods are based on an adaptation of the field gathering
+algorithm from FBPIC (https://github.com/fbpic/fbpic) assuming linear particle
+shapes.
+
 """
+
 
 import math
 import numpy as np
@@ -14,10 +19,6 @@ def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
     """
     Interpolate a 2D field defined on an r-z grid to the particle positions
     of a 3D distribution.
-
-    The interpolation is performed using an adaptation of the field gathering
-    algorithm from FBPIC (https://github.com/fbpic/fbpic) assuming linear
-    particle shapes.
 
     Parameters:
     -----------
@@ -102,10 +103,6 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
     """
     Convenient method for interpolating at once (more efficient) the transverse
     and longitudinal wakefields.
-
-    The interpolation is performed using an adaptation of the field gathering
-    algorithm from FBPIC (https://github.com/fbpic/fbpic) assuming linear
-    particle shapes.
 
     Parameters:
     -----------
