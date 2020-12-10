@@ -132,7 +132,6 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
 
     # Loop over particles.
     for i in range(z.shape[0]):
-
         # Get particle components.
         x_i = x[i]
         y_i = y[i]
@@ -147,8 +146,8 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
         z_cell = (z_i - z_min)/dz
 
         # Indices of the lowest cell in which the particle will deposit charge.
-        ir_cell = min(int(math.ceil(r_cell))+1, nr+2)
-        iz_cell = int(math.ceil(z_cell)) + 1
+        ir_cell = min(int(math.ceil(r_cell)), nr+2)
+        iz_cell = int(math.ceil(z_cell))
 
         # Particle position wrt left neighbor gridpoint.
         u_z = z_cell - int(math.ceil(z_cell)) + 1
