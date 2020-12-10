@@ -3,7 +3,7 @@
 import numpy as np
 import scipy.constants as ct
 from scipy import ndimage
-from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
+from scipy.interpolate import RegularGridInterpolator
 import aptools.plasma_accel.general_equations as ge
 # import matplotlib.pyplot as plt
 try:
