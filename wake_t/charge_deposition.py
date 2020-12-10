@@ -62,7 +62,7 @@ def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
     # Precalculate particle shape coefficients needed to satisfy charge
     # conservation during deposition (see work by W.M. Ruyten
     # https://doi.org/10.1006/jcph.1993.1070).
-    r_grid = (np.arange(nr) + 0.5) * dr
+    r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
     cell_volume = np.pi*dz*((r_grid+0.5*dr)**2 - (r_grid-0.5*dr)**2)
     cell_volume_norm = cell_volume / (2*np.pi*dr**2*dz)
     cell_number = np.arange(nr) + 1
@@ -120,7 +120,7 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
     # Precalculate particle shape coefficients needed to satisfy charge
     # conservation during deposition (see work by W.M. Ruyten
     # https://doi.org/10.1006/jcph.1993.1070).
-    r_grid = (np.arange(nr) + 0.5) * dr
+    r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
     cell_volume = np.pi*dz*((r_grid+0.5*dr)**2 - (r_grid-0.5*dr)**2)
     cell_volume_norm = cell_volume / (2*np.pi*dr**2*dz)
     cell_number = np.arange(nr) + 1
