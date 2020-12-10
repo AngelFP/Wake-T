@@ -53,6 +53,10 @@ def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     elif p_shape == 'cubic':
         return charge_distribution_cyl_cubic(
             z, x, y, q, z_min, r_min, nz, nr, dz, dr)
+    else:
+        err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
+                      "Possible values are 'linear' or 'cubic'.")
+        raise ValueError(err_string)
 
 
 @njit
