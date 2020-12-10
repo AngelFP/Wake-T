@@ -284,7 +284,7 @@ class WakefieldFromPICSimulation(Wakefield):
 class NonLinearColdFluidWakefield(Wakefield):
     def __init__(self, density_function, driver=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
-                 n_xi=100, beam_wakefields=False):
+                 n_xi=100, beam_wakefields=False, p_shape='linear'):
         self.density_function = density_function
         self.driver = driver
         self.laser_evolution = laser_evolution
@@ -295,6 +295,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.n_r = n_r
         self.n_xi = n_xi
         self.beam_wakefields = beam_wakefields
+        self.p_shape = p_shape
         self.current_t = -1
         self.current_n_p = None
 
@@ -328,7 +329,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         # Get charge distribution and remove guard cells.
         beam_hist = charge_distribution_cyl(
             xi/s_d, x/s_d, y/s_d, q/ct.e, self.xi_min/s_d, r[0], self.n_xi,
-            self.n_r, dz, dr, p_shape='cubic')
+            self.n_r, dz, dr, p_shape=self.p_shape)
         beam_hist = beam_hist[2:-2, 2:-2]
 
         n = np.arange(self.n_r)
@@ -438,7 +439,7 @@ class Quasistatic2DWakefield(Wakefield):
 
     def __init__(self, density_function, laser=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
-                 n_xi=100, ppc=2, dz_fields=0):
+                 n_xi=100, ppc=2, dz_fields=0, p_shape='linear'):
         self.density_function = density_function
         self.laser = laser
         self.laser_evolution = laser_evolution
@@ -450,6 +451,7 @@ class Quasistatic2DWakefield(Wakefield):
         self.n_xi = n_xi
         self.ppc = ppc
         self.dz_fields = np.inf if dz_fields is None else dz_fields
+        self.p_shape = p_shape
         self.current_t = None
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
@@ -497,7 +499,7 @@ class Quasistatic2DWakefield(Wakefield):
 
         flds = calculate_wakefields(
             self.laser, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
-            self.n_r, self.n_xi, self.ppc, n_p, dz_foc)
+            self.n_r, self.n_xi, self.ppc, n_p, dz_foc, p_shape=self.p_shape)
         n_p_mesh, W_r, E_z, E_z_p, K_r, psi_mesh, xi_arr, r_arr = flds
 
         # For debugging
