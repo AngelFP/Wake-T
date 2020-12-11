@@ -19,11 +19,11 @@ laser = LaserPulse(100e-6, l_0=800e-9, w_0=70e-6, a_0=0.8, tau=30e-15)
 
 
 # Create bunch (matched to a focusing strength of 0.13 MT/m).
-en = 0.3e-6  # m
+en = 1e-6  # m
 ene = 200  # units of beta*gamma
 ene_sp = 0.3  # %
 xi_c = laser.xi_c - 55e-6  # m
-s_t = 1  # fs
+s_t = 3  # fs
 q_tot = 1  # pC
 n_part = 1e4
 bunch = get_matched_bunch(en, en, ene, ene_sp, s_t, xi_c, q_tot, n_part,
@@ -33,8 +33,8 @@ bunch = get_matched_bunch(en, en, ene, ene_sp, s_t, xi_c, q_tot, n_part,
 # Create plasma stage.
 plasma = PlasmaStage(
     1e-2, 1e23, laser=laser, wakefield_model='cold_fluid_1d', n_out=20,
-    laser_evolution=True, laser_z_foc=0, r_max=70e-6,  xi_min=40e-6,
-    xi_max=120e-6, n_r=70, n_xi=50)
+    laser_evolution=True, laser_z_foc=0, beam_wakefields=True,
+    r_max=70e-6,  xi_min=40e-6, xi_max=120e-6, n_r=70, n_xi=200)
 
 
 # Do tracking.

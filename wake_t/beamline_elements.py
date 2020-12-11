@@ -188,6 +188,10 @@ class PlasmaStage():
         n_xi : int
             Number of grid elements along xi to calculate the wakefields.
 
+        p_shape : str
+            Particle shape to be used for the beam charge deposition. Possible
+            values are 'linear' or 'cubic'.
+
         Model 'quasistatic_2d'
         ---------------------
         laser_evolution : bool
@@ -233,6 +237,10 @@ class PlasmaStage():
             the simulation window advances by 10 micron. If dz_fields=None, the
             wakefields are only computed once (at the start of the plasma) and
             never updated throughout the simulation.
+
+        p_shape : str
+            Particle shape to be used for the beam charge deposition. Possible
+            values are 'linear' or 'cubic'.
 
         """
         self.length = length
@@ -615,6 +623,10 @@ class PlasmaRamp():
         n_xi : int
             Number of grid elements along xi to calculate the wakefields.
 
+        p_shape : str
+            Particle shape to be used for the beam charge deposition. Possible
+            values are 'linear' or 'cubic'.
+
         Model 'quasistatic_2d'
         ---------------------
         laser : LaserPulse
@@ -663,6 +675,10 @@ class PlasmaRamp():
             the simulation window advances by 10 micron. If dz_fields=None, the
             wakefields are only computed once (at the start of the plasma) and
             never updated throughout the simulation.
+
+        p_shape : str
+            Particle shape to be used for the beam charge deposition. Possible
+            values are 'linear' or 'cubic'.
 
         """
         self.length = length
@@ -912,6 +928,10 @@ class PlasmaLens():
         n_xi : int
             Number of grid elements along xi to calculate the wakefields.
 
+        p_shape : str
+            Particle shape to be used for the beam charge deposition. Possible
+            values are 'linear' or 'cubic'.
+
         Model 'quasistatic_2d'
         ---------------------
         laser_evolution : bool
@@ -957,6 +977,10 @@ class PlasmaLens():
             the simulation window advances by 10 micron. If dz_fields=None, the
             wakefields are only computed once (at the start of the plasma) and
             never updated throughout the simulation.
+
+        p_shape : str
+            Particle shape to be used for the beam charge deposition. Possible
+            values are 'linear' or 'cubic'.
 
         """
         self.length = length

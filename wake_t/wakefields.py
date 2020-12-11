@@ -13,6 +13,7 @@ except ImportError:
     vpic_installed = False
 
 from wake_t.quasistatic_2d import calculate_wakefields
+from wake_t.charge_deposition import charge_distribution_cyl
 from wake_t.interpolation import (gather_field_cyl_linear,
                                   gather_main_fields_cyl_linear)
 
@@ -285,7 +286,7 @@ class WakefieldFromPICSimulation(Wakefield):
 class NonLinearColdFluidWakefield(Wakefield):
     def __init__(self, density_function, driver=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
-                 n_xi=100, beam_wakefields=False):
+                 n_xi=100, beam_wakefields=False, p_shape='linear'):
         self.density_function = density_function
         self.driver = driver
         self.laser_evolution = laser_evolution
@@ -296,6 +297,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.n_r = n_r
         self.n_xi = n_xi
         self.beam_wakefields = beam_wakefields
+        self.p_shape = p_shape
         self.current_t = -1
         self.current_t_interp = None
         self.current_n_p = None
@@ -323,17 +325,16 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.current_n_p = n_p
 
         s_d = ge.plasma_skin_depth(n_p*1e-6)
-        r = np.linspace(0, self.r_max, self.n_r)
         dz = (self.xi_max - self.xi_min) / self.n_xi / s_d
         dr = self.r_max / self.n_r / s_d
-        r_part = np.sqrt(x**2 + y**2)
-        beam_hist, *_ = np.histogram2d(xi, r_part,
-                                       bins=[self.n_xi, self.n_r],
-                                       range=[[self.xi_min, self.xi_max],
-                                              [0, self.r_max]],
-                                       weights=q/ct.e)
-        # ,
-        # weights=1/(ct.pi*dr*2*dz))
+        r = np.linspace(dr/2, self.r_max/s_d-dr/2, self.n_r)
+
+        # Get charge distribution and remove guard cells.
+        beam_hist = charge_distribution_cyl(
+            xi/s_d, x/s_d, y/s_d, q/ct.e, self.xi_min/s_d, r[0], self.n_xi,
+            self.n_r, dz, dr, p_shape=self.p_shape)
+        beam_hist = beam_hist[2:-2, 2:-2]
+
         n = np.arange(self.n_r)
         disc_area = np.pi * dr**2*(1+2*n)
         beam_hist *= 1/(disc_area*dz*n_p)/s_d**3
@@ -351,24 +352,24 @@ class NonLinearColdFluidWakefield(Wakefield):
             z = z_arr[-1] - i*dz
             # get laser a0 at z, z+dz/2 and z+dz
             if self.driver is not None:
-                a0_0 = self.driver.get_a0_profile(r, z*s_d, dz_foc)
-                a0_1 = self.driver.get_a0_profile(r, (z - dz/2)*s_d, dz_foc)
-                a0_2 = self.driver.get_a0_profile(r, (z - dz)*s_d, dz_foc)
+                a0_0 = self.driver.get_a0_profile(r*s_d, z*s_d, dz_foc)
+                a0_1 = self.driver.get_a0_profile(r*s_d, (z-dz/2)*s_d, dz_foc)
+                a0_2 = self.driver.get_a0_profile(r*s_d, (z-dz)*s_d, dz_foc)
             else:
                 a0_0 = np.zeros(r.shape[0])
                 a0_1 = np.zeros(r.shape[0])
                 a0_2 = np.zeros(r.shape[0])
             # perform runge-kutta
             A = dz*self.__wakefield_ode_system(
-                u_1[-1-i], u_2[-1-i], r, z*s_d, a0_0, beam_hist[-(i+1)])
+                u_1[-1-i], u_2[-1-i], r*s_d, z*s_d, a0_0, beam_hist[-(i+1)])
             B = dz*self.__wakefield_ode_system(
-                u_1[-1-i] + A[0]/2, u_2[-1-i] + A[1]/2, r, (z - dz/2)*s_d,
+                u_1[-1-i] + A[0]/2, u_2[-1-i] + A[1]/2, r*s_d, (z - dz/2)*s_d,
                 a0_1, beam_hist[-(i+1)])
             C = dz*self.__wakefield_ode_system(
-                u_1[-1-i] + B[0]/2, u_2[-1-i] + B[1]/2, r, (z - dz/2)*s_d,
+                u_1[-1-i] + B[0]/2, u_2[-1-i] + B[1]/2, r*s_d, (z - dz/2)*s_d,
                 a0_1, beam_hist[-(i+1)])
             D = dz*self.__wakefield_ode_system(
-                u_1[-1-i] + C[0], u_2[-1-i] + C[1], r, (z - dz)*s_d, a0_2,
+                u_1[-1-i] + C[0], u_2[-1-i] + C[1], r*s_d, (z - dz)*s_d, a0_2,
                 beam_hist[-(i+1)])
             u_1[-2-i] = u_1[-1-i] + 1/6*(A[0] + 2*B[0] + 2*C[0] + D[0])
             u_2[-2-i] = u_2[-1-i] + 1/6*(A[1] + 2*B[1] + 2*C[1] + D[1])
@@ -405,7 +406,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.K_x = K_r*E_0/s_d/ct.c
         self.E_z_p = E_z_p*E_0/s_d
         self.xi_fld = z_arr * s_d
-        self.r_fld = r
+        self.r_fld = r * s_d
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
@@ -444,7 +445,7 @@ class Quasistatic2DWakefield(Wakefield):
 
     def __init__(self, density_function, laser=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
-                 n_xi=100, ppc=2, dz_fields=0):
+                 n_xi=100, ppc=2, dz_fields=0, p_shape='linear'):
         self.density_function = density_function
         self.laser = laser
         self.laser_evolution = laser_evolution
@@ -456,6 +457,7 @@ class Quasistatic2DWakefield(Wakefield):
         self.n_xi = n_xi
         self.ppc = ppc
         self.dz_fields = np.inf if dz_fields is None else dz_fields
+        self.p_shape = p_shape
         self.current_t = None
         self.current_t_interp = None
 
@@ -502,7 +504,7 @@ class Quasistatic2DWakefield(Wakefield):
 
         flds = calculate_wakefields(
             self.laser, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
-            self.n_r, self.n_xi, self.ppc, n_p, dz_foc)
+            self.n_r, self.n_xi, self.ppc, n_p, dz_foc, p_shape=self.p_shape)
         n_p_mesh, W_r, E_z, E_z_p, K_r, psi_mesh, xi_arr, r_arr = flds
 
         # For debugging
