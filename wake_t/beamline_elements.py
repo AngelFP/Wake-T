@@ -406,11 +406,11 @@ class PlasmaStage():
 
         # Fields
         E_p = -ct.e/(ct.m_e*ct.c) * self.wakefield.Ez_p(
-            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, None, 0)
+            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, 0)
         E = -ct.e/(ct.m_e*ct.c) * self.wakefield.Wz(
-            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, None, 0)
+            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, 0)
         K = ct.e/ct.m_e * self.wakefield.Kx(
-            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, None, 0)
+            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, 0)
 
         if any(K <= 0):
             raise ValueError(
@@ -1094,11 +1094,7 @@ class PlasmaLens():
     def _get_optimized_dt(self, beam, WF):
         gamma = self._gamma(beam.px, beam.py, beam.pz)
         mean_gamma = np.average(gamma, weights=beam.q)
-        Kx = WF.Kx(
-            beam.x, beam.y, beam.xi, beam.px, beam.py, beam.pz, beam.q,
-            0)
-        mean_Kx = np.average(Kx, weights=beam.q)
-        w_x = np.sqrt(ct.e*ct.c/ct.m_e * mean_Kx/mean_gamma)
+        w_x = np.sqrt(ct.e*ct.c/ct.m_e * self.foc_strength/mean_gamma)
         T_x = 1/w_x
         dt = 0.1*T_x
         return dt
