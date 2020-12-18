@@ -6,7 +6,7 @@ before_install:
   - pip install flake8
 
 install:
-  - python setup.py install
+  - pip install .
 
 script:
   - flake8
