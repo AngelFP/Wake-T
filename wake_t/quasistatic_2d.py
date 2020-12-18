@@ -807,7 +807,7 @@ def get_nabla_a(xi, r, a_0, l_0, w_0, tau, xi_c, pol='linear', dz_foc=0):
     avg_amplitude = a_0
     if pol == 'linear':
         avg_amplitude /= np.sqrt(2)
-    return - 2 * avg_amplitude**2 * r / s_r**2 * (
+    return - 2 * (avg_amplitude/w_fac)**2 * r / s_r**2 * (
         np.exp(-(r)**2/(s_r**2)) * np.exp(-(xi-xi_c)**2/(s_z**2)))
 
 
