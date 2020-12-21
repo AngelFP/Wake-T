@@ -3,6 +3,8 @@ import numpy as np
 from openpmd_api import (Series, Access, Dataset, Mesh_Record_Component,
                          Unit_Dimension)
 
+from wake_t.__version__ import __version__
+
 
 SCALAR = Mesh_Record_Component.SCALAR
 
@@ -18,14 +20,17 @@ class OpenPMDDiagnostics():
         os.makedirs(self.write_dir)
         self._index_out = 0
 
-    def write_diagnostics(self, time, species_list=[], wakefield=None):
+    def write_diagnostics(self, time, dt, species_list=[], wakefield=None):
         file_name = 'data{0:08d}.h5'.format(self._index_out)
         file_path = os.path.join(self.write_dir, 'hdf5', file_name)
         opmd_series = Series(file_path, Access.create)
+        opmd_series.set_software('Wake-T', __version__)
         opmd_series.set_meshes_path('fields')
         opmd_series.set_particles_path('particles')
         
         it = opmd_series.iterations[self._index_out]
+        it.set_time(time)
+        it.set_dt(dt)
 
         for species in species_list:
             diag_data = species.get_openpmd_diagnostics_data()
