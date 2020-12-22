@@ -21,7 +21,7 @@ class OpenPMDDiagnostics():
         # Create diagnostics folder if it doesn't exist already.
         if not os.path.exists(self.write_dir):
             os.makedirs(self.write_dir)
-            
+
         file_name = 'data{0:08d}.h5'.format(self._index_out)
         file_path = os.path.join(self.write_dir, 'hdf5', file_name)
         opmd_series = Series(file_path, Access.create)
