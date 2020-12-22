@@ -4,9 +4,7 @@ import numpy as np
 import scipy.constants as ct
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator
-import aptools.plasma_accel.general_equations as ge
-# import matplotlib.pyplot as plt
-try:
+import aptools.plasma_accel.general_equations as getry:
     from VisualPIC.DataHandling.dataContainer import DataContainer
     vpic_installed = True
 except ImportError:
@@ -393,27 +391,6 @@ class NonLinearColdFluidWakefield(Wakefield):
         K_r = np.gradient(W_r, dr, axis=1, edge_order=2)
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
 
-        # For debugging
-        # plt.plot(E_z[:,0])
-        # plt.plot(K_r[:,0])
-        # plt.plot(a0_0[:,0])
-        # plt.show()
-
-        # plt.subplot(411)
-        # plt.imshow(E_z.T*E_0, aspect='auto',
-        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        # plt.plot(E_z[:,0]*E_0)
-        # plt.subplot(412)
-        # plt.imshow(W_r.T*E_0, aspect='auto',
-        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        # plt.subplot(413)
-        # plt.imshow(E_z_p.T*E_0/s_d, aspect='auto',
-        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        # plt.subplot(414)
-        # plt.imshow(beam_hist.T, aspect='auto',
-        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        # plt.show()
-
         self.E_z = E_z*E_0
         self.W_x = W_r*E_0
         self.K_x = K_r*E_0/s_d/ct.c
@@ -543,26 +520,6 @@ class Quasistatic2DWakefield(Wakefield):
             self.n_r, self.n_xi, self.ppc, n_p, dz_foc, p_shape=self.p_shape)
         n_p_mesh, W_r, E_z, E_z_p, K_r, psi_mesh, xi_arr, r_arr = flds
 
-        # For debugging
-        # plt.plot(E_z[:,0])
-        # plt.plot(K_r[:,0])
-        # plt.plot(a0_0[:,0])
-        # plt.show()
-
-        # plt.subplot(411)
-        # plt.imshow(E_z.T*E_0, aspect='auto',
-        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        # plt.plot(E_z[:,0]*E_0)
-        # plt.subplot(412)
-        # plt.imshow(K_r.T*E_0/s_d, aspect='auto',
-        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        # plt.subplot(413)
-        # plt.imshow(E_z_p.T*E_0/s_d, aspect='auto',
-        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        # plt.subplot(414)
-        # plt.imshow(beam_hist.T, aspect='auto',
-        #           extent=(self.xi_min, self.xi_max, 0, self.r_max))
-        # plt.show()
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
         s_d = ge.plasma_skin_depth(n_p*1e-6)
 
