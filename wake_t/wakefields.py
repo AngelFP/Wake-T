@@ -16,6 +16,7 @@ from wake_t.quasistatic_2d import calculate_wakefields
 from wake_t.charge_deposition import charge_distribution_cyl
 from wake_t.interpolation import (gather_field_cyl_linear,
                                   gather_main_fields_cyl_linear)
+from wake_t.utilities.other import generate_field_diag_dictionary
 
 
 class Wakefield():
@@ -453,35 +454,24 @@ class NonLinearColdFluidWakefield(Wakefield):
             self.wx_part, self.wy_part, self.ez_part = interp_flds
 
     def _get_openpmd_diagnostics_data(self):
-        diag_data = {}
-
-        # Cell-centered in 'r' anf 'z'. TODO: check correctness.
-        fld_position = [0.5, 0.5]
-        diag_data['fields'] = {}
-        diag_data['fields']['E'] = {}
-        diag_data['fields']['E']['comps'] = {}
-        diag_data['fields']['E']['comps']['z'] = {}
-        diag_data['fields']['E']['comps']['z']['array'] = self.E_z
-        diag_data['fields']['E']['comps']['z']['position'] = fld_position
-        diag_data['fields']['W'] = {}
-        diag_data['fields']['W']['comps'] = {}
-        diag_data['fields']['W']['comps']['r'] = {}
-        diag_data['fields']['W']['comps']['r']['array'] = self.W_x
-        diag_data['fields']['W']['comps']['r']['position'] = fld_position
-
+        # Prepare necessary data.
         dr = np.abs(self.r_fld[1] - self.r_fld[0])
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
         grid_spacing = [dr, dz]
         grid_labels = ['r', 'z']
         grid_global_offset = [0., 0.]
-        diag_data['fields']['E']['grid'] = {}
-        diag_data['fields']['E']['grid']['spacing'] = grid_spacing
-        diag_data['fields']['E']['grid']['labels'] = grid_labels
-        diag_data['fields']['E']['grid']['global_offset'] = grid_global_offset
-        diag_data['fields']['W']['grid'] = {}
-        diag_data['fields']['W']['grid']['spacing'] = grid_spacing
-        diag_data['fields']['W']['grid']['labels'] = grid_labels
-        diag_data['fields']['W']['grid']['global_offset'] = grid_global_offset
+        # Cell-centered in 'r' anf 'z'. TODO: check correctness.
+        fld_position = [0.5, 0.5]
+        fld_names = ['E', 'W']
+        fld_comps = [['z'], ['r']]
+        fld_arrays = [[self.E_z], [self.W_x]]
+        fld_comp_pos = [fld_position] * len(fld_names)
+
+        # Generate dictionary for openPMD diagnostics.
+        diag_data = generate_field_diag_dictionary(
+            fld_names, fld_comps, fld_arrays, fld_comp_pos, grid_labels,
+            grid_spacing, grid_global_offset)
+
         return diag_data
 
 
