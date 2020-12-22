@@ -17,7 +17,8 @@ class OpenPMDDiagnostics():
             self.write_dir = os.path.abspath(write_dir)
 
     def initialize(self):
-        os.makedirs(self.write_dir)
+        if not os.path.exists(self.write_dir):
+            os.makedirs(self.write_dir)
         self._index_out = 0
 
     def write_diagnostics(self, time, dt, species_list=[], wakefield=None):
