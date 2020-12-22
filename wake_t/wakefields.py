@@ -23,7 +23,7 @@ class Wakefield():
     """ Base class for all wakefields """
 
     def __init__(self):
-        pass
+        self.openpmd_diag_supported = False
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
         raise NotImplementedError
@@ -40,12 +40,20 @@ class Wakefield():
     def Ez_p(self, x, y, xi, px, py, pz, q, t):
         raise NotImplementedError
 
+    def get_openpmd_diagnostics_data(self):
+        if self.openpmd_diag_supported:
+            return self._get_openpmd_diagnostics_data()
+
+    def _get_openpmd_diagnostics_data(self):
+        raise NotImplementedError
+
 
 class SimpleBlowoutWakefield(Wakefield):
     def __init__(self, n_p, driver, field_offset=0):
         """
         [n_p] = m^-3
         """
+        super().__init__()
         self.n_p = n_p
         self.field_off = field_offset
         self.driver = driver
@@ -82,6 +90,7 @@ class CustomBlowoutWakefield(Wakefield):
         """
         [n_p] = m^-3
         """
+        super().__init__()
         self.n_p = n_p
         self.xi_fields = xi_fields
         self.driver = driver
@@ -122,6 +131,7 @@ class WakefieldFromPICSimulation(Wakefield):
         """
         [n_p] = m^-3
         """
+        super().__init__()
         self.driver = driver
         self.b_w = driver.get_group_velocity(n_p)
         self.filter_fields = filter_fields
@@ -287,6 +297,8 @@ class NonLinearColdFluidWakefield(Wakefield):
     def __init__(self, density_function, driver=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, beam_wakefields=False, p_shape='linear'):
+        super().__init__()
+        self.openpmd_diag_supported = True
         self.density_function = density_function
         self.driver = driver
         self.laser_evolution = laser_evolution
@@ -440,12 +452,45 @@ class NonLinearColdFluidWakefield(Wakefield):
                 self.W_x, self.E_z, self.xi_fld, self.r_fld, x, y, xi)
             self.wx_part, self.wy_part, self.ez_part = interp_flds
 
+    def _get_openpmd_diagnostics_data(self):
+        diag_data = {}
+
+        # Cell-centered in 'r' anf 'z'. TODO: check correctness.
+        fld_position = [0.5, 0.5]
+        diag_data['fields'] = {}
+        diag_data['fields']['E'] = {}
+        diag_data['fields']['E']['comps'] = {}
+        diag_data['fields']['E']['comps']['z'] = {}
+        diag_data['fields']['E']['comps']['z']['array'] = self.E_z
+        diag_data['fields']['E']['comps']['z']['position'] = fld_position
+        diag_data['fields']['W'] = {}
+        diag_data['fields']['W']['comps'] = {}
+        diag_data['fields']['W']['comps']['r'] = {}
+        diag_data['fields']['W']['comps']['r']['array'] = self.W_x
+        diag_data['fields']['W']['comps']['r']['position'] = fld_position
+
+        dr = np.abs(self.r_fld[1] - self.r_fld[0])
+        dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
+        grid_spacing = [dr, dz]
+        grid_labels = ['r', 'z']
+        grid_global_offset = [0., 0.]
+        diag_data['fields']['E']['grid'] = {}
+        diag_data['fields']['E']['grid']['spacing'] = grid_spacing
+        diag_data['fields']['E']['grid']['labels'] = grid_labels
+        diag_data['fields']['E']['grid']['global_offset'] = grid_global_offset
+        diag_data['fields']['W']['grid'] = {}
+        diag_data['fields']['W']['grid']['spacing'] = grid_spacing
+        diag_data['fields']['W']['grid']['labels'] = grid_labels
+        diag_data['fields']['W']['grid']['global_offset'] = grid_global_offset
+        return diag_data
+
 
 class Quasistatic2DWakefield(Wakefield):
 
     def __init__(self, density_function, laser=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, ppc=2, dz_fields=0, p_shape='linear'):
+        super().__init__()
         self.density_function = density_function
         self.laser = laser
         self.laser_evolution = laser_evolution
@@ -547,6 +592,7 @@ class Quasistatic2DWakefield(Wakefield):
 
 class PlasmaRampBlowoutField(Wakefield):
     def __init__(self, density_function):
+        super().__init__()
         self.density_function = density_function
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
@@ -573,6 +619,7 @@ class PlasmaRampBlowoutField(Wakefield):
 
 class PlasmaLensField(Wakefield):
     def __init__(self, dB_r):
+        super().__init__()
         self.dB_r = dB_r  # [T/m]
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
@@ -596,6 +643,7 @@ class PlasmaLensField(Wakefield):
 
 class PlasmaLensFieldRelativistic(Wakefield):
     def __init__(self, k_x):
+        super().__init__()
         self.k_x = k_x  # [T/m]
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
@@ -613,6 +661,7 @@ class PlasmaLensFieldRelativistic(Wakefield):
 
 class CombinedWakefield(Wakefield):
     def __init__(self, wakefield_list):
+        super().__init__()
         self.wakefield_list = wakefield_list
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
