@@ -273,10 +273,10 @@ class ParticleBunch():
         self.xi += dxi
 
     def get_openpmd_diagnostics_data(self):
-        """ 
+        """
         Returns a dictionary with the necessary data to write the openPMD
         diagnostics of the particle bunch.
-        
+
         """
         diag_dict = {
             'x': self.x,
@@ -288,6 +288,6 @@ class ParticleBunch():
             'w': self.q / ct.e,
             'q': -ct.e,
             'm': ct.m_e,
-            'name': 'electron_bunch' # TODO: add name parameter.
+            'name': 'electron_bunch'  # TODO: add name parameter.
         }
         return diag_dict
