@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from openpmd_api import (Series, Access, Dataset, Mesh_Record_Component,
-                         Unit_Dimension)
+                         Unit_Dimension, Geometry)
 
 from wake_t.__version__ import __version__
 
@@ -38,8 +38,8 @@ class OpenPMDDiagnostics():
 
         if wakefield is not None:
             wf_data = wakefield.get_openpmd_diagnostics_data()
-            # register data
-            # flush
+            if wf_data is not None:
+                self._write_fields(it, wf_data)
 
         opmd_series.flush()
         self._index_out += 1
@@ -128,3 +128,52 @@ class OpenPMDDiagnostics():
         particles['weighting'][SCALAR].set_attribute('weightingPower', 1.)
         particles['charge'][SCALAR].set_attribute('weightingPower', 1.)
         particles['mass'][SCALAR].set_attribute('weightingPower', 1.)
+
+    def _write_fields(self, it, field_data):
+        it.meshes.set_attribute('fieldSolver', 'other')
+        it.meshes.set_attribute('fieldSolverParams', 'todo')
+        it.meshes.set_attribute('fieldBoundary', [
+            np.string_("other"), np.string_("other"), np.string_("other"), np.string_("other")])
+        it.meshes.set_attribute('particleBoundary', [
+            np.string_("other"), np.string_("other"), np.string_("other"), np.string_("other")])
+        it.meshes.set_attribute('currentSmoothing', 'none')
+        it.meshes.set_attribute('chargeCorrection', 'none')
+        for field in field_data['fields']:
+
+            fld = it.meshes[field]
+
+            if 'comps' in field_data['fields'][field]:
+                for comp in field_data['fields'][field]['comps']:
+                    fld_comp = fld[comp]
+                    fld_comp_array = field_data['fields'][field]['comps'][comp]['array']
+                    d_fld_comp = Dataset(fld_comp_array.dtype, extent=fld_comp_array.shape)
+                    fld_comp.reset_dataset(d_fld_comp)
+                    fld_comp.store_chunk(fld_comp_array)
+                    fld_comp.set_attribute('position', field_data['fields'][field]['comps'][comp]['position'])
+            else:
+                fld_array = field_data['fields'][field]['array']
+                d_fld = Dataset(fld_array.dtype, extent=fld_array.shape)
+                fld[SCALAR].reset_dataset(d_fld)
+                fld[SCALAR].store_chunk(fld_array)
+                fld[SCALAR].set_attribute('position', field_data['fields'][field]['position'])
+
+            if field in ['E', 'W']:
+                fld.unit_dimension = {
+                    Unit_Dimension.L: 1,
+                    Unit_Dimension.M: 1,
+                    Unit_Dimension.T: -3,
+                    Unit_Dimension.I: -1
+                    }
+            elif field == 'rho':
+                fld.unit_dimension = {
+                    Unit_Dimension.L: -3,
+                    Unit_Dimension.T: 1,
+                    Unit_Dimension.I: 1
+                    }
+
+            fld.set_geometry(Geometry.cylindrical)
+            fld.set_attribute('fieldSmoothing', 'none')
+            fld.set_axis_labels(field_data['fields'][field]['grid']['labels'])
+            fld.set_grid_spacing(field_data['fields'][field]['grid']['spacing'])
+            fld.set_grid_global_offset(field_data['fields'][field]['grid']['global_offset'])
+
