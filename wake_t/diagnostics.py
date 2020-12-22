@@ -138,24 +138,24 @@ class OpenPMDDiagnostics():
             np.string_("other"), np.string_("other"), np.string_("other"), np.string_("other")])
         it.meshes.set_attribute('currentSmoothing', 'none')
         it.meshes.set_attribute('chargeCorrection', 'none')
-        for field in field_data['fields']:
+        for field in field_data:
 
             fld = it.meshes[field]
 
-            if 'comps' in field_data['fields'][field]:
-                for comp in field_data['fields'][field]['comps']:
+            if 'comps' in field_data[field]:
+                for comp in field_data[field]['comps']:
                     fld_comp = fld[comp]
-                    fld_comp_array = field_data['fields'][field]['comps'][comp]['array']
+                    fld_comp_array = field_data[field]['comps'][comp]['array']
                     d_fld_comp = Dataset(fld_comp_array.dtype, extent=fld_comp_array.shape)
                     fld_comp.reset_dataset(d_fld_comp)
                     fld_comp.store_chunk(fld_comp_array)
-                    fld_comp.set_attribute('position', field_data['fields'][field]['comps'][comp]['position'])
+                    fld_comp.set_attribute('position', field_data[field]['comps'][comp]['position'])
             else:
-                fld_array = field_data['fields'][field]['array']
+                fld_array = field_data[field]['array']
                 d_fld = Dataset(fld_array.dtype, extent=fld_array.shape)
                 fld[SCALAR].reset_dataset(d_fld)
                 fld[SCALAR].store_chunk(fld_array)
-                fld[SCALAR].set_attribute('position', field_data['fields'][field]['position'])
+                fld[SCALAR].set_attribute('position', field_data[field]['position'])
 
             if field in ['E', 'W']:
                 fld.unit_dimension = {
@@ -173,7 +173,7 @@ class OpenPMDDiagnostics():
 
             fld.set_geometry(Geometry.cylindrical)
             fld.set_attribute('fieldSmoothing', 'none')
-            fld.set_axis_labels(field_data['fields'][field]['grid']['labels'])
-            fld.set_grid_spacing(field_data['fields'][field]['grid']['spacing'])
-            fld.set_grid_global_offset(field_data['fields'][field]['grid']['global_offset'])
+            fld.set_axis_labels(field_data[field]['grid']['labels'])
+            fld.set_grid_spacing(field_data[field]['grid']['spacing'])
+            fld.set_grid_global_offset(field_data[field]['grid']['global_offset'])
 
