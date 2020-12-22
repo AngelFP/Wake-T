@@ -17,6 +17,7 @@ from wake_t.utilities.other import print_progress_bar
 from wake_t.utilities.bunch_manipulation import (
     convert_to_ocelot_matrix, convert_from_ocelot_matrix, rotation_matrix_xz)
 from wake_t.csr import get_csr_calculator
+from wake_t.diagnostics import OpenPMDDiagnostics
 
 
 class Beamline():
@@ -26,7 +27,7 @@ class Beamline():
     def __init__(self, elements):
         self.elements = elements
 
-    def track(self, bunch, out_initial=True):
+    def track(self, bunch, out_initial=True, opmd_diag=False, diag_dir=None):
         """
         Track bunch through beamline.
 
@@ -40,6 +41,19 @@ class Beamline():
             output bunch list. This applies only at the beginning and not for
             every beamline element.
 
+        opmd_diag : bool or OpenPMDDiagnostics
+            Determines whether to write simulation diagnostics to disk (i.e.
+            particle distributions and fields). The output is written to
+            HDF5 files following the openPMD standard. The number of outputs
+            per beamline element is determined by its `n_out` value. It is also
+            possible to provide an already existing OpenPMDDiagnostics
+            instance instead of a boolean value.
+
+        diag_dir : str
+            Directory into which the openPMD output will be written. By default
+            this is a 'diags' folder in the current directory. Only needed if
+            `opmd_diag=True`.
+
         Returns:
         --------
         A list of size 'n_out' containing the bunch distribution at each step.
@@ -48,8 +62,11 @@ class Beamline():
         bunch_list = []
         if out_initial:
             bunch_list.append(copy(bunch))
+        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
+            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
         for element in self.elements:
-            bunch_list.extend(element.track(bunch, out_initial=False))
+            bunch_list.extend(
+                element.track(bunch, out_initial=False, opmd_diag=opmd_diag))
         return bunch_list
 
 
@@ -252,7 +269,8 @@ class PlasmaStage():
         self.n_out = n_out
         self.model_params = model_params
 
-    def track(self, bunch, parallel=False, n_proc=None, out_initial=False):
+    def track(self, bunch, parallel=False, n_proc=None, out_initial=False,
+              opmd_diag=False, diag_dir=None):
         """
         Track bunch through plasma stage.
 
@@ -272,6 +290,18 @@ class PlasmaStage():
             Determines whether the initial bunch should be included in the
             output bunch list.
 
+        opmd_diag : bool or OpenPMDDiagnostics
+            Determines whether to write simulation diagnostics to disk (i.e.
+            particle distributions and fields). The output is written to
+            HDF5 files following the openPMD standard. The number of outputs
+            the `n_out` value. It is also possible to provide an already
+            existing OpenPMDDiagnostics instance instead of a boolean value.
+
+        diag_dir : str
+            Directory into which the openPMD output will be written. By default
+            this is a 'diags' folder in the current directory. Only needed if
+            `opmd_diag=True`.
+
         Returns:
         --------
         A list of size 'n_out' containing the bunch distribution at each step.
@@ -282,8 +312,11 @@ class PlasmaStage():
         print('-'*len('Plasma stage'))
         if out_initial:
             initial_bunch = copy(bunch)
+        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
+            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
         if self.tracking_mode == 'numerical':
-            bunch_list = self._track_numerically(bunch, parallel, n_proc)
+            bunch_list = self._track_numerically(
+                bunch, parallel, n_proc, opmd_diag)
         elif self.tracking_mode == 'analytical':
             bunch_list = self._track_analytically(bunch, parallel, n_proc)
         if out_initial:
@@ -315,7 +348,7 @@ class PlasmaStage():
     def _gamma(self, px, py, pz):
         return np.sqrt(1 + px**2 + py**2 + pz**2)
 
-    def _track_numerically(self, bunch, parallel, n_proc):
+    def _track_numerically(self, bunch, parallel, n_proc, opmd_diag):
         # Get 6D matrix
         mat = bunch.get_6D_matrix_with_charge()
         # Plasma length in time
@@ -365,6 +398,9 @@ class PlasmaStage():
                         ParticleBunch(bunch.q, x, y, xi, px, py, pz,
                                       prop_distance=new_prop_dist)
                     )
+                    if opmd_diag is not False:
+                        opmd_diag.write_diagnostics(
+                            s*t_step, t_step, [bunch_list[-1]], self.wakefield)
             finally:
                 process_pool.close()
                 process_pool.join()
@@ -386,6 +422,9 @@ class PlasmaStage():
                     ParticleBunch(bunch.q, x, y, xi, px, py, pz,
                                   prop_distance=new_prop_dist)
                 )
+                if opmd_diag is not False:
+                    opmd_diag.write_diagnostics(
+                        s*t_step, t_step, [bunch_list[-1]], self.wakefield)
         # print computing time
         end = time.time()
         print("Done ({:1.3f} seconds).".format(end-start))
@@ -693,7 +732,8 @@ class PlasmaRamp():
         self.n_out = n_out
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
 
-    def track(self, bunch, parallel=False, n_proc=None, out_initial=False):
+    def track(self, bunch, parallel=False, n_proc=None, out_initial=False,
+              opmd_diag=False, diag_dir=None):
         """
         Track bunch through plasma ramp.
 
@@ -712,6 +752,18 @@ class PlasmaRamp():
         out_initial : bool
             Determines whether the initial bunch should be included in the
             output bunch list.
+
+        opmd_diag : bool or OpenPMDDiagnostics
+            Determines whether to write simulation diagnostics to disk (i.e.
+            particle distributions and fields). The output is written to
+            HDF5 files following the openPMD standard. The number of outputs
+            the `n_out` value. It is also possible to provide an already
+            existing OpenPMDDiagnostics instance instead of a boolean value.
+
+        diag_dir : str
+            Directory into which the openPMD output will be written. By default
+            this is a 'diags' folder in the current directory. Only needed if
+            `opmd_diag=True`.
 
         Returns:
         --------
@@ -735,6 +787,8 @@ class PlasmaRamp():
         bunch_list = list()
         if out_initial:
             bunch_list.append(copy(bunch))
+        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
+            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
         start = time.time()
 
         if parallel:
@@ -766,6 +820,9 @@ class PlasmaRamp():
                         ParticleBunch(bunch.q, x, y, xi, px, py, pz,
                                       prop_distance=new_prop_dist)
                     )
+                    if opmd_diag is not False:
+                        opmd_diag.write_diagnostics(
+                            s*t_step, t_step, [bunch_list[-1]], self.wakefield)
             finally:
                 process_pool.close()
                 process_pool.join()
@@ -784,6 +841,9 @@ class PlasmaRamp():
                     ParticleBunch(bunch.q, x, y, xi, px, py, pz,
                                   prop_distance=new_prop_dist)
                 )
+                if opmd_diag is not False:
+                    opmd_diag.write_diagnostics(
+                        s*t_step, t_step, [bunch_list[-1]], self.wakefield)
         end = time.time()
         print("Done ({:1.3f} seconds).".format(end-start))
         print('-'*80)
@@ -1014,7 +1074,8 @@ class PlasmaLens():
     def calculate_density(self, z):
         return self.n_p
 
-    def track(self, bunch, parallel=False, n_proc=None, out_initial=False):
+    def track(self, bunch, parallel=False, n_proc=None, out_initial=False,
+              opmd_diag=False, diag_dir=None):
         """
         Track bunch through plasma lens.
 
@@ -1033,6 +1094,18 @@ class PlasmaLens():
         out_initial : bool
             Determines whether the initial bunch should be included in the
             output bunch list.
+
+        opmd_diag : bool or OpenPMDDiagnostics
+            Determines whether to write simulation diagnostics to disk (i.e.
+            particle distributions and fields). The output is written to
+            HDF5 files following the openPMD standard. The number of outputs
+            the `n_out` value. It is also possible to provide an already
+            existing OpenPMDDiagnostics instance instead of a boolean value.
+
+        diag_dir : str
+            Directory into which the openPMD output will be written. By default
+            this is a 'diags' folder in the current directory. Only needed if
+            `opmd_diag=True`.
 
         Returns:
         --------
@@ -1057,6 +1130,8 @@ class PlasmaLens():
         bunch_list = list()
         if out_initial:
             bunch_list.append(copy(bunch))
+        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
+            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
         start = time.time()
         if parallel:
             if n_proc is None:
@@ -1086,6 +1161,9 @@ class PlasmaLens():
                     bunch_list.append(
                         ParticleBunch(bunch.q, x, y, xi, px, py, pz,
                                       prop_distance=new_prop_dist))
+                    if opmd_diag is not False:
+                        opmd_diag.write_diagnostics(
+                            s*t_step, t_step, [bunch_list[-1]], self.field)
             finally:
                 process_pool.close()
                 process_pool.join()
@@ -1105,6 +1183,9 @@ class PlasmaLens():
                     ParticleBunch(bunch.q, x, y, xi, px, py, pz,
                                   prop_distance=new_prop_dist)
                 )
+                if opmd_diag is not False:
+                    opmd_diag.write_diagnostics(
+                        s*t_step, t_step, [bunch_list[-1]], self.field)
         end = time.time()
         print("Done ({:1.3f} seconds).".format(end-start))
         print('-'*80)
@@ -1144,7 +1225,8 @@ class TMElement():
         self.csr_calculator = get_csr_calculator()
         self.element_name = ''
 
-    def track(self, bunch, backtrack=False, out_initial=False):
+    def track(self, bunch, backtrack=False, out_initial=False, opmd_diag=False,
+              diag_dir=None):
         # Convert bunch to ocelot units and reference frame
         bunch_mat, g_avg = self._get_beam_matrix_for_tracking(bunch)
         if self.gamma_ref is None:
@@ -1157,6 +1239,10 @@ class TMElement():
             self.csr_calculator.clear()
         # Determine track and output steps
         l_step, track_steps, output_steps = self._determine_steps()
+
+        # Create diagnostics if needed
+        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
+            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
 
         # Print output header
         print('')
@@ -1192,6 +1278,9 @@ class TMElement():
                 new_bunch = self._create_new_bunch(
                     bunch, new_bunch_mat, l_curr)
                 output_bunch_list.append(new_bunch)
+                if opmd_diag is not False:
+                    opmd_diag.write_diagnostics(
+                        l_curr/ct.c, l_step/ct.c, [output_bunch_list[-1]])
 
         # Update bunch data
         self._update_input_bunch(bunch, bunch_mat, output_bunch_list)
