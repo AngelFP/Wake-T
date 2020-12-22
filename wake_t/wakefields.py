@@ -481,6 +481,7 @@ class Quasistatic2DWakefield(Wakefield):
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, ppc=2, dz_fields=0, p_shape='linear'):
         super().__init__()
+        self.openpmd_diag_supported = True
         self.density_function = density_function
         self.laser = laser
         self.laser_evolution = laser_evolution
@@ -565,6 +566,7 @@ class Quasistatic2DWakefield(Wakefield):
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
         s_d = ge.plasma_skin_depth(n_p*1e-6)
 
+        self.rho = n_p_mesh
         self.E_z = E_z.T*E_0
         self.W_x = W_r.T*E_0
         self.K_x = K_r.T*E_0/s_d/ct.c
@@ -578,6 +580,27 @@ class Quasistatic2DWakefield(Wakefield):
             interp_flds = gather_main_fields_cyl_linear(
                 self.W_x, self.E_z, self.xi_fld, self.r_fld, x, y, xi)
             self.wx_part, self.wy_part, self.ez_part = interp_flds
+
+    def _get_openpmd_diagnostics_data(self):
+        # Prepare necessary data.
+        dr = np.abs(self.r_fld[1] - self.r_fld[0])
+        dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
+        grid_spacing = [dr, dz]
+        grid_labels = ['r', 'z']
+        grid_global_offset = [0., 0.]
+        # Cell-centered in 'r' anf 'z'. TODO: check correctness.
+        fld_position = [0.5, 0.5]
+        fld_names = ['E', 'W', 'rho']
+        fld_comps = [['z'], ['r'], None]
+        fld_arrays = [[self.E_z], [self.W_x], [self.rho]]
+        fld_comp_pos = [fld_position] * len(fld_names)
+
+        # Generate dictionary for openPMD diagnostics.
+        diag_data = generate_field_diag_dictionary(
+            fld_names, fld_comps, fld_arrays, fld_comp_pos, grid_labels,
+            grid_spacing, grid_global_offset)
+
+        return diag_data
 
 
 class PlasmaRampBlowoutField(Wakefield):
