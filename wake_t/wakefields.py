@@ -4,7 +4,8 @@ import numpy as np
 import scipy.constants as ct
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator
-import aptools.plasma_accel.general_equations as getry:
+import aptools.plasma_accel.general_equations as ge
+try:
     from VisualPIC.DataHandling.dataContainer import DataContainer
     vpic_installed = True
 except ImportError:
