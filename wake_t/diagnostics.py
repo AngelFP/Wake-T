@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 import numpy as np
 import scipy.constants as ct
 from openpmd_api import (Series, Access, Dataset, Mesh_Record_Component,
@@ -202,4 +203,6 @@ class OpenPMDDiagnostics():
             fld.set_attribute('fieldSmoothing', 'none')
             fld.set_axis_labels(wf_data[field]['grid']['labels'])
             fld.set_grid_spacing(wf_data[field]['grid']['spacing'])
-            fld.set_grid_global_offset(wf_data[field]['grid']['global_offset'])
+            global_offset = deepcopy(wf_data[field]['grid']['local_offset'])
+            global_offset[-1] += self._current_z_pos
+            fld.set_grid_global_offset(global_offset)

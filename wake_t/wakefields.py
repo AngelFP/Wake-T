@@ -445,7 +445,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
         grid_spacing = [dr, dz]
         grid_labels = ['r', 'z']
-        grid_global_offset = [0., 0.]
+        grid_local_offset = [0., self.current_t*ct.c-self.xi_min]
         # Cell-centered in 'r' anf 'z'. TODO: check correctness.
         fld_position = [0.5, 0.5]
         fld_names = ['E', 'W']
@@ -456,7 +456,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         # Generate dictionary for openPMD diagnostics.
         diag_data = generate_field_diag_dictionary(
             fld_names, fld_comps, fld_arrays, fld_comp_pos, grid_labels,
-            grid_spacing, grid_global_offset, fld_solver, fld_solver_params,
+            grid_spacing, grid_local_offset, fld_solver, fld_solver_params,
             fld_boundary, fld_boundary_params, part_boundary,
             part_boundary_params, current_smoothing, charge_correction)
 
@@ -482,7 +482,11 @@ class Quasistatic2DWakefield(Wakefield):
         self.ppc = ppc
         self.dz_fields = np.inf if dz_fields is None else dz_fields
         self.p_shape = p_shape
+        # Last time at which the fields where requested.
         self.current_t = None
+        # Last time at which the fields where calculated.
+        self.current_t_wf = None
+        # Last time at which the fields where interpolated to the particles.
         self.current_t_interp = None
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
@@ -511,10 +515,12 @@ class Quasistatic2DWakefield(Wakefield):
             self.E_z_p, self.xi_fld, self.r_fld, x, y, xi)
 
     def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
-        if self.current_t is None:
-            self.current_t = t
-        elif self.current_t != t and t >= self.current_t + self.dz_fields/ct.c:
-            self.current_t = t
+        self.current_t = t
+        if self.current_t_wf is None:
+            self.current_t_wf = t
+        elif (self.current_t_wf != t and
+              t >= self.current_t_wf+ self.dz_fields/ct.c):
+            self.current_t_wf = t
         else:
             return
         z_beam = t*ct.c + np.average(xi)  # z postion of beam center
@@ -543,7 +549,7 @@ class Quasistatic2DWakefield(Wakefield):
         self.r_fld = r_arr*s_d
 
     def __interpolate_fields_to_particles(self, x, y, xi, t):
-        if (self.current_t_interp is None) or (self.current_t != t):
+        if (self.current_t_interp is None) or (self.current_t_interp != t):
             self.current_t_interp = t
             interp_flds = gather_main_fields_cyl_linear(
                 self.W_x, self.E_z, self.xi_fld, self.r_fld, x, y, xi)
@@ -563,7 +569,7 @@ class Quasistatic2DWakefield(Wakefield):
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
         grid_spacing = [dr, dz]
         grid_labels = ['r', 'z']
-        grid_global_offset = [0., 0.]
+        grid_local_offset = [0., self.current_t*ct.c-self.xi_min]
         # Cell-centered in 'r' anf 'z'. TODO: check correctness.
         fld_position = [0.5, 0.5]
         fld_names = ['E', 'W', 'rho']
@@ -574,7 +580,7 @@ class Quasistatic2DWakefield(Wakefield):
         # Generate dictionary for openPMD diagnostics.
         diag_data = generate_field_diag_dictionary(
             fld_names, fld_comps, fld_arrays, fld_comp_pos, grid_labels,
-            grid_spacing, grid_global_offset, fld_solver, fld_solver_params,
+            grid_spacing, grid_local_offset, fld_solver, fld_solver_params,
             fld_boundary, fld_boundary_params, part_boundary,
             part_boundary_params, current_smoothing, charge_correction)
 

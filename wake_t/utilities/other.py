@@ -16,7 +16,7 @@ def print_progress_bar(pre_string, step, total_steps):
 
 def generate_field_diag_dictionary(
         fld_names, fld_comps, fld_arrays, fld_comp_pos, grid_labels,
-        grid_spacing, grid_global_offset, fld_solver, fld_solver_params,
+        grid_spacing, grid_local_offset, fld_solver, fld_solver_params,
         fld_boundary, fld_boundary_params, part_boundary,
         part_boundary_params, current_smoothing, charge_correction):
     """
@@ -41,7 +41,7 @@ def generate_field_diag_dictionary(
         diag_data[fld]['grid'] = {}
         diag_data[fld]['grid']['spacing'] = grid_spacing
         diag_data[fld]['grid']['labels'] = grid_labels
-        diag_data[fld]['grid']['global_offset'] = grid_global_offset
+        diag_data[fld]['grid']['local_offset'] = grid_local_offset
     diag_data['field_solver'] = fld_solver
     diag_data['field_solver_params'] = fld_solver_params
     diag_data['field_boundary'] = fld_boundary
