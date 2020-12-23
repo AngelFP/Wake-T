@@ -321,6 +321,8 @@ class PlasmaStage():
             bunch_list = self._track_analytically(bunch, parallel, n_proc)
         if out_initial:
             bunch_list.insert(0, initial_bunch)
+        if opmd_diag is not False:
+            opmd_diag.increase_z_pos(self.length)
         return bunch_list
 
     def _get_wakefield(self, wakefield_model, model_params):
@@ -852,6 +854,8 @@ class PlasmaRamp():
         bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
                               last_bunch.px, last_bunch.py, last_bunch.pz)
         bunch.increase_prop_distance(self.length)
+        if opmd_diag is not False:
+            opmd_diag.increase_z_pos(self.length)
 
         return bunch_list
 
@@ -1194,6 +1198,8 @@ class PlasmaLens():
         bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
                               last_bunch.px, last_bunch.py, last_bunch.pz)
         bunch.increase_prop_distance(self.length)
+        if opmd_diag is not False:
+            opmd_diag.increase_z_pos(self.length)
         return bunch_list
 
     def _get_optimized_dt(self, beam, WF):
@@ -1284,6 +1290,10 @@ class TMElement():
 
         # Update bunch data
         self._update_input_bunch(bunch, bunch_mat, output_bunch_list)
+
+        # Add element length to diagnostics position
+        if opmd_diag is not False:
+            opmd_diag.increase_z_pos(self.length)
 
         # Finalize
         tracking_time = time.time() - start_time

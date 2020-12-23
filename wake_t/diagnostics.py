@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import scipy.constants as ct
 from openpmd_api import (Series, Access, Dataset, Mesh_Record_Component,
                          Unit_Dimension, Geometry)
 
@@ -16,6 +17,7 @@ class OpenPMDDiagnostics():
         else:
             self.write_dir = os.path.abspath(write_dir)
         self._index_out = 0
+        self._current_z_pos = 0.
 
     def write_diagnostics(self, time, dt, species_list=[], wakefield=None):
         # Create diagnostics folder if it doesn't exist already.
@@ -30,7 +32,7 @@ class OpenPMDDiagnostics():
         opmd_series.set_particles_path('particles')
 
         it = opmd_series.iterations[self._index_out]
-        it.set_time(time)
+        it.set_time(time + self._current_z_pos/ct.c)
         it.set_dt(dt)
 
         for species in species_list:
@@ -44,6 +46,9 @@ class OpenPMDDiagnostics():
 
         opmd_series.flush()
         self._index_out += 1
+
+    def increase_z_pos(self, dist):
+        self._current_z_pos += dist
 
     def _write_species(self, it, species_data):
         # Create particles for this species.
@@ -59,6 +64,7 @@ class OpenPMDDiagnostics():
         w = species_data['w']
         q = species_data['q']
         m = species_data['m']
+        z_off = species_data['z_off']
 
         # Generate datasets.
         d_x = Dataset(x.dtype, extent=x.shape)
@@ -94,7 +100,7 @@ class OpenPMDDiagnostics():
         particles['position']['z'].store_chunk(z)
         particles['positionOffset']['x'].make_constant(0.)
         particles['positionOffset']['y'].make_constant(0.)
-        particles['positionOffset']['z'].make_constant(0.)
+        particles['positionOffset']['z'].make_constant(z_off)
         particles['momentum']['x'].store_chunk(px)
         particles['momentum']['y'].store_chunk(py)
         particles['momentum']['z'].store_chunk(pz)

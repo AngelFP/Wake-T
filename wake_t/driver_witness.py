@@ -288,6 +288,7 @@ class ParticleBunch():
             'w': self.q / ct.e,
             'q': -ct.e,
             'm': ct.m_e,
-            'name': 'electron_bunch'  # TODO: add name parameter.
+            'name': 'electron_bunch',  # TODO: add name parameter.
+            'z_off': self.prop_distance
         }
         return diag_dict
