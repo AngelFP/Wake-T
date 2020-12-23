@@ -519,7 +519,7 @@ class Quasistatic2DWakefield(Wakefield):
         if self.current_t_wf is None:
             self.current_t_wf = t
         elif (self.current_t_wf != t and
-              t >= self.current_t_wf+ self.dz_fields/ct.c):
+              t >= self.current_t_wf + self.dz_fields/ct.c):
             self.current_t_wf = t
         else:
             return

@@ -1,7 +1,6 @@
 """ Contains other utilities """
 
 import sys
-import numpy as np
 
 
 def print_progress_bar(pre_string, step, total_steps):
