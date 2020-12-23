@@ -1,3 +1,7 @@
+"""
+This module contains the OpenPMDDiagnostics class, which generates the
+openPMD output.
+"""
 import os
 from copy import deepcopy
 import numpy as np
@@ -12,46 +16,107 @@ SCALAR = Mesh_Record_Component.SCALAR
 
 
 class OpenPMDDiagnostics():
+    """
+    Class in charge of creating and writing the particle and field
+    diagnostics following the openPMD standard.
+    """
+
     def __init__(self, write_dir=None):
+        """
+        Initialize diagnostics.
+
+        Parameters
+        ----------
+        write_dir : str
+            Directory to which the diagnostics will be written. By default
+            this will be a 'diags' folder in the current working directory.
+
+        """
         if write_dir is None:
             self.write_dir = os.path.join(os.getcwd(), 'diags')
         else:
             self.write_dir = os.path.abspath(write_dir)
+        # Index of the data file to be written. Will be increased after
+        # each time step is written.
         self._index_out = 0
+        # Longitudinal position at which the current beamline element begins.
+        # This is needed in order to keep track of the global z position in the
+        # simulation (needed for `globalOffset` and `positionOffset`
+        # attributes) since the beamline elements themselves are not aware of
+        # each other.
         self._current_z_pos = 0.
 
     def write_diagnostics(self, time, dt, species_list=[], wakefield=None):
+        """
+        Write to disk the diagnostics of a certain time step.
+
+        Parameters
+        ----------
+        time : float
+            Simulation time at the current beamline element.
+
+        dt : float
+            Time step used in the current beamline element.
+
+        species_list : list
+            List of particle species to be written.
+
+        wakefield : Wakefield
+            Instance of a wakefield from which the fields should be written
+            to the output. It not specified, no fields will be written for
+            this time step.
+
+        """
         # Create diagnostics folder if it doesn't exist already.
         if not os.path.exists(self.write_dir):
             os.makedirs(self.write_dir)
 
+        # Create file and series.
         file_name = 'data{0:08d}.h5'.format(self._index_out)
         file_path = os.path.join(self.write_dir, 'hdf5', file_name)
         opmd_series = Series(file_path, Access.create)
+
+        # Set basic attributes.
         opmd_series.set_software('Wake-T', __version__)
         opmd_series.set_meshes_path('fields')
         opmd_series.set_particles_path('particles')
 
+        # Create current iteration and set time attributes.
         it = opmd_series.iterations[self._index_out]
         it.set_time(time + self._current_z_pos/ct.c)
         it.set_dt(dt)
 
+        # Write particle diagnostics.
         for species in species_list:
             diag_data = species.get_openpmd_diagnostics_data()
             self._write_species(it, diag_data)
 
+        # Write field diagnostics.
         if wakefield is not None:
             wf_data = wakefield.get_openpmd_diagnostics_data()
             if wf_data is not None:
                 self._write_fields(it, wf_data)
 
+        # Flush data and increase counter for next step.
         opmd_series.flush()
         self._index_out += 1
 
     def increase_z_pos(self, dist):
+        """
+        Increase the current z position along the beamline. This should be
+        called after tracking in each beamline element is completed.
+
+        Parameters
+        ----------
+        dist : float
+            This distance should be the length of the beamline element in
+            which tracking has just finalized.
+
+        """
         self._current_z_pos += dist
 
     def _write_species(self, it, species_data):
+        """ Write all particle diagnostics of a given species. """
         # Create particles for this species.
         particles = it.particles[species_data['name']]
 
@@ -147,6 +212,8 @@ class OpenPMDDiagnostics():
         particles['mass'][SCALAR].set_attribute('weightingPower', 1.)
 
     def _write_fields(self, it, wf_data):
+        """ Write wakefield diagnostics. """
+        # Set common field attributes.
         it.meshes.set_attribute(
             'fieldSolver', wf_data['field_solver'])
         it.meshes.set_attribute(
@@ -163,6 +230,8 @@ class OpenPMDDiagnostics():
             'currentSmoothing', wf_data['current_smoothing'])
         it.meshes.set_attribute(
             'chargeCorrection', wf_data['charge_correction'])
+
+        # Add diagnostics of each field.
         for field in wf_data['fields']:
 
             fld = it.meshes[field]
