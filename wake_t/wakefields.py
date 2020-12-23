@@ -433,6 +433,14 @@ class NonLinearColdFluidWakefield(Wakefield):
 
     def _get_openpmd_diagnostics_data(self):
         # Prepare necessary data.
+        fld_solver = 'other'
+        fld_solver_params = 'cold_fluid_1d'
+        fld_boundary = ['other'] * 4
+        part_boundary = ['other'] * 4
+        fld_boundary_params = ['none'] * 4
+        part_boundary_params = ['none'] * 4
+        current_smoothing = 'none'
+        charge_correction = 'none'
         dr = np.abs(self.r_fld[1] - self.r_fld[0])
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
         grid_spacing = [dr, dz]
@@ -448,7 +456,9 @@ class NonLinearColdFluidWakefield(Wakefield):
         # Generate dictionary for openPMD diagnostics.
         diag_data = generate_field_diag_dictionary(
             fld_names, fld_comps, fld_arrays, fld_comp_pos, grid_labels,
-            grid_spacing, grid_global_offset)
+            grid_spacing, grid_global_offset, fld_solver, fld_solver_params,
+            fld_boundary, fld_boundary_params, part_boundary,
+            part_boundary_params, current_smoothing, charge_correction)
 
         return diag_data
 
@@ -541,6 +551,14 @@ class Quasistatic2DWakefield(Wakefield):
 
     def _get_openpmd_diagnostics_data(self):
         # Prepare necessary data.
+        fld_solver = 'other'
+        fld_solver_params = 'quasistatic_2d'
+        fld_boundary = ['other'] * 4
+        part_boundary = ['other'] * 4
+        fld_boundary_params = ['none'] * 4
+        part_boundary_params = ['none'] * 4
+        current_smoothing = 'none'
+        charge_correction = 'none'
         dr = np.abs(self.r_fld[1] - self.r_fld[0])
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
         grid_spacing = [dr, dz]
@@ -556,7 +574,9 @@ class Quasistatic2DWakefield(Wakefield):
         # Generate dictionary for openPMD diagnostics.
         diag_data = generate_field_diag_dictionary(
             fld_names, fld_comps, fld_arrays, fld_comp_pos, grid_labels,
-            grid_spacing, grid_global_offset)
+            grid_spacing, grid_global_offset, fld_solver, fld_solver_params,
+            fld_boundary, fld_boundary_params, part_boundary,
+            part_boundary_params, current_smoothing, charge_correction)
 
         return diag_data
 

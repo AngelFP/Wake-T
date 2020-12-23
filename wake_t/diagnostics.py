@@ -146,17 +146,23 @@ class OpenPMDDiagnostics():
         particles['mass'][SCALAR].set_attribute('weightingPower', 1.)
 
     def _write_fields(self, it, wf_data):
-        it.meshes.set_attribute('fieldSolver', 'other')
-        it.meshes.set_attribute('fieldSolverParams', 'todo')
-        it.meshes.set_attribute('fieldBoundary', [
-            np.string_("other"), np.string_("other"),
-            np.string_("other"), np.string_("other")])
-        it.meshes.set_attribute('particleBoundary', [
-            np.string_("other"), np.string_("other"),
-            np.string_("other"), np.string_("other")])
-        it.meshes.set_attribute('currentSmoothing', 'none')
-        it.meshes.set_attribute('chargeCorrection', 'none')
-        for field in wf_data:
+        it.meshes.set_attribute(
+            'fieldSolver', wf_data['field_solver'])
+        it.meshes.set_attribute(
+            'fieldSolverParams', wf_data['field_solver_params'])
+        it.meshes.set_attribute(
+            'fieldBoundary', wf_data['field_boundary'])
+        it.meshes.set_attribute(
+            'fieldBoundaryParams', wf_data['field_boundary_params'])
+        it.meshes.set_attribute(
+            'particleBoundary', wf_data['particle_boundary'])
+        it.meshes.set_attribute(
+            'particleBoundaryParams', wf_data['particle_boundary_params'])
+        it.meshes.set_attribute(
+            'currentSmoothing', wf_data['current_smoothing'])
+        it.meshes.set_attribute(
+            'chargeCorrection', wf_data['charge_correction'])
+        for field in wf_data['fields']:
 
             fld = it.meshes[field]
 
