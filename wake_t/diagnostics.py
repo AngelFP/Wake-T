@@ -54,6 +54,12 @@ class OpenPMDDiagnostics():
         # Create particles for this species.
         particles = it.particles[species_data['name']]
 
+        # TODO: evaluate adding ED-PIC attributes to particles output. This is
+        # tricky because Wake-T is not a PIC code and in the TMElements there
+        # is no particle shape/smoothing nor charge/current deposition.
+        # Could these attributes be only added in the time steps in which they
+        # are actually used?
+
         # Get arrays.
         x = species_data['x']
         y = species_data['y']
