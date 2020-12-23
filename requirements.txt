@@ -2,3 +2,4 @@ numpy
 scipy
 numba
 aptools
+openpmd-api

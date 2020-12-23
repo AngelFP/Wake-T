@@ -271,3 +271,24 @@ class ParticleBunch():
         current_xi_c = np.average(self.xi, weights=self.q)
         dxi = xi_c - current_xi_c
         self.xi += dxi
+
+    def get_openpmd_diagnostics_data(self):
+        """
+        Returns a dictionary with the necessary data to write the openPMD
+        diagnostics of the particle bunch.
+
+        """
+        diag_dict = {
+            'x': self.x,
+            'y': self.y,
+            'z': self.xi,
+            'px': self.px,
+            'py': self.py,
+            'pz': self.pz,
+            'w': self.q / ct.e,
+            'q': -ct.e,
+            'm': ct.m_e,
+            'name': 'electron_bunch',  # TODO: add name parameter.
+            'z_off': self.prop_distance
+        }
+        return diag_dict

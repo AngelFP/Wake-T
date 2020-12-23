@@ -41,7 +41,8 @@ plasma = PlasmaStage(
 
 
 # Do tracking.
-bunch_list = plasma.track(bunch, out_initial=True)
+opmd_diag = False  # Set to True to active openPMD output.
+bunch_list = plasma.track(bunch, out_initial=True, opmd_diag=opmd_diag)
 
 
 # Analyze bunch evolution.
