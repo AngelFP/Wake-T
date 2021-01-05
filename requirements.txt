@@ -2,4 +2,4 @@ numpy
 scipy
 numba
 aptools
-openpmd-api~=0.12.0
+openpmd-api~=0.13.0
