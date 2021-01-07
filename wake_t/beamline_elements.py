@@ -82,7 +82,7 @@ class PlasmaStage():
         Parameters:
         -----------
         length : float
-            Length of the plasma stage in cm.
+            Length of the plasma stage in m.
 
         n_p : float
             Plasma density in units of m^{-3}.
@@ -584,7 +584,7 @@ class PlasmaRamp():
         Parameters:
         -----------
         length : float
-            Length of the plasma stage in cm.
+            Length of the plasma stage in m.
 
         plasma_dens_top : float
             Plasma density at the beginning (end) of the downramp (upramp) in
@@ -933,7 +933,7 @@ class PlasmaLens():
         Parameters:
         -----------
         length : float
-            Length of the plasma lens in cm.
+            Length of the plasma lens in m.
 
         foc_strength : float
             Focusing strength of the plasma lens in T/m.
