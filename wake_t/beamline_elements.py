@@ -347,7 +347,8 @@ class PlasmaStage():
     def _gamma(self, px, py, pz):
         return np.sqrt(1 + px**2 + py**2 + pz**2)
 
-    def _track_numerically(self, bunch, parallel, n_proc, out_initial, opmd_diag):
+    def _track_numerically(self, bunch, parallel, n_proc, out_initial,
+                           opmd_diag):
         # Get 6D matrix
         mat = bunch.get_6D_matrix_with_charge()
         # Plasma length in time
