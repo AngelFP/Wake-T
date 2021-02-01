@@ -398,7 +398,8 @@ class PlasmaStage():
                     new_prop_dist = bunch.prop_distance + (s+1)*t_step*ct.c
                     bunch_list.append(
                         ParticleBunch(bunch.q, x, y, xi, px, py, pz,
-                                      prop_distance=new_prop_dist)
+                                      prop_distance=new_prop_dist,
+                                      name=bunch.name)
                     )
                     if opmd_diag is not False:
                         opmd_diag.write_diagnostics(
@@ -422,7 +423,8 @@ class PlasmaStage():
                 new_prop_dist = bunch.prop_distance + (s+1)*t_step*ct.c
                 bunch_list.append(
                     ParticleBunch(bunch.q, x, y, xi, px, py, pz,
-                                  prop_distance=new_prop_dist)
+                                  prop_distance=new_prop_dist,
+                                  name=bunch.name)
                 )
                 if opmd_diag is not False:
                     opmd_diag.write_diagnostics(
@@ -565,7 +567,8 @@ class PlasmaStage():
         p_z = np.sqrt(g**2-p_x**2-p_y**2)
 
         beam_step = ParticleBunch(beam.q, x, y, xi, p_x, p_y, p_z,
-                                  prop_distance=beam.prop_distance+t*ct.c)
+                                  prop_distance=beam.prop_distance+t*ct.c,
+                                  name=beam.name)
 
         return beam_step
 
@@ -820,7 +823,8 @@ class PlasmaRamp():
                     new_prop_dist = bunch.prop_distance + (s+1)*t_step*ct.c
                     bunch_list.append(
                         ParticleBunch(bunch.q, x, y, xi, px, py, pz,
-                                      prop_distance=new_prop_dist)
+                                      prop_distance=new_prop_dist,
+                                      name=bunch.name)
                     )
                     if opmd_diag is not False:
                         opmd_diag.write_diagnostics(
@@ -841,7 +845,8 @@ class PlasmaRamp():
                 new_prop_dist = bunch.prop_distance + (s+1)*t_step*ct.c
                 bunch_list.append(
                     ParticleBunch(bunch.q, x, y, xi, px, py, pz,
-                                  prop_distance=new_prop_dist)
+                                  prop_distance=new_prop_dist,
+                                  name=bunch.name)
                 )
                 if opmd_diag is not False:
                     opmd_diag.write_diagnostics(
@@ -1164,7 +1169,9 @@ class PlasmaLens():
                     new_prop_dist = bunch.prop_distance + (s+1)*t_step*ct.c
                     bunch_list.append(
                         ParticleBunch(bunch.q, x, y, xi, px, py, pz,
-                                      prop_distance=new_prop_dist))
+                                      prop_distance=new_prop_dist,
+                                      name=bunch.name)
+                                      )
                     if opmd_diag is not False:
                         opmd_diag.write_diagnostics(
                             s*t_step, t_step, [bunch_list[-1]], self.field)
@@ -1185,7 +1192,8 @@ class PlasmaLens():
                 new_prop_dist = bunch.prop_distance + (s+1)*t_step*ct.c
                 bunch_list.append(
                     ParticleBunch(bunch.q, x, y, xi, px, py, pz,
-                                  prop_distance=new_prop_dist)
+                                  prop_distance=new_prop_dist,
+                                  name=bunch.name)
                 )
                 if opmd_diag is not False:
                     opmd_diag.write_diagnostics(
@@ -1375,7 +1383,8 @@ class TMElement():
         new_bunch_mat[0] += new_x_ref
         # create new bunch
         new_bunch = ParticleBunch(q, bunch_matrix=new_bunch_mat,
-                                  prop_distance=new_prop_dist)
+                                  prop_distance=new_prop_dist,
+                                  name=old_bunch.name)
         new_bunch.theta_ref = new_theta_ref
         new_bunch.x_ref = new_x_ref
         return new_bunch

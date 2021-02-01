@@ -101,9 +101,11 @@ class ParticleBunch():
 
     """ Defines a particle bunch. """
 
+    _n_unnamed = 0  # Number of unnamed ParticleBunch instances
+
     def __init__(self, q, x=None, y=None, xi=None, px=None, py=None, pz=None,
                  bunch_matrix=None, matrix_type='standard', gamma_ref=None,
-                 tags=None, prop_distance=0, t_flight=0):
+                 tags=None, prop_distance=0, t_flight=0, name=None):
         """
         Initialize particle bunch.
 
@@ -111,40 +113,56 @@ class ParticleBunch():
         -----------
         q : array
             Charge of each particle in units of C.
+
         x : array
             Position of each particle in the x-plane in units of m.
+
         y : array
             Position of each particle in the y-plane in units of m.
+
         xi : array
             Position of each particle in the xi-plane in units of m.
+
         px : array
             Momentum of each particle in the x-plane in non-dimensional units
             (beta*gamma).
+
         py : array
             Momentum of each particle in the y-plane in non-dimensional units
             (beta*gamma).
+
         pz : array
             Momentum of each particle in the z-plane in non-dimensional units
             (beta*gamma).
+
         bunch_matrix : array
             6 x N matrix, where N is the number of particles, containing the
             phase-space information of the bunch. If provided, the arguments x
             to pz are not considered. The matrix contains (x, px, y, py, z, pz)
             if matrix_type='standard' or (x, x', y, y', xi, dp) if
             matrix_type='alternative'.
+
         matrix_type : string
             Indicates the type of bunch_matrix. Possible values are 'standard'
             or 'alternative' (see above).
+
         gamma_ref : float
             Reference energy with respect to which the particle momentum dp is
             calculated. Only needed if bunch_matrix is used and
             matrix_type='alternative'.
+
         tags : array
             Individual tags assigned to each particle.
+
         prop_distance : float
             Propagation distance of the bunch along the beamline.
+
         t_flight : float
             Time of flight of the bunch along the beamline.
+
+        name : str
+            Name of the particle bunch. Used for species identification
+            in openPMD diagnostics.
 
         """
         if bunch_matrix is not None:
@@ -167,6 +185,14 @@ class ParticleBunch():
         self.t_flight = t_flight
         self.x_ref = 0
         self.theta_ref = 0
+        self.set_name(name)
+
+    def set_name(self, name):
+        """ Set the particle bunch name """
+        if name is None:
+            name = 'elec_bunch_{}'.format(ParticleBunch._n_unnamed)
+            ParticleBunch._n_unnamed += 1
+        self.name = name
 
     def set_phase_space(self, x, y, xi, px, py, pz):
         """Sets the phase space coordinates"""
@@ -288,7 +314,7 @@ class ParticleBunch():
             'w': self.q / ct.e,
             'q': -ct.e,
             'm': ct.m_e,
-            'name': 'electron_bunch',  # TODO: add name parameter.
+            'name': self.name,
             'z_off': self.prop_distance
         }
         return diag_dict
