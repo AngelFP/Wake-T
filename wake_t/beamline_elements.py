@@ -310,17 +310,14 @@ class PlasmaStage():
         print('')
         print('Plasma stage')
         print('-'*len('Plasma stage'))
-        if out_initial:
-            initial_bunch = copy(bunch)
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
             opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
         if self.tracking_mode == 'numerical':
             bunch_list = self._track_numerically(
-                bunch, parallel, n_proc, opmd_diag)
+                bunch, parallel, n_proc, out_initial, opmd_diag)
         elif self.tracking_mode == 'analytical':
-            bunch_list = self._track_analytically(bunch, parallel, n_proc)
-        if out_initial:
-            bunch_list.insert(0, initial_bunch)
+            bunch_list = self._track_analytically(
+                bunch, parallel, n_proc, out_initial)
         if opmd_diag is not False:
             opmd_diag.increase_z_pos(self.length)
         return bunch_list
@@ -350,7 +347,7 @@ class PlasmaStage():
     def _gamma(self, px, py, pz):
         return np.sqrt(1 + px**2 + py**2 + pz**2)
 
-    def _track_numerically(self, bunch, parallel, n_proc, opmd_diag):
+    def _track_numerically(self, bunch, parallel, n_proc, out_initial, opmd_diag):
         # Get 6D matrix
         mat = bunch.get_6D_matrix_with_charge()
         # Plasma length in time
@@ -364,6 +361,11 @@ class PlasmaStage():
         dt_adjusted = t_final/iterations
         # initialize list to store the distribution at each step
         bunch_list = list()
+        if out_initial:
+            bunch_list.append(copy(bunch))
+            if opmd_diag is not False:
+                opmd_diag.write_diagnostics(
+                    0., t_step, [bunch_list[-1]])
         # get start time
         start = time.time()
         if parallel:
@@ -440,7 +442,7 @@ class PlasmaStage():
         bunch.increase_prop_distance(self.length)
         return bunch_list
 
-    def _track_analytically(self, bunch, parallel, n_proc):
+    def _track_analytically(self, bunch, parallel, n_proc, out_initial):
         # Group velocity of driver
         v_w = self.wakefield.laser.get_group_velocity(self.n_p)*ct.c
 
@@ -490,6 +492,11 @@ class PlasmaStage():
         cs_y = y_0/A_y
         phi_y_0 = np.arctan2(sn_y, cs_y)
 
+        # initialize list to store the distribution at each step
+        bunch_list = list()
+        if out_initial:
+            bunch_list.append(copy(bunch))
+
         # track bunch in steps
         # print("Tracking plasma stage in {} steps...   ".format(steps))
         start = time.time()
@@ -499,7 +506,7 @@ class PlasmaStage():
                        beam=bunch, g_0=g_0, w_0=w_0, xi_0=xi_0, A_x=A_x,
                        A_y=A_y, phi_x_0=phi_x_0, phi_y_0=phi_y_0, E=E, E_p=E_p,
                        v_w=v_w, K=K)
-        bunch_list = p.map(part, t)
+        bunch_list += p.map(part, t)
         end = time.time()
         print("Done ({} seconds)".format(end-start))
 
@@ -789,11 +796,14 @@ class PlasmaRamp():
         it_per_step = max(int(iterations/self.n_out), 1)
         iterations = it_per_step*self.n_out
         dt_adjusted = t_final/iterations
+        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
+            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
         bunch_list = list()
         if out_initial:
             bunch_list.append(copy(bunch))
-        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
-            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
+            if opmd_diag is not False:
+                opmd_diag.write_diagnostics(
+                    0., t_step, [bunch_list[-1]])
         start = time.time()
 
         if parallel:
@@ -1136,11 +1146,14 @@ class PlasmaLens():
         it_per_step = max(int(iterations/self.n_out), 1)
         iterations = it_per_step*self.n_out
         dt_adjusted = t_final/iterations
+        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
+            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
         bunch_list = list()
         if out_initial:
             bunch_list.append(copy(bunch))
-        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
-            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
+            if opmd_diag is not False:
+                opmd_diag.write_diagnostics(
+                    0., t_step, [bunch_list[-1]])
         start = time.time()
         if parallel:
             if n_proc is None:
@@ -1274,6 +1287,9 @@ class TMElement():
         output_bunch_list = list()
         if out_initial:
             output_bunch_list.append(copy(bunch))
+            if opmd_diag is not False:
+                opmd_diag.write_diagnostics(
+                    0., l_step/ct.c, [output_bunch_list[-1]])
         for i in track_steps:
             print_progress_bar(st_0, i+1, n_steps)
             l_curr = (i+1) * l_step * (1-2*backtrack)
