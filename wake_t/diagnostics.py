@@ -78,6 +78,7 @@ class OpenPMDDiagnostics():
 
         # Set basic attributes.
         opmd_series.set_software('Wake-T', __version__)
+        opmd_series.set_iteration_format('data%T.h5')
         opmd_series.set_meshes_path('fields')
         opmd_series.set_particles_path('particles')
 
