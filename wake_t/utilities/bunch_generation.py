@@ -11,7 +11,7 @@ from wake_t.driver_witness import ParticleBunch
 
 def get_gaussian_bunch_from_twiss(
         en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
-        x_off=0, y_off=0, theta_x=0, theta_y=0):
+        x_off=0, y_off=0, theta_x=0, theta_y=0, name=None):
     """
     Creates a 6D Gaussian particle bunch with the specified Twiss parameters.
 
@@ -19,36 +19,54 @@ def get_gaussian_bunch_from_twiss(
     -----------
     en_x : float
         Normalized trace-space emittance in the x-plane in units of m*rad.
+
     en_y : float
         Normalized trace-space emittance in the y-plane in units of m*rad.
+
     a_x : float
         Alpha parameter in the x-plane.
+
     a_y : float
         Alpha parameter in the y-plane.
+
     b_x : float
         Beta parameter in the x-plane in units of m.
+
     b_y : float
         Beta parameter in the y-plane in units of m.
+
     ene: float
-        Mean bunch energy in non-dimmensional units (beta*gamma).
+        Mean bunch energy in non-dimensional units (beta*gamma).
+
     ene_sp: float
         Relative energy spread in %.
+
     s_t: float
         Bunch duration (standard deviation) in units of fs.
+
     xi_c: float
         Central bunch position in the xi in units of m.
+
     q_tot: float
         Total bunch charge in pC.
+
     n_part: int
         Total number of particles in the bunch.
+
     x_off: float
         Centroid offset in the x-plane in units of m.
+
     y_off: float
         Centroid offset in the y-plane in units of m.
+
     theta_x: float
         Pointing angle in the x-plane in radians.
+
     theta_y: float
         Pointing angle in the y-plane in radians.
+
+    name: str
+        Name of the particle bunch.
 
     Returns:
     --------
@@ -92,12 +110,12 @@ def get_gaussian_bunch_from_twiss(
     py = yp*pz + p_y_off
     # Charge
     q = np.ones(n_part)*(q_tot/n_part)
-    return ParticleBunch(q, x, y, xi, px, py, pz)
+    return ParticleBunch(q, x, y, xi, px, py, pz, name=name)
 
 
 def get_gaussian_bunch_from_size(
         en_x, en_y, s_x, s_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0,
-        y_off=0, theta_x=0, theta_y=0):
+        y_off=0, theta_x=0, theta_y=0, name=None):
     """
     Creates a Gaussian bunch with the specified emitance and spot size. It is
     assumed to be on its waist (alpha_x = alpha_y = 0)
@@ -106,32 +124,48 @@ def get_gaussian_bunch_from_size(
     -----------
     en_x : float
         Normalized trace-space emittance in the x-plane in units of m*rad.
+
     en_y : float
         Normalized trace-space emittance in the y-plane in units of m*rad.
+
     s_x : float
         Bunch size (standard deviation) in the x-plane in units of m.
+
     s_y : float
         Bunch size (standard deviation) in the y-plane in units of m.
+
     ene: float
-        Mean bunch energy in non-dimmensional units (beta*gamma).
+        Mean bunch energy in non-dimensional units (beta*gamma).
+
     ene_sp: float
         Relative energy spread in %.
+
     s_t: float
         Bunch duration (standard deviation) in units of fs.
+
     xi_c: float
         Central bunch position in the xi in units of m.
+
     q_tot: float
         Total bunch charge in pC.
+
     n_part: int
         Total number of particles in the bunch.
+
     x_off: float
         Centroid offset in the x-plane in units of m.
+
     y_off: float
         Centroid offset in the y-plane in units of m.
+
     theta_x: float
         Pointing angle in the x-plane in radians.
+
     theta_y: float
         Pointing angle in the y-plane in radians.
+
+    name: str
+        Name of the particle bunch.
 
     Returns:
     --------
@@ -142,12 +176,13 @@ def get_gaussian_bunch_from_size(
     b_y = s_y**2*ene/en_y
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_x, b_y, ene,
                                          ene_sp, s_t, xi_c, q_tot, n_part,
-                                         x_off, y_off, theta_x, theta_y)
+                                         x_off, y_off, theta_x, theta_y,
+                                         name=name)
 
 
 def get_matched_bunch(
         en_x, en_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0, y_off=0,
-        theta_x=0, theta_y=0, n_p=None, k_x=None):
+        theta_x=0, theta_y=0, n_p=None, k_x=None, name=None):
     """
     Creates a Gaussian bunch matched to the plasma focusing fields.
 
@@ -155,33 +190,49 @@ def get_matched_bunch(
     -----------
     en_x : float
         Normalized trace-space emittance in the x-plane in units of m*rad.
+
     en_y : float
         Normalized trace-space emittance in the y-plane in units of m*rad.
+
     ene: float
-        Mean bunch energy in non-dimmensional units (beta*gamma).
+        Mean bunch energy in non-dimensional units (beta*gamma).
+
     ene_sp: float
         Relative energy spread in %.
+
     s_t: float
         Bunch duration (standard deviation) in units of fs.
+
     xi_c: float
         Central bunch position in the xi in units of m.
+
     q_tot: float
         Total bunch charge in pC.
+
     n_part: int
         Total number of particles in the bunch.
+
     x_off: float
         Centroid offset in the x-plane in units of m.
+
     y_off: float
         Centroid offset in the y-plane in units of m.
+
     theta_x: float
         Pointing angle in the x-plane in radians.
+
     theta_y: float
         Pointing angle in the y-plane in radians.
+
     n_p: double
         Plasma density in units of m^{-3}. This value is used to calculate the
         focusing fields in the plasma assuming blowout regime.
+
     k_x: int
         Focusing fields in the plasma in units of T/m. Has priority over n_p.
+
+    name: str
+        Name of the particle bunch.
 
     Returns:
     --------
@@ -193,14 +244,16 @@ def get_matched_bunch(
     b_m = ge.matched_plasma_beta_function(ene, n_p, k_x)
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_m, b_m, ene,
                                          ene_sp, s_t, xi_c, q_tot, n_part,
-                                         x_off, y_off, theta_x, theta_y)
+                                         x_off, y_off, theta_x, theta_y,
+                                         name=name)
 
 
-def get_from_file(file_path, code_name, preserve_prop_dist=False, **kwargs):
+def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
+                  **kwargs):
     x, y, z, px, py, pz, q = dr.read_beam(code_name, file_path, **kwargs)
     z_avg = np.average(z, weights=q)
     xi = z - z_avg
-    bunch = ParticleBunch(q, x, y, xi, px, py, pz)
+    bunch = ParticleBunch(q, x, y, xi, px, py, pz, name=name)
     if preserve_prop_dist:
         bunch.prop_distance = z_avg
     return bunch

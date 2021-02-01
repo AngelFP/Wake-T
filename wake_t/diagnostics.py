@@ -67,6 +67,9 @@ class OpenPMDDiagnostics():
             this time step.
 
         """
+        # Perform checks.
+        self.check_species_names(species_list)
+
         # Create diagnostics folder if it doesn't exist already.
         if not os.path.exists(self.write_dir):
             os.makedirs(self.write_dir)
@@ -78,6 +81,7 @@ class OpenPMDDiagnostics():
 
         # Set basic attributes.
         opmd_series.set_software('Wake-T', __version__)
+        opmd_series.set_iteration_format('data%T.h5')
         opmd_series.set_meshes_path('fields')
         opmd_series.set_particles_path('particles')
 
@@ -275,3 +279,14 @@ class OpenPMDDiagnostics():
             global_offset = deepcopy(wf_data[field]['grid']['local_offset'])
             global_offset[-1] += self._current_z_pos
             fld.set_grid_global_offset(global_offset)
+
+    def check_species_names(self, species_list=[]):
+        """ Check that no species have duplicate names. """
+        sp_names = []
+        for species in species_list:
+            name = species.name
+            if name not in sp_names:
+                sp_names.append(name)
+            else:
+                raise ValueError(
+                    'Several species share same name {}.'.format(name))
