@@ -4,7 +4,7 @@ from numba import njit, prange
 import numpy as np
 import scipy.constants as ct
 
-from .physics_models.beam_optics.transfer_matrices import (
+from wake_t.physics_models.beam_optics.transfer_matrices import (
     first_order_matrix, second_order_matrix
 )
 
