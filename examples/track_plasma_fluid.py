@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 from aptools.plotting.quick_diagnostics import slice_analysis
 
 from wake_t.beamline_elements import PlasmaStage
-from wake_t.driver_witness import LaserPulse
+from wake_t import LaserPulse
 from wake_t.utilities.bunch_generation import get_matched_bunch
-from wake_t.data_analysis import analyze_bunch_list
+from wake_t.diagnostics import analyze_bunch_list
 
 
 # Create laser driver.
