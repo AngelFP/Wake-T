@@ -1,5 +1,7 @@
 import numpy as np
 import scipy.constants as ct
+from scipy import ndimage
+from scipy.interpolate import RegularGridInterpolator
 try:
     from VisualPIC.DataHandling.dataContainer import DataContainer
     vpic_installed = True

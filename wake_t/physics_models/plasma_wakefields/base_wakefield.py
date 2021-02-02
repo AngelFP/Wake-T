@@ -26,4 +26,3 @@ class Wakefield():
 
     def _get_openpmd_diagnostics_data(self):
         raise NotImplementedError
-    

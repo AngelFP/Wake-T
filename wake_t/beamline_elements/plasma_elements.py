@@ -10,7 +10,7 @@ import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particles.tracking import runge_kutta_4
-import wake_t.physics_models.plasma_wakefields  as wf
+import wake_t.physics_models.plasma_wakefields as wf
 from wake_t.particles.particle_bunch import ParticleBunch
 from wake_t.utilities.other import print_progress_bar
 from wake_t.diagnostics import OpenPMDDiagnostics

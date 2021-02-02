@@ -106,4 +106,3 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
         T = second_order_matrix(z, L, theta, k1, k2, gamma_ref)
         bm_new += np.einsum('ijk,j...,k...', T, beam_matrix, beam_matrix).T
     return bm_new
-
