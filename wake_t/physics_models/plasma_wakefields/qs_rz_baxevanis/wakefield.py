@@ -2,7 +2,7 @@ import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.quasistatic_2d import calculate_wakefields
+from .solver import calculate_wakefields
 from wake_t.interpolation import (
     gather_field_cyl_linear, gather_main_fields_cyl_linear)
 from wake_t.utilities.other import generate_field_diag_dictionary
