@@ -6,7 +6,7 @@ from scipy.stats import truncnorm
 import aptools.plasma_accel.general_equations as ge
 import aptools.data_handling.reading as dr
 
-from wake_t.driver_witness import ParticleBunch
+from wake_t.particles.particle_bunch import ParticleBunch
 
 
 def get_gaussian_bunch_from_twiss(
