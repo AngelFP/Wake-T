@@ -2,8 +2,8 @@ import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.charge_deposition import charge_distribution_cyl
-from wake_t.interpolation import (
+from wake_t.particles.charge_deposition import charge_distribution_cyl
+from wake_t.particles.interpolation import (
     gather_field_cyl_linear, gather_main_fields_cyl_linear)
 from wake_t.utilities.other import generate_field_diag_dictionary
 from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
