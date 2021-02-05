@@ -13,7 +13,7 @@ from numba import njit
 import scipy.interpolate as scint
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.charge_deposition import charge_distribution_cyl
+from wake_t.particles.charge_deposition import charge_distribution_cyl
 
 # For debugging
 # from time import time
