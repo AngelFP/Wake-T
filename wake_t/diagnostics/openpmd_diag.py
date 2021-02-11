@@ -7,7 +7,7 @@ from copy import deepcopy
 import numpy as np
 import scipy.constants as ct
 from openpmd_api import (Series, Access, Dataset, Mesh_Record_Component,
-                         Unit_Dimension, Geometry)
+                         Unit_Dimension, Geometry, Iteration_Encoding)
 
 from wake_t.__version__ import __version__
 
@@ -75,13 +75,13 @@ class OpenPMDDiagnostics():
             os.makedirs(self.write_dir)
 
         # Create file and series.
-        file_name = 'data{0:08d}.h5'.format(self._index_out)
+        file_name = 'data%08T.h5'
         file_path = os.path.join(self.write_dir, 'hdf5', file_name)
         opmd_series = Series(file_path, Access.create)
 
         # Set basic attributes.
+        opmd_series.iteration_encoding = Iteration_Encoding.file_based
         opmd_series.set_software('Wake-T', __version__)
-        opmd_series.set_iteration_format('data%T.h5')
         opmd_series.set_meshes_path('fields')
         opmd_series.set_particles_path('particles')
         opmd_series.set_openPMD_extension(1)
