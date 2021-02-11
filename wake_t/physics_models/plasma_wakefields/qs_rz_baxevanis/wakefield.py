@@ -86,7 +86,7 @@ class Quasistatic2DWakefield(Wakefield):
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
         s_d = ge.plasma_skin_depth(n_p*1e-6)
 
-        self.rho = n_p_mesh
+        self.rho = n_p_mesh.T
         self.E_z = E_z.T*E_0
         self.W_x = W_r.T*E_0
         self.K_x = K_r.T*E_0/s_d/ct.c
@@ -115,12 +115,12 @@ class Quasistatic2DWakefield(Wakefield):
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
         grid_spacing = [dr, dz]
         grid_labels = ['r', 'z']
-        grid_local_offset = [0., self.current_t*ct.c-self.xi_min]
+        grid_local_offset = [0., self.current_t*ct.c+self.xi_min]
         # Cell-centered in 'r' anf 'z'. TODO: check correctness.
         fld_position = [0.5, 0.5]
         fld_names = ['E', 'W', 'rho']
         fld_comps = [['z'], ['r'], None]
-        fld_arrays = [[self.E_z], [self.W_x], [self.rho]]
+        fld_arrays = [[self.E_z.T], [self.W_x.T], [self.rho.T]]
         fld_comp_pos = [fld_position] * len(fld_names)
 
         # Generate dictionary for openPMD diagnostics.

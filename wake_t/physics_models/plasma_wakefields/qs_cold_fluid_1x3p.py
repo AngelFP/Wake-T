@@ -161,12 +161,17 @@ class NonLinearColdFluidWakefield(Wakefield):
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
         grid_spacing = [dr, dz]
         grid_labels = ['r', 'z']
-        grid_local_offset = [0., self.current_t*ct.c-self.xi_min]
+        grid_local_offset = [0., self.current_t*ct.c+self.xi_min]
         # Cell-centered in 'r' anf 'z'. TODO: check correctness.
         fld_position = [0.5, 0.5]
         fld_names = ['E', 'W']
         fld_comps = [['z'], ['r']]
-        fld_arrays = [[self.E_z], [self.W_x]]
+        # Need to make sure it is a contiguous array to prevent incorrect
+        # openPMD output.
+        fld_arrays = [
+            [np.ascontiguousarray(self.E_z.T)],
+            [np.ascontiguousarray(self.W_x.T)]
+            ]
         fld_comp_pos = [fld_position] * len(fld_names)
 
         # Generate dictionary for openPMD diagnostics.
