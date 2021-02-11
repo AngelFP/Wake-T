@@ -84,6 +84,7 @@ class OpenPMDDiagnostics():
         opmd_series.set_iteration_format('data%T.h5')
         opmd_series.set_meshes_path('fields')
         opmd_series.set_particles_path('particles')
+        opmd_series.set_openPMD_extension(1)
 
         # Create current iteration and set time attributes.
         it = opmd_series.iterations[self._index_out]
