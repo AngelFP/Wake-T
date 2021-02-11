@@ -276,7 +276,7 @@ class OpenPMDDiagnostics():
             fld.set_attribute('fieldSmoothing', 'none')
             fld.set_axis_labels(wf_data[field]['grid']['labels'])
             fld.set_grid_spacing(wf_data[field]['grid']['spacing'])
-            global_offset = deepcopy(wf_data[field]['grid']['local_offset'])
+            global_offset = deepcopy(wf_data[field]['grid']['global_offset'])
             global_offset[-1] += self._current_z_pos
             fld.set_grid_global_offset(global_offset)
 

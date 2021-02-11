@@ -161,7 +161,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
         grid_spacing = [dr, dz]
         grid_labels = ['r', 'z']
-        grid_local_offset = [0., self.current_t*ct.c+self.xi_min]
+        grid_global_offset = [0., self.current_t*ct.c+self.xi_min]
         # Cell-centered in 'r' anf 'z'. TODO: check correctness.
         fld_position = [0.5, 0.5]
         fld_names = ['E', 'W']
@@ -177,7 +177,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         # Generate dictionary for openPMD diagnostics.
         diag_data = generate_field_diag_dictionary(
             fld_names, fld_comps, fld_arrays, fld_comp_pos, grid_labels,
-            grid_spacing, grid_local_offset, fld_solver, fld_solver_params,
+            grid_spacing, grid_global_offset, fld_solver, fld_solver_params,
             fld_boundary, fld_boundary_params, part_boundary,
             part_boundary_params, current_smoothing, charge_correction)
 
