@@ -81,14 +81,14 @@ class OpenPMDDiagnostics():
 
         # Set basic attributes.
         opmd_series.set_software('Wake-T', __version__)
-        opmd_series.set_meshes_path('fields')
-        opmd_series.set_particles_path('particles')
-        opmd_series.set_openPMD_extension(1)
+        opmd_series.meshes_path = 'fields'
+        opmd_series.particles_path = 'particles'
+        opmd_series.openPMD_extension = 1
 
         # Create current iteration and set time attributes.
         it = opmd_series.iterations[self._index_out]
-        it.set_time(time + self._current_z_pos/ct.c)
-        it.set_dt(dt)
+        it.time = time + self._current_z_pos/ct.c
+        it.dt = dt
 
         # Write particle diagnostics.
         for species in species_list:
@@ -272,13 +272,13 @@ class OpenPMDDiagnostics():
                     Unit_Dimension.I: 1
                     }
 
-            fld.set_geometry(Geometry.cylindrical)
+            fld.geometry = Geometry.cylindrical
             fld.set_attribute('fieldSmoothing', 'none')
-            fld.set_axis_labels(wf_data[field]['grid']['labels'])
-            fld.set_grid_spacing(wf_data[field]['grid']['spacing'])
+            fld.axis_labels = wf_data[field]['grid']['labels']
+            fld.grid_spacing = wf_data[field]['grid']['spacing']
             global_offset = deepcopy(wf_data[field]['grid']['global_offset'])
             global_offset[-1] += self._current_z_pos
-            fld.set_grid_global_offset(global_offset)
+            fld.grid_global_offset = global_offset
 
     def check_species_names(self, species_list=[]):
         """ Check that no species have duplicate names. """
