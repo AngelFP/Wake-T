@@ -275,3 +275,4 @@ __pycache__/
 *.pdf
 *.pptx
 /old_stuff
+/venv
