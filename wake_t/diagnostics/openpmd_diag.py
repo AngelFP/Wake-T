@@ -7,7 +7,7 @@ from copy import deepcopy
 import numpy as np
 import scipy.constants as ct
 from openpmd_api import (Series, Access, Dataset, Mesh_Record_Component,
-                         Unit_Dimension, Geometry, Iteration_Encoding)
+                         Unit_Dimension, Geometry)
 
 from wake_t.__version__ import __version__
 
@@ -80,7 +80,6 @@ class OpenPMDDiagnostics():
         opmd_series = Series(file_path, Access.create)
 
         # Set basic attributes.
-        opmd_series.iteration_encoding = Iteration_Encoding.file_based
         opmd_series.set_software('Wake-T', __version__)
         opmd_series.set_meshes_path('fields')
         opmd_series.set_particles_path('particles')
