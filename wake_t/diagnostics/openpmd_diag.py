@@ -244,6 +244,11 @@ class OpenPMDDiagnostics():
                 for comp in wf_data[field]['comps']:
                     fld_comp = fld[comp]
                     fld_comp_array = wf_data[field]['comps'][comp]['array']
+                    # Add extra dimension to mimic thetaMode geometry (mode 0).
+                    # Workaround needed for reading the data with
+                    # openPMD-viewer until cylindrical geometry is properly
+                    # defined in the standard.
+                    fld_comp_array = np.expand_dims(fld_comp_array, axis=0)
                     d_fld_comp = Dataset(
                         fld_comp_array.dtype, extent=fld_comp_array.shape)
                     fld_comp.reset_dataset(d_fld_comp)
@@ -252,6 +257,8 @@ class OpenPMDDiagnostics():
                         'position', wf_data[field]['comps'][comp]['position'])
             else:
                 fld_array = wf_data[field]['array']
+                # Add extra dimmension to mimic thetaMode geometry (mode 0).
+                fld_array = np.expand_dims(fld_array, axis=0)
                 d_fld = Dataset(fld_array.dtype, extent=fld_array.shape)
                 fld[SCALAR].reset_dataset(d_fld)
                 fld[SCALAR].store_chunk(fld_array)
@@ -272,7 +279,9 @@ class OpenPMDDiagnostics():
                     Unit_Dimension.I: 1
                     }
 
-            fld.geometry = Geometry.cylindrical
+            # Set geometry to thetaMode until cylindrical geometry is
+            # properly defined in the openPMD standard.
+            fld.geometry = Geometry.thetaMode  # Geometry.cylindrical
             fld.set_attribute('fieldSmoothing', 'none')
             fld.axis_labels = wf_data[field]['grid']['labels']
             fld.grid_spacing = wf_data[field]['grid']['spacing']
