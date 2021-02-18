@@ -13,7 +13,7 @@ import numpy as np
 from numba import njit
 
 
-def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
+def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr, charge_dist,
                             p_shape='cubic'):
     """
     Deposit the charge of a partice distribution in a 2D grid (cylindrical
@@ -38,6 +38,9 @@ def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     dz, dr : float
         Grid step size along the longitudinal and radial direction.
 
+    charge_dist : array
+        The 2D array containing the charge distribution.
+
     p_shape : str
         Particle shape to be used. Possible values are 'linear' or 'cubic'.
 
@@ -49,10 +52,10 @@ def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     """
     if p_shape == 'linear':
         return charge_distribution_cyl_linear(
-            z, x, y, q, z_min, r_min, nz, nr, dz, dr)
+            z, x, y, q, z_min, r_min, nz, nr, dz, dr, charge_dist)
     elif p_shape == 'cubic':
         return charge_distribution_cyl_cubic(
-            z, x, y, q, z_min, r_min, nz, nr, dz, dr)
+            z, x, y, q, z_min, r_min, nz, nr, dz, dr, charge_dist)
     else:
         err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
                       "Possible values are 'linear' or 'cubic'.")
@@ -60,7 +63,7 @@ def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
 
 
 @njit
-def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
+def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr, charge_dist):
     """ Calculate charge distribution assuming linear particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -114,11 +117,11 @@ def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
         rho[iz_cell+1, ir_cell+0] += zsl_1 * rsl_0 * w_i
         rho[iz_cell+1, ir_cell+1] += zsl_1 * rsl_1 * w_i
 
-    return rho
+    return rho + charge_dist
 
 
 @njit
-def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
+def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr, charge_dist):
     """ Calculate charge distribution assuming cubic particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -194,4 +197,4 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr):
         rho[iz_cell+3, ir_cell+2] += zsc_3 * rsc_2 * w_i
         rho[iz_cell+3, ir_cell+3] += zsc_3 * rsc_3 * w_i
 
-    return rho
+    return rho + charge_dist

@@ -6,7 +6,6 @@ See https://journals.aps.org/prab/abstract/10.1103/PhysRevAccelBeams.21.071301
 for the full details about this model.
 """
 
-
 import numpy as np
 import scipy.constants as ct
 from numba import njit
@@ -14,6 +13,7 @@ import scipy.interpolate as scint
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particles.charge_deposition import charge_distribution_cyl
+
 
 # For debugging
 # from time import time
@@ -89,10 +89,10 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     dr = r_max / n_r
     dr_p = dr / ppc
     n_part = n_r * ppc
-    r = np.linspace(dr_p/2, r_max - dr_p/2, n_part)
+    r = np.linspace(dr_p / 2, r_max - dr_p / 2, n_part)
     pr = np.zeros_like(r)
     gamma = np.ones_like(r)
-    q = dr_p*r
+    q = dr_p * r
 
     # Iteration steps.
     dxi = (xi_max - xi_min) / n_xi
@@ -103,7 +103,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     dxi_psi_mesh = np.zeros((n_r, n_xi))
     b_theta_bar_mesh = np.zeros((n_r, n_xi))
     b_theta_0_mesh = np.zeros((n_r, n_xi))
-    r_arr = np.linspace(dr/2, r_max - dr/2, n_r)
+    r_arr = np.linspace(dr / 2, r_max - dr / 2, n_r)
     xi_arr = np.linspace(xi_min, xi_max, n_xi)
 
     # Calculate beam source term (b_theta_0) from particle distribution.
@@ -112,6 +112,20 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
             beam_part, n_r, n_xi, n_p, r_arr, xi_arr, p_shape)
     else:
         beam_source = None
+
+    # copied the idea from get_beam_function at line ~800
+    # Get and normalize particle coordinate arrays. --> NECESSARY TO GET Q_BEAM?
+    x, y, xi, q_beam = beam_part
+    xi_n = xi / s_d
+    x_n = x / s_d
+    y_n = y / s_d
+
+    # Calculate particle weights.  --> NECESSARY TO USE W? CAN I JUST USE Q_BEAM?
+    w = q_beam / ct.e / (2 * np.pi * dr * dxi * s_d ** 3 * n_p)
+
+    # Calculate the charge distribution of the initial column
+    rho = np.zeros((n_xi + 4, n_r + 4))
+    rho = charge_distribution_cyl(xi_n, x_n, y_n, w, xi_arr[0], r_arr[0], n_xi, n_r, dxi, dr, rho, p_shape=p_shape)
 
     # Main loop.
     for step in np.arange(n_xi):
@@ -122,7 +136,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
             r, pr, q, xi, dxi, laser_params, beam_source, s_d)
 
         # Remove plasma particles leaving simulation boundaries (plus margin).
-        idx_keep = np.where(r <= r_max+0.1)
+        idx_keep = np.where(r <= r_max + 0.1)
         r = r[idx_keep]
         pr = pr[idx_keep]
         gamma = gamma[idx_keep]
@@ -133,6 +147,9 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
         # Calculate fields at specified r locations.
         fields = calculate_fields(r_arr, xi, r, pr, q,
                                   laser_params, beam_source, s_d)
+
+        # Deposit charge of updated plasma column
+        rho = charge_distribution_cyl(xi, x_n, y_n, w, xi_arr[0], r_arr[0], n_xi, n_r, dxi, dr, rho, p_shape=p_shape)
         i = -1 - step
 
         # Unpack fields.
@@ -145,7 +162,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     dr_psi_mesh *= -1
     e_r_mesh = b_theta_bar_mesh + b_theta_0_mesh - dr_psi_mesh
     r_arr_v = np.vstack(r_arr)
-    n_p = (np.gradient(r_arr_v * e_r_mesh, dr, axis=0, edge_order=2)/r_arr_v
+    n_p = (np.gradient(r_arr_v * e_r_mesh, dr, axis=0, edge_order=2) / r_arr_v
            - np.gradient(dxi_psi_mesh, dxi, axis=1, edge_order=2) - 1)
     k_r_mesh = np.gradient(dr_psi_mesh, dr, axis=0, edge_order=2)
     e_z_p_mesh = np.gradient(dxi_psi_mesh, dxi, axis=1, edge_order=2)
@@ -199,11 +216,11 @@ def evolve_plasma(r, pr, q, xi, dxi, laser_params, beam_source, s_d):
     Ar, Apr = motion_derivatives(
         dxi, xi, r, pr, q, laser_params, beam_source, s_d)
     Br, Bpr = motion_derivatives(
-        dxi, xi-dxi/2, r + Ar/2, pr + Apr/2, q, laser_params, beam_source, s_d)
+        dxi, xi - dxi / 2, r + Ar / 2, pr + Apr / 2, q, laser_params, beam_source, s_d)
     Cr, Cpr = motion_derivatives(
-        dxi, xi-dxi/2, r + Br/2, pr + Bpr/2, q, laser_params, beam_source, s_d)
+        dxi, xi - dxi / 2, r + Br / 2, pr + Bpr / 2, q, laser_params, beam_source, s_d)
     Dr, Dpr = motion_derivatives(
-        dxi, xi-dxi, r + Cr, pr + Cpr, q, laser_params, beam_source, s_d)
+        dxi, xi - dxi, r + Cr, pr + Cpr, q, laser_params, beam_source, s_d)
     return update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr)
 
 
@@ -229,8 +246,8 @@ def motion_derivatives(dxi, xi, r, pr, q, laser_params, beam_source, s_d):
         pr[idx_neg] *= -1.
 
     # Convert xi and r from normalized to SI units.
-    xi_si = xi*s_d
-    r_si = r*s_d
+    xi_si = xi * s_d
+    r_si = r * s_d
 
     # Calculate source terms from laser and beam particles.
     if laser_params is not None:
@@ -290,7 +307,7 @@ def calculate_derivatives(dxi, r, pr, q, b_theta_0, nabla_a, a2):
     # Calculate gamma (Lorentz factor) of particles.
     for i in range(n_part):
         psi_i = psi[i]
-        gamma[i] = (1. + pr[i]**2 + a2[i] + (1.+psi_i)**2) / (2.*(1.+psi_i))
+        gamma[i] = (1. + pr[i] ** 2 + a2[i] + (1. + psi_i) ** 2) / (2. * (1. + psi_i))
 
     # Calculate azimuthal magnetic field from plasma at particle positions.
     b_theta_bar = calculate_b_theta_at_particles(
@@ -319,8 +336,8 @@ def update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr):
     # Push particles
     inv_6 = 1. / 6.
     for i in range(r.shape[0]):
-        r[i] += (Ar[i] + 2.*(Br[i] + Cr[i]) + Dr[i]) * inv_6
-        pr[i] += (Apr[i] + 2.*(Bpr[i] + Cpr[i]) + Dpr[i]) * inv_6
+        r[i] += (Ar[i] + 2. * (Br[i] + Cr[i]) + Dr[i]) * inv_6
+        pr[i] += (Apr[i] + 2. * (Bpr[i] + Cpr[i]) + Dpr[i]) * inv_6
     # Check if any have a negative radial position. If so, invert them.
     idx_neg = np.where(r < 0.)
     if idx_neg[0].size > 0:
@@ -369,8 +386,8 @@ def calculate_fields(r_arr, xi, r, pr, q, laser_params, beam_source, s_d):
 
     """
     # Convert xi and r from normalized to SI units.
-    xi_si = xi*s_d
-    r_si = r*s_d
+    xi_si = xi * s_d
+    r_si = r * s_d
 
     # Calculate source terms from laser and beam at plasma particles.
     if laser_params is not None:
@@ -383,7 +400,7 @@ def calculate_fields(r_arr, xi, r, pr, q, laser_params, beam_source, s_d):
 
     # Calculate wakefield potential and derivatives at plasma particles.
     psi, dr_psi, dxi_psi = calculate_psi_and_derivatives_at_particles(r, pr, q)
-    gamma = (1 + pr**2 + a2/2 + (1+psi)**2) / (2*(1+psi))
+    gamma = (1 + pr ** 2 + a2 / 2 + (1 + psi) ** 2) / (2 * (1 + psi))
 
     # Calculate all fields at the specified r_arr locations.
     b_theta_0_r = beam_source(r_arr, xi)
@@ -431,18 +448,18 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q):
         sum_2_new = sum_2 + q_i * np.log(r_i)
 
         # Calculate average.
-        sum_1_avg = 0.5 * (sum_1+sum_1_new)
-        sum_2_avg = 0.5 * (sum_2+sum_2_new)
+        sum_1_avg = 0.5 * (sum_1 + sum_1_new)
+        sum_2_avg = 0.5 * (sum_2 + sum_2_new)
 
         # Calculate psi and dr_psi.
-        psi[i] = sum_1_avg*np.log(r_i) - sum_2_avg - 0.25*r_i**2
-        dr_psi[i] = sum_1_avg/r_i - 0.5*r_i
+        psi[i] = sum_1_avg * np.log(r_i) - sum_2_avg - 0.25 * r_i ** 2
+        dr_psi[i] = sum_1_avg / r_i - 0.5 * r_i
 
         # Update value of sums.
         sum_1 = sum_1_new
         sum_2 = sum_2_new
     r_N = r[-1]
-    psi = psi - (sum_1*np.log(r_N) - sum_2 - 0.25*r_N**2)
+    psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_N ** 2)
 
     # Calculate dxi_psi.
     for i_sort in range(n_part):
@@ -452,7 +469,7 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q):
         q_i = q[i]
         psi_i = psi[i]
 
-        sum_3_new = sum_3 + (q_i * pr_i) / (r_i * (1+psi_i))
+        sum_3_new = sum_3 + (q_i * pr_i) / (r_i * (1 + psi_i))
         dxi_psi[i] = -0.5 * (sum_3 + sum_3_new)
         sum_3 = sum_3_new
     dxi_psi = dxi_psi + sum_3
@@ -491,9 +508,9 @@ def calculate_psi_and_derivatives(r_arr, r, pr, q):
         sum_2 += q_i * np.log(r_i)
         sum_1_arr[i] = sum_1
         sum_2_arr[i] = sum_2
-        psi_part[i] = sum_1*np.log(r_i) - sum_2 - 0.25*r_i**2
+        psi_part[i] = sum_1 * np.log(r_i) - sum_2 - 0.25 * r_i ** 2
     r_N = r[-1]
-    psi_part += - (sum_1*np.log(r_N) - sum_2 - 0.25*r_N**2)
+    psi_part += - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_N ** 2)
 
     # Calculate sum_3.
     for i_sort in range(n_part):
@@ -503,7 +520,7 @@ def calculate_psi_and_derivatives(r_arr, r, pr, q):
         q_i = q[i]
         psi_i = psi_part[i]
 
-        sum_3 += (q_i * pr_i) / (r_i * (1+psi_i))
+        sum_3 += (q_i * pr_i) / (r_i * (1 + psi_i))
         sum_3_arr[i] = sum_3
 
     # Initialize arrays for psi and derivatives at r_arr locations.
@@ -526,15 +543,15 @@ def calculate_psi_and_derivatives(r_arr, r, pr, q):
                 break
         # Calculate fields at r_j.
         if i_last == -1:
-            psi[j] = -0.25*r_j**2
-            dr_psi[j] = -0.5*r_j
+            psi[j] = -0.25 * r_j ** 2
+            dr_psi[j] = -0.5 * r_j
             dxi_psi[j] = 0.
         else:
             i_p = idx[i_last]
-            psi[j] = sum_1_arr[i_p]*np.log(r_j) - sum_2_arr[i_p] - 0.25*r_j**2
-            dr_psi[j] = sum_1_arr[i_p] / r_j - 0.5*r_j
+            psi[j] = sum_1_arr[i_p] * np.log(r_j) - sum_2_arr[i_p] - 0.25 * r_j ** 2
+            dr_psi[j] = sum_1_arr[i_p] / r_j - 0.5 * r_j
             dxi_psi[j] = - sum_3_arr[i_p]
-    psi = psi - (sum_1*np.log(r_N) - sum_2 - 0.25*r_N**2)
+    psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_N ** 2)
     dxi_psi = dxi_psi + sum_3
     return psi, dr_psi, dxi_psi
 
@@ -712,8 +729,8 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
         nabla_a_i = nabla_a[i]
 
         a = 1. + psi_i
-        a2 = a*a
-        a3 = a2*a
+        a2 = a * a
+        a3 = a2 * a
         b = 1. / (r_i * a)
         c = 1. / (r_i * a2)
         pr_i2 = pr_i * pr_i
@@ -722,20 +739,20 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
         B_i = q_i * (- (gamma_i * dr_psi_i) * c
                      + (pr_i2 * dr_psi_i) / (r_i * a3)
                      + (pr_i * dxi_psi_i) * c
-                     + pr_i2 / (r_i*r_i * a2)
+                     + pr_i2 / (r_i * r_i * a2)
                      + b_theta_0_i * b
                      + nabla_a_i * c * 0.5)
-        C_i = q_i * (pr_i2*c - (gamma_i/a-1.)/r_i)
+        C_i = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
 
-        l_i = (1. + 0.5*A_i*r_i)
+        l_i = (1. + 0.5 * A_i * r_i)
         m_i = 0.5 * A_i / r_i
-        n_i = -0.5 * A_i * r_i**3
-        o_i = (1. - 0.5*A_i*r_i)
+        n_i = -0.5 * A_i * r_i ** 3
+        o_i = (1. - 0.5 * A_i * r_i)
 
-        K_i = l_i*K_im1 + m_i*U_im1
-        U_i = n_i*K_im1 + o_i*U_im1
-        T_i = l_i*T_im1 + m_i*P_im1 + 0.5*B_i + 0.25*A_i*C_i
-        P_i = n_i*T_im1 + o_i*P_im1 + r_i*(C_i-0.5*B_i*r_i-0.25*A_i*C_i*r_i)
+        K_i = l_i * K_im1 + m_i * U_im1
+        U_i = n_i * K_im1 + o_i * U_im1
+        T_i = l_i * T_im1 + m_i * P_im1 + 0.5 * B_i + 0.25 * A_i * C_i
+        P_i = n_i * T_im1 + o_i * P_im1 + r_i * (C_i - 0.5 * B_i * r_i - 0.25 * A_i * C_i * r_i)
 
         K[i] = K_i
         U[i] = U_i
@@ -765,7 +782,7 @@ def get_beam_function(beam_part, n_r, n_xi, n_p, r_arr, xi_arr, p_shape):
 
     """
     # Plasma skin depth.
-    s_d = ge.plasma_skin_depth(n_p/1e6)
+    s_d = ge.plasma_skin_depth(n_p / 1e6)
 
     # Grid parameters.
     dr = r_arr[1] - r_arr[0]
@@ -774,8 +791,8 @@ def get_beam_function(beam_part, n_r, n_xi, n_p, r_arr, xi_arr, p_shape):
     xi_min = xi_arr[0]
 
     # Grid arrays with guard cells.
-    r_grid_g = (0.5+np.arange(-2, n_r+2)) * dr
-    xi_grid_g = np.arange(-2, n_xi+2) * dxi + xi_min
+    r_grid_g = (0.5 + np.arange(-2, n_r + 2)) * dr
+    xi_grid_g = np.arange(-2, n_xi + 2) * dxi + xi_min
 
     # Get and normalize particle coordinate arrays.
     x, y, xi, q = beam_part
@@ -784,7 +801,7 @@ def get_beam_function(beam_part, n_r, n_xi, n_p, r_arr, xi_arr, p_shape):
     y_n = y / s_d
 
     # Calculate particle weights.
-    w = q / ct.e / (2*np.pi*dr*dxi*s_d**3*n_p)
+    w = q / ct.e / (2 * np.pi * dr * dxi * s_d ** 3 * n_p)
 
     # Obtain charge distribution (using cubic particle shape by default).
     q_dist = charge_distribution_cyl(
@@ -800,26 +817,26 @@ def get_beam_function(beam_part, n_r, n_xi, n_p, r_arr, xi_arr, p_shape):
 @njit()
 def get_nabla_a(xi, r, a_0, l_0, w_0, tau, xi_c, pol='linear', dz_foc=0):
     """ Calculate the gradient of the normalized vector potential. """
-    z_r = np.pi * w_0**2 / l_0
-    w_fac = np.sqrt(1 + (dz_foc/z_r)**2)
+    z_r = np.pi * w_0 ** 2 / l_0
+    w_fac = np.sqrt(1 + (dz_foc / z_r) ** 2)
     s_r = w_0 * w_fac / np.sqrt(2)
-    s_z = tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
+    s_z = tau * ct.c / (2 * np.sqrt(2 * np.log(2))) * np.sqrt(2)
     avg_amplitude = a_0
     if pol == 'linear':
         avg_amplitude /= np.sqrt(2)
-    return - 2 * (avg_amplitude/w_fac)**2 * r / s_r**2 * (
-        np.exp(-(r)**2/(s_r**2)) * np.exp(-(xi-xi_c)**2/(s_z**2)))
+    return - 2 * (avg_amplitude / w_fac) ** 2 * r / s_r ** 2 * (
+            np.exp(-(r) ** 2 / (s_r ** 2)) * np.exp(-(xi - xi_c) ** 2 / (s_z ** 2)))
 
 
 @njit()
 def get_a2(xi, r, a_0, l_0, w_0, tau, xi_c, pol='linear', dz_foc=0):
     """ Calculate the square of the normalized vector potential. """
-    z_r = np.pi * w_0**2 / l_0
-    w_fac = np.sqrt(1 + (dz_foc/z_r)**2)
+    z_r = np.pi * w_0 ** 2 / l_0
+    w_fac = np.sqrt(1 + (dz_foc / z_r) ** 2)
     s_r = w_0 * w_fac / np.sqrt(2)
-    s_z = tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
+    s_z = tau * ct.c / (2 * np.sqrt(2 * np.log(2))) * np.sqrt(2)
     avg_amplitude = a_0
     if pol == 'linear':
         avg_amplitude /= np.sqrt(2)
-    return (avg_amplitude/w_fac)**2 * (np.exp(-(r)**2/(s_r**2)) *
-                                       np.exp(-(xi-xi_c)**2/(s_z**2)))
+    return (avg_amplitude / w_fac) ** 2 * (np.exp(-(r) ** 2 / (s_r ** 2)) *
+                                           np.exp(-(xi - xi_c) ** 2 / (s_z ** 2)))
