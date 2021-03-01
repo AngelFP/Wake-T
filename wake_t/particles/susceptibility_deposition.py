@@ -11,9 +11,11 @@ import math
 import numpy as np
 from numba import njit
 
+# change names to deposit_susceptibility_... of all functions
 
-def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                            charge_dist, p_shape='cubic'):
+# https://github.com/fbpic/fbpic/blob/laser_envelope/fbpic/particles/deposition/threading_methods.py
+# use deposit_chi_numba_linear. Use float instead of complex128.
+def deposit_susceptibility_cyl(z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist, p_shape='cubic'):
     """
     Deposit the charge of a partice distribution in a 2D grid (cylindrical
     symmetry) to obtain the spatial charge distribution.
@@ -50,11 +52,11 @@ def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
 
     """
     if p_shape == 'linear':
-        return charge_distribution_cyl_linear(
-            z, x, y, q, z_min, r_min, nz, nr, dz, dr, charge_dist)
+        return deposit_susceptibility_cyl_linear(
+            z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist)
     elif p_shape == 'cubic':
-        return charge_distribution_cyl_cubic(
-            z, x, y, q, z_min, r_min, nz, nr, dz, dr, charge_dist)
+        return deposit_susceptibility_cyl_cubic(
+            z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist)
     else:
         err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
                       "Possible values are 'linear' or 'cubic'.")
@@ -62,8 +64,7 @@ def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
 
 
 @njit
-def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                                   rho):
+def deposit_susceptibility_cyl_linear(z, x, y, q, z_min, r_min, nr, dz, dr, chi):
     """ Calculate charge distribution assuming linear particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -83,7 +84,7 @@ def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         x_i = x[i]
         y_i = y[i]
         z_i = z[i]
-        w_i = q[i]
+        w_i = q2_over_m_e0 * inv_gamma[i] * q[i]  # TODO: update according to deposit_chi_numba_linear/cubic
 
         # Calculate radius.
         r_i = math.sqrt(x_i ** 2 + y_i ** 2)
@@ -110,17 +111,16 @@ def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         rsl_1 = 1 - rsl_0
 
         # Add contribution of particle to charge distribution.
-        rho[iz_cell + 0, ir_cell + 0] += zsl_0 * rsl_0 * w_i
-        rho[iz_cell + 0, ir_cell + 1] += zsl_0 * rsl_1 * w_i
-        rho[iz_cell + 1, ir_cell + 0] += zsl_1 * rsl_0 * w_i
-        rho[iz_cell + 1, ir_cell + 1] += zsl_1 * rsl_1 * w_i
+        chi[iz_cell + 0, ir_cell + 0] += zsl_0 * rsl_0 * w_i
+        chi[iz_cell + 0, ir_cell + 1] += zsl_0 * rsl_1 * w_i
+        chi[iz_cell + 1, ir_cell + 0] += zsl_1 * rsl_0 * w_i
+        chi[iz_cell + 1, ir_cell + 1] += zsl_1 * rsl_1 * w_i
 
-    return rho
+    return chi
 
 
 @njit
-def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                                  rho):
+def deposit_susceptibility_cyl_cubic(z, x, y, q, z_min, r_min, nr, dz, dr, chi):
     """ Calculate charge distribution assuming cubic particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -140,7 +140,7 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         x_i = x[i]
         y_i = y[i]
         z_i = z[i]
-        w_i = q[i]
+        w_i = q2_over_m_e0 * inv_gamma[i] * q[i]  # TODO: update according to deposit_chi_numba_linear/cubic
 
         # Calculate radius.
         r_i = math.sqrt(x_i ** 2 + y_i ** 2)
@@ -177,21 +177,21 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         rsc_3 = inv_6 * u_r ** 3
 
         # Add contribution of particle to charge distribution.
-        rho[iz_cell + 0, ir_cell + 0] += zsc_0 * rsc_0 * w_i
-        rho[iz_cell + 0, ir_cell + 1] += zsc_0 * rsc_1 * w_i
-        rho[iz_cell + 0, ir_cell + 2] += zsc_0 * rsc_2 * w_i
-        rho[iz_cell + 0, ir_cell + 3] += zsc_0 * rsc_3 * w_i
-        rho[iz_cell + 1, ir_cell + 0] += zsc_1 * rsc_0 * w_i
-        rho[iz_cell + 1, ir_cell + 1] += zsc_1 * rsc_1 * w_i
-        rho[iz_cell + 1, ir_cell + 2] += zsc_1 * rsc_2 * w_i
-        rho[iz_cell + 1, ir_cell + 3] += zsc_1 * rsc_3 * w_i
-        rho[iz_cell + 2, ir_cell + 0] += zsc_2 * rsc_0 * w_i
-        rho[iz_cell + 2, ir_cell + 1] += zsc_2 * rsc_1 * w_i
-        rho[iz_cell + 2, ir_cell + 2] += zsc_2 * rsc_2 * w_i
-        rho[iz_cell + 2, ir_cell + 3] += zsc_2 * rsc_3 * w_i
-        rho[iz_cell + 3, ir_cell + 0] += zsc_3 * rsc_0 * w_i
-        rho[iz_cell + 3, ir_cell + 1] += zsc_3 * rsc_1 * w_i
-        rho[iz_cell + 3, ir_cell + 2] += zsc_3 * rsc_2 * w_i
-        rho[iz_cell + 3, ir_cell + 3] += zsc_3 * rsc_3 * w_i
+        chi[iz_cell + 0, ir_cell + 0] += zsc_0 * rsc_0 * w_i
+        chi[iz_cell + 0, ir_cell + 1] += zsc_0 * rsc_1 * w_i
+        chi[iz_cell + 0, ir_cell + 2] += zsc_0 * rsc_2 * w_i
+        chi[iz_cell + 0, ir_cell + 3] += zsc_0 * rsc_3 * w_i
+        chi[iz_cell + 1, ir_cell + 0] += zsc_1 * rsc_0 * w_i
+        chi[iz_cell + 1, ir_cell + 1] += zsc_1 * rsc_1 * w_i
+        chi[iz_cell + 1, ir_cell + 2] += zsc_1 * rsc_2 * w_i
+        chi[iz_cell + 1, ir_cell + 3] += zsc_1 * rsc_3 * w_i
+        chi[iz_cell + 2, ir_cell + 0] += zsc_2 * rsc_0 * w_i
+        chi[iz_cell + 2, ir_cell + 1] += zsc_2 * rsc_1 * w_i
+        chi[iz_cell + 2, ir_cell + 2] += zsc_2 * rsc_2 * w_i
+        chi[iz_cell + 2, ir_cell + 3] += zsc_2 * rsc_3 * w_i
+        chi[iz_cell + 3, ir_cell + 0] += zsc_3 * rsc_0 * w_i
+        chi[iz_cell + 3, ir_cell + 1] += zsc_3 * rsc_1 * w_i
+        chi[iz_cell + 3, ir_cell + 2] += zsc_3 * rsc_2 * w_i
+        chi[iz_cell + 3, ir_cell + 3] += zsc_3 * rsc_3 * w_i
 
-    return rho
+    return chi

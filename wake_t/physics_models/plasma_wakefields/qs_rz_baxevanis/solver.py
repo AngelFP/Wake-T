@@ -13,6 +13,7 @@ import scipy.interpolate as scint
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particles.charge_deposition import charge_distribution_cyl
+from wake_t.particles.susceptibility_deposition import deposit_susceptibility_cyl
 
 
 # For debugging
@@ -113,19 +114,15 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     else:
         beam_source = None
 
-    # copied the idea from get_beam_function at line ~800
-    # Get and normalize particle coordinate arrays. --> NECESSARY TO GET Q_BEAM?
-    x, y, xi, q_beam = beam_part
-    xi_n = xi / s_d
-    x_n = x / s_d
-    y_n = y / s_d
-
-    # Calculate particle weights.  --> NECESSARY TO USE W? CAN I JUST USE Q_BEAM?
-    w = q_beam / ct.e / (2 * np.pi * dr * dxi * s_d ** 3 * n_p)
+# use line 92 for radius, initialize using (r,0,xi_max)
 
     # Calculate the charge distribution of the initial column
     rho = np.zeros((n_xi + 4, n_r + 4))
-    rho = charge_distribution_cyl(xi_n, x_n, y_n, w, xi_arr[0], r_arr[0], n_xi, n_r, dxi, dr, rho, p_shape=p_shape)
+    rho = charge_distribution_cyl(np.full_like(r, xi_max), r_arr, np.zeros_like(r), q, xi_arr[0], r[0], n_xi, n_part, dxi, dr_p, rho, p_shape=p_shape)
+
+    # Calculate the plasma susceptibility of the initial column:
+    chi = np.zeros((n_xi + 4, n_r + 4))
+    chi = deposit_susceptibility_cyl(np.full_like(r, xi_max), r_arr, np.zeros_like(r), q, xi_arr[0], r[0], n_part, dxi, dr_p, chi, p_shape=p_shape)
 
     # Main loop.
     for step in np.arange(n_xi):
@@ -148,8 +145,12 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
         fields = calculate_fields(r_arr, xi, r, pr, q,
                                   laser_params, beam_source, s_d)
 
-        # Deposit charge of updated plasma column
-        rho = charge_distribution_cyl(xi, x_n, y_n, w, xi_arr[0], r_arr[0], n_xi, n_r, dxi, dr, rho, p_shape=p_shape)
+        # Deposit charge of updated plasma column using (r, 0, xi)
+        rho = charge_distribution_cyl(np.full_like(r, xi), r, np.zeros_like(r), q, xi_arr[0], r[0], n_xi, n_part, dxi, dr_p, rho, p_shape=p_shape)
+
+        # Deposit chi of updated plasma column using (r,0,xi):
+        chi = deposit_susceptibility_cyl(np.full_like(r, xi), r, np.zeros_like(r), q, xi_arr[0], r[0], n_part, dxi, dr_p, chi, p_shape=p_shape)
+
         i = -1 - step
 
         # Unpack fields.
@@ -216,9 +217,11 @@ def evolve_plasma(r, pr, q, xi, dxi, laser_params, beam_source, s_d):
     Ar, Apr = motion_derivatives(
         dxi, xi, r, pr, q, laser_params, beam_source, s_d)
     Br, Bpr = motion_derivatives(
-        dxi, xi - dxi / 2, r + Ar / 2, pr + Apr / 2, q, laser_params, beam_source, s_d)
+        dxi, xi - dxi / 2, r + Ar / 2, pr + Apr / 2, q, laser_params,
+        beam_source, s_d)
     Cr, Cpr = motion_derivatives(
-        dxi, xi - dxi / 2, r + Br / 2, pr + Bpr / 2, q, laser_params, beam_source, s_d)
+        dxi, xi - dxi / 2, r + Br / 2, pr + Bpr / 2, q, laser_params,
+        beam_source, s_d)
     Dr, Dpr = motion_derivatives(
         dxi, xi - dxi, r + Cr, pr + Cpr, q, laser_params, beam_source, s_d)
     return update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr)
@@ -307,7 +310,8 @@ def calculate_derivatives(dxi, r, pr, q, b_theta_0, nabla_a, a2):
     # Calculate gamma (Lorentz factor) of particles.
     for i in range(n_part):
         psi_i = psi[i]
-        gamma[i] = (1. + pr[i] ** 2 + a2[i] + (1. + psi_i) ** 2) / (2. * (1. + psi_i))
+        gamma[i] = (1. + pr[i] ** 2 + a2[i] + (1. + psi_i) ** 2) / (
+                2. * (1. + psi_i))
 
     # Calculate azimuthal magnetic field from plasma at particle positions.
     b_theta_bar = calculate_b_theta_at_particles(
@@ -316,10 +320,10 @@ def calculate_derivatives(dxi, r, pr, q, b_theta_0, nabla_a, a2):
     # Calculate derivatives of r and pr.
     for i in range(n_part):
         psi_i = psi[i]
-        dpr[i] = dxi * (gamma[i] * dr_psi[i] / (1. + psi_i) -
-                        b_theta_bar[i] -
-                        b_theta_0[i] -
-                        nabla_a[i] / (2. * (1. + psi_i)))
+        dpr[i] = dxi * (gamma[i] * dr_psi[i] / (1. + psi_i)
+                        - b_theta_bar[i]
+                        - b_theta_0[i]
+                        - nabla_a[i] / (2. * (1. + psi_i)))
         dr[i] = dxi * pr[i] / (1. + psi_i)
     return dr, dpr
 
@@ -548,7 +552,8 @@ def calculate_psi_and_derivatives(r_arr, r, pr, q):
             dxi_psi[j] = 0.
         else:
             i_p = idx[i_last]
-            psi[j] = sum_1_arr[i_p] * np.log(r_j) - sum_2_arr[i_p] - 0.25 * r_j ** 2
+            psi[j] = sum_1_arr[i_p] * np.log(r_j) - sum_2_arr[
+                i_p] - 0.25 * r_j ** 2
             dr_psi[j] = sum_1_arr[i_p] / r_j - 0.5 * r_j
             dxi_psi[j] = - sum_3_arr[i_p]
     psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_N ** 2)
@@ -752,7 +757,8 @@ def calculate_ai_bi(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a):
         K_i = l_i * K_im1 + m_i * U_im1
         U_i = n_i * K_im1 + o_i * U_im1
         T_i = l_i * T_im1 + m_i * P_im1 + 0.5 * B_i + 0.25 * A_i * C_i
-        P_i = n_i * T_im1 + o_i * P_im1 + r_i * (C_i - 0.5 * B_i * r_i - 0.25 * A_i * C_i * r_i)
+        P_i = n_i * T_im1 + o_i * P_im1 + r_i * (
+                C_i - 0.5 * B_i * r_i - 0.25 * A_i * C_i * r_i)
 
         K[i] = K_i
         U[i] = U_i
@@ -825,7 +831,8 @@ def get_nabla_a(xi, r, a_0, l_0, w_0, tau, xi_c, pol='linear', dz_foc=0):
     if pol == 'linear':
         avg_amplitude /= np.sqrt(2)
     return - 2 * (avg_amplitude / w_fac) ** 2 * r / s_r ** 2 * (
-            np.exp(-(r) ** 2 / (s_r ** 2)) * np.exp(-(xi - xi_c) ** 2 / (s_z ** 2)))
+                np.exp(-r ** 2 / (s_r ** 2)) * np.exp(
+            -(xi - xi_c) ** 2 / (s_z ** 2)))
 
 
 @njit()
@@ -839,4 +846,5 @@ def get_a2(xi, r, a_0, l_0, w_0, tau, xi_c, pol='linear', dz_foc=0):
     if pol == 'linear':
         avg_amplitude /= np.sqrt(2)
     return (avg_amplitude / w_fac) ** 2 * (np.exp(-(r) ** 2 / (s_r ** 2)) *
-                                           np.exp(-(xi - xi_c) ** 2 / (s_z ** 2)))
+                                           np.exp(
+                                               -(xi - xi_c) ** 2 / (s_z ** 2)))
