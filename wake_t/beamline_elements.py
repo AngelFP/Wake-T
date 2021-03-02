@@ -629,7 +629,7 @@ class PlasmaRamp():
             Number of times along the stage in which the particle distribution
             should be returned (A list with all output bunches is returned
             after tracking).
-            
+
         **model_params
             Keyword arguments which will be given to the wakefield model. Each
             model requires a different set of parameters which are listed
@@ -917,9 +917,8 @@ class PlasmaRamp():
 
     def calculate_density(self, z):
         if self.dens_func is not None:
-            n_p = self.dens_func(z)
-            return n_p
-            
+            return self.dens_func(z)
+
         if self.ramp_type == 'upramp':
             z = self.length - z
         if self.profile == 'linear':
