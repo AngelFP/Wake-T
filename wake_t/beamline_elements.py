@@ -587,7 +587,7 @@ class PlasmaRamp():
 
     def __init__(self, length, plasma_dens_top=None, plasma_dens_down=None,
                  position_down=None, ramp_type='upramp',
-                 profile='inverse square', wakefield_model='blowout', dens_func=None,
+                 profile='inverse square', wakefield_model='blowout',
                  n_out=None, **model_params):
         """
         Initialize plasma ramp.
@@ -596,10 +596,6 @@ class PlasmaRamp():
         -----------
         length : float
             Length of the plasma stage in m.
-
-        dens_func : callable, optional
-            A function of the form : def dens_func( z ) ...
-            which returns the density value at the given position z
 
         plasma_dens_top : float
             Plasma density at the beginning (end) of the downramp (upramp) in
@@ -617,9 +613,12 @@ class PlasmaRamp():
         ramp_type : string
             Possible types are 'upramp' and 'downramp'.
 
-        profile : string
-            Longitudinal density profile of the ramp. Possible values are
+        profile : string or callable function
+            string: Longitudinal density profile of the ramp.
+            Possible values are:
             'linear', 'inverse square' and 'exponential'.
+            callable: a function of the form 'def func(z)'
+            which returns the density value at the given position z
 
         wakefield_model : str
             Wakefield model to be used. Possible values are 'blowout',
@@ -747,7 +746,6 @@ class PlasmaRamp():
         self.ramp_type = ramp_type
         self.profile = profile
         self.n_out = n_out
-        self.dens_func = dens_func
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
 
     def track(self, bunch, parallel=False, n_proc=None, out_initial=False,
@@ -812,7 +810,7 @@ class PlasmaRamp():
                     0., t_step, [bunch_list[-1]])
         start = time.time()
 
-        if self.dens_func is not None:
+        if callable(self.profile):
             parallel = False
             print('Parallel computation not available for user predefined density functions')
         
@@ -916,8 +914,8 @@ class PlasmaRamp():
         return np.sqrt(1 + px**2 + py**2 + pz**2)
 
     def calculate_density(self, z):
-        if self.dens_func is not None:
-            return self.dens_func(z)
+        if callable(self.profile):
+            return self.profile(z)
 
         if self.ramp_type == 'upramp':
             z = self.length - z
