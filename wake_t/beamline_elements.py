@@ -585,9 +585,9 @@ class PlasmaRamp():
 
     """Defines a plasma ramp."""
 
-    def __init__(self, length, dens_func=None, plasma_dens_top=None, plasma_dens_down=None,
+    def __init__(self, length, plasma_dens_top=None, plasma_dens_down=None,
                  position_down=None, ramp_type='upramp',
-                 profile='inverse square', wakefield_model='blowout',
+                 profile='inverse square', wakefield_model='blowout', dens_func=None,
                  n_out=None, **model_params):
         """
         Initialize plasma ramp.
