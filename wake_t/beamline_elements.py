@@ -585,7 +585,7 @@ class PlasmaRamp():
 
     """Defines a plasma ramp."""
 
-    def __init__(self, length, plasma_dens_top, plasma_dens_down=None,
+    def __init__(self, length, dens_func=None, plasma_dens_top=None, plasma_dens_down=None,
                  position_down=None, ramp_type='upramp',
                  profile='inverse square', wakefield_model='blowout',
                  n_out=None, **model_params):
@@ -596,6 +596,10 @@ class PlasmaRamp():
         -----------
         length : float
             Length of the plasma stage in m.
+
+        dens_func : callable, optional
+            A function of the form : def dens_func( z ) ...
+            which returns the density value at the given position z
 
         plasma_dens_top : float
             Plasma density at the beginning (end) of the downramp (upramp) in
@@ -625,7 +629,7 @@ class PlasmaRamp():
             Number of times along the stage in which the particle distribution
             should be returned (A list with all output bunches is returned
             after tracking).
-
+            
         **model_params
             Keyword arguments which will be given to the wakefield model. Each
             model requires a different set of parameters which are listed
@@ -743,6 +747,7 @@ class PlasmaRamp():
         self.ramp_type = ramp_type
         self.profile = profile
         self.n_out = n_out
+        self.dens_func = dens_func
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
 
     def track(self, bunch, parallel=False, n_proc=None, out_initial=False,
@@ -807,6 +812,10 @@ class PlasmaRamp():
                     0., t_step, [bunch_list[-1]])
         start = time.time()
 
+        if self.dens_func is not None:
+            parallel = False
+            print('Parallel computation not available for user predefined density functions')
+        
         if parallel:
             if n_proc is None:
                 num_proc = cpu_count()
@@ -907,6 +916,10 @@ class PlasmaRamp():
         return np.sqrt(1 + px**2 + py**2 + pz**2)
 
     def calculate_density(self, z):
+        if self.dens_func is not None:
+            n_p = self.dens_func(z)
+            return n_p
+            
         if self.ramp_type == 'upramp':
             z = self.length - z
         if self.profile == 'linear':
