@@ -20,7 +20,7 @@ class PlasmaStage():
 
     """ Defines a plasma stage. """
 
-    def __init__(self, length, n_p, laser=None, tracking_mode='numerical',
+    def __init__(self, length, n_p, laser=None,
                  wakefield_model='simple_blowout', n_out=None, **model_params):
         """
         Initialize plasma stage.
@@ -35,11 +35,6 @@ class PlasmaStage():
 
         laser : LaserPulse
             Laser driver of the plasma stage.
-
-        tracking_mode : str
-            Tracking algorithm used for the bunch particles. Can be 'numerical'
-            for the Runge-Kutta solver or 'analytical' to use the model from
-            https://doi.org/10.1038/s41598-019-53887-8
 
         wakefield_model : str
             Wakefield model to be used. Possible values are 'simple_blowout',
@@ -209,7 +204,6 @@ class PlasmaStage():
         self.length = length
         self.n_p = n_p
         self.laser = laser
-        self.tracking_mode = tracking_mode
         self.wakefield_model = wakefield_model
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
         self.n_out = n_out
@@ -258,12 +252,8 @@ class PlasmaStage():
         print('-'*len('Plasma stage'))
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
             opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
-        if self.tracking_mode == 'numerical':
-            bunch_list = self._track_numerically(
-                bunch, parallel, n_proc, out_initial, opmd_diag)
-        elif self.tracking_mode == 'analytical':
-            bunch_list = self._track_analytically(
-                bunch, parallel, n_proc, out_initial)
+        bunch_list = self._track_numerically(
+            bunch, parallel, n_proc, out_initial, opmd_diag)
         if opmd_diag is not False:
             opmd_diag.increase_z_pos(self.length)
         return bunch_list
@@ -389,87 +379,6 @@ class PlasmaStage():
         bunch.increase_prop_distance(self.length)
         return bunch_list
 
-    def _track_analytically(self, bunch, parallel, n_proc, out_initial):
-        # Group velocity of driver
-        v_w = self.wakefield.laser.get_group_velocity(self.n_p)*ct.c
-
-        # Main bunch quantities [SI units]
-        x_0 = bunch.x
-        y_0 = bunch.y
-        xi_0 = bunch.xi
-        px_0 = bunch.px * ct.m_e * ct.c
-        py_0 = bunch.py * ct.m_e * ct.c
-        pz_0 = bunch.pz * ct.m_e * ct.c
-
-        # Plasma length in time
-        t_final = self.length/ct.c
-
-        # Fields
-        E_p = -ct.e/(ct.m_e*ct.c) * self.wakefield.Ez_p(
-            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, 0)
-        E = -ct.e/(ct.m_e*ct.c) * self.wakefield.Wz(
-            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, 0)
-        K = ct.e/ct.m_e * self.wakefield.Kx(
-            x_0, y_0, xi_0, pz_0, py_0, pz_0, bunch.q, 0)
-
-        if any(K <= 0):
-            raise ValueError(
-                'Detected bunch particles in defocusing phase. Defocusing '
-                'fields currently not supported by analytical solver.')
-        # Some initial values
-        p_0 = np.sqrt(np.square(px_0) + np.square(py_0) + np.square(pz_0))
-        g_0 = np.sqrt(np.square(p_0)/(ct.m_e*ct.c)**2 + 1)
-        w_0 = np.sqrt(K/g_0)
-
-        # Initial velocities
-        v_x_0 = px_0/(ct.m_e*g_0)
-        v_y_0 = py_0/(ct.m_e*g_0)
-
-        # calculate oscillation amplitude
-        A_x = np.sqrt(x_0**2+v_x_0**2/w_0**2)
-        A_y = np.sqrt(y_0**2+v_y_0**2/w_0**2)
-
-        # initial phase (x)
-        sn_x = -v_x_0/(A_x*w_0)
-        cs_x = x_0/A_x
-        phi_x_0 = np.arctan2(sn_x, cs_x)
-
-        # initial phase (y)
-        sn_y = -v_y_0/(A_y*w_0)
-        cs_y = y_0/A_y
-        phi_y_0 = np.arctan2(sn_y, cs_y)
-
-        # initialize list to store the distribution at each step
-        bunch_list = list()
-        if out_initial:
-            bunch_list.append(copy(bunch))
-
-        # track bunch in steps
-        # print("Tracking plasma stage in {} steps...   ".format(steps))
-        start = time.time()
-        p = Pool(cpu_count())
-        t = t_final/self.n_out*(np.arange(self.n_out)+1)
-        part = partial(self._get_beam_at_specified_time_step_analytically,
-                       beam=bunch, g_0=g_0, w_0=w_0, xi_0=xi_0, A_x=A_x,
-                       A_y=A_y, phi_x_0=phi_x_0, phi_y_0=phi_y_0, E=E, E_p=E_p,
-                       v_w=v_w, K=K)
-        bunch_list += p.map(part, t)
-        end = time.time()
-        print("Done ({} seconds)".format(end-start))
-
-        # update bunch data
-        last_bunch = bunch_list[-1]
-        bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
-                              last_bunch.px, last_bunch.py, last_bunch.pz)
-        bunch.increase_prop_distance(self.length)
-
-        # update laser data
-        # laser.increase_prop_distance(self.length)
-        # laser.xi_c = laser.xi_c + (v_w-ct.c)*t_final
-
-        # return steps
-        return bunch_list
-
     def _get_optimized_dt(self, beam, WF):
         """ Get optimized time step """
         gamma = self._gamma(beam.px, beam.py, beam.pz)
@@ -482,49 +391,6 @@ class PlasmaStage():
 
     def calculate_density(self, z):
         return self.n_p
-
-    def _get_beam_at_specified_time_step_analytically(
-            self, t, beam, g_0, w_0, xi_0, A_x, A_y, phi_x_0, phi_y_0, E, E_p,
-            v_w, K):
-        G = 1 + E/g_0*t
-        if (G < 1/g_0).any():
-            n_part = len(np.where(G < 1/g_0)[0])
-            print('Warning: unphysical energy found in {}'.format(n_part)
-                  + 'particles due to negative accelerating gradient.')
-            # fix unphysical energies (model does not work well when E<=0)
-            G = np.where(G < 1/g_0, 1/g_0, G)
-
-        phi = 2*np.sqrt(K*g_0)/E*(G**(1/2) - 1)
-        if (E == 0).any():
-            # apply limit when E->0
-            idx_0 = np.where(E == 0)[0]
-            phi[idx_0] = np.sqrt(K[idx_0]/g_0[idx_0])*t[idx_0]
-        A_0 = np.sqrt(A_x**2 + A_y**2)
-
-        x = A_x*G**(-1/4)*np.cos(phi + phi_x_0)
-        v_x = -w_0*A_x*G**(-3/4)*np.sin(phi + phi_x_0)
-        p_x = G*g_0*v_x/ct.c
-
-        y = A_y*G**(-1/4)*np.cos(phi + phi_y_0)
-        v_y = -w_0*A_y*G**(-3/4)*np.sin(phi + phi_y_0)
-        p_y = G*g_0*v_y/ct.c
-
-        delta_xi = (ct.c/(2*E*g_0)*(G**(-1) - 1)
-                    + A_0**2*K/(2*ct.c*E)*(G**(-1/2) - 1))
-        xi = xi_0 + delta_xi
-
-        delta_xi_max = -1/(2*E)*(ct.c/g_0 + A_0**2*K/ct.c)
-
-        g = (g_0 + E*t + E_p*delta_xi_max*t + E_p/2*(ct.c-v_w)*t**2
-             + ct.c*E_p/(2*E**2)*np.log(G)
-             + E_p*A_0**2*K*g_0/(ct.c*E**2)*(G**(1/2) - 1))
-        p_z = np.sqrt(g**2-p_x**2-p_y**2)
-
-        beam_step = ParticleBunch(beam.q, x, y, xi, p_x, p_y, p_z,
-                                  prop_distance=beam.prop_distance+t*ct.c,
-                                  name=beam.name)
-
-        return beam_step
 
 
 class PlasmaRamp():
