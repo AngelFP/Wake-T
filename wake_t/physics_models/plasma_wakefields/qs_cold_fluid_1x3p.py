@@ -9,13 +9,13 @@ from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
 
 
 class NonLinearColdFluidWakefield(Wakefield):
-    def __init__(self, density_function, driver=None, laser_evolution=False,
+    def __init__(self, density_function, laser=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, beam_wakefields=False, p_shape='linear'):
         super().__init__()
         self.openpmd_diag_supported = True
         self.density_function = density_function
-        self.driver = driver
+        self.laser = laser
         self.laser_evolution = laser_evolution
         self.laser_z_foc = laser_z_foc
         self.r_max = r_max
@@ -46,7 +46,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         n_p = self.density_function(z_beam)
 
         if n_p == self.current_n_p and not self.laser_evolution:
-            # If density has not changed and driver does not evolve, it is
+            # If density has not changed and laser does not evolve, it is
             # not necessary to recompute fields.
             return
         self.current_n_p = n_p
@@ -78,10 +78,10 @@ class NonLinearColdFluidWakefield(Wakefield):
         for i in np.arange(n_iter):
             z = z_arr[-1] - i*dz
             # get laser a0 at z, z+dz/2 and z+dz
-            if self.driver is not None:
-                a0_0 = self.driver.get_a0_profile(r*s_d, z*s_d, dz_foc)
-                a0_1 = self.driver.get_a0_profile(r*s_d, (z-dz/2)*s_d, dz_foc)
-                a0_2 = self.driver.get_a0_profile(r*s_d, (z-dz)*s_d, dz_foc)
+            if self.laser is not None:
+                a0_0 = self.laser.get_a0_profile(r*s_d, z*s_d, dz_foc)
+                a0_1 = self.laser.get_a0_profile(r*s_d, (z-dz/2)*s_d, dz_foc)
+                a0_2 = self.laser.get_a0_profile(r*s_d, (z-dz)*s_d, dz_foc)
             else:
                 a0_0 = np.zeros(r.shape[0])
                 a0_1 = np.zeros(r.shape[0])
