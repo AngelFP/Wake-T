@@ -4,7 +4,7 @@ import scipy.constants as ct
 from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
 
 
-class PlasmaRampBlowoutField(Wakefield):
+class FocusingBlowoutField(Wakefield):
     def __init__(self, density_function):
         super().__init__()
         self.density_function = density_function
