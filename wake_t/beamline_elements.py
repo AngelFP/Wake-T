@@ -585,7 +585,7 @@ class PlasmaRamp():
 
     """Defines a plasma ramp."""
 
-    def __init__(self, length, plasma_dens_top, plasma_dens_down=None,
+    def __init__(self, length, plasma_dens_top=None, plasma_dens_down=None,
                  position_down=None, ramp_type='upramp',
                  profile='inverse square', wakefield_model='blowout',
                  n_out=None, **model_params):
@@ -613,9 +613,12 @@ class PlasmaRamp():
         ramp_type : string
             Possible types are 'upramp' and 'downramp'.
 
-        profile : string
-            Longitudinal density profile of the ramp. Possible values are
+        profile : string or callable function
+            string: Longitudinal density profile of the ramp.
+            Possible values are:
             'linear', 'inverse square' and 'exponential'.
+            callable: a function of the form 'def func(z)'
+            which returns the density value at the given position z
 
         wakefield_model : str
             Wakefield model to be used. Possible values are 'blowout',
@@ -807,6 +810,11 @@ class PlasmaRamp():
                     0., t_step, [bunch_list[-1]])
         start = time.time()
 
+        if callable(self.profile):
+            parallel = False
+            print('Parallel computation not available '
+                  'for user predefined callable density functions')
+
         if parallel:
             if n_proc is None:
                 num_proc = cpu_count()
@@ -909,6 +917,8 @@ class PlasmaRamp():
     def calculate_density(self, z):
         if self.ramp_type == 'upramp':
             z = self.length - z
+        if callable(self.profile):
+            return self.profile(z)
         if self.profile == 'linear':
             b = -((self.plasma_dens_top - self.plasma_dens_down)
                   / self.position_down)
