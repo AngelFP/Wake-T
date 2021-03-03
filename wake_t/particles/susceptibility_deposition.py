@@ -10,12 +10,13 @@ implemented in FBPIC (https://github.com/fbpic/fbpic).
 import math
 import numpy as np
 from numba import njit
+import scipy.constants as ct
 
 # change names to deposit_susceptibility_... of all functions
 
 # https://github.com/fbpic/fbpic/blob/laser_envelope/fbpic/particles/deposition/threading_methods.py
 # use deposit_chi_numba_linear. Use float instead of complex128.
-def deposit_susceptibility_cyl(z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist, p_shape='cubic'):
+def deposit_susceptibility_cyl(z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist, gamma, p_shape='cubic'):
     """
     Deposit the charge of a partice distribution in a 2D grid (cylindrical
     symmetry) to obtain the spatial charge distribution.
@@ -53,10 +54,10 @@ def deposit_susceptibility_cyl(z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist, 
     """
     if p_shape == 'linear':
         return deposit_susceptibility_cyl_linear(
-            z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist)
+            z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist, gamma)
     elif p_shape == 'cubic':
         return deposit_susceptibility_cyl_cubic(
-            z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist)
+            z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist, gamma)
     else:
         err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
                       "Possible values are 'linear' or 'cubic'.")
@@ -64,7 +65,7 @@ def deposit_susceptibility_cyl(z, x, y, q, z_min, r_min, nr, dz, dr, sust_dist, 
 
 
 @njit
-def deposit_susceptibility_cyl_linear(z, x, y, q, z_min, r_min, nr, dz, dr, chi):
+def deposit_susceptibility_cyl_linear(z, x, y, q, z_min, r_min, nr, dz, dr, chi, gamma):
     """ Calculate charge distribution assuming linear particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -84,7 +85,8 @@ def deposit_susceptibility_cyl_linear(z, x, y, q, z_min, r_min, nr, dz, dr, chi)
         x_i = x[i]
         y_i = y[i]
         z_i = z[i]
-        w_i = q2_over_m_e0 * inv_gamma[i] * q[i]  # TODO: update according to deposit_chi_numba_linear/cubic
+        q2_over_m_e0 = (ct.e ** 2 / ct.m_e) / ct.epsilon_0
+        w_i = q2_over_m_e0 / gamma[i] * q[i]
 
         # Calculate radius.
         r_i = math.sqrt(x_i ** 2 + y_i ** 2)
@@ -120,7 +122,7 @@ def deposit_susceptibility_cyl_linear(z, x, y, q, z_min, r_min, nr, dz, dr, chi)
 
 
 @njit
-def deposit_susceptibility_cyl_cubic(z, x, y, q, z_min, r_min, nr, dz, dr, chi):
+def deposit_susceptibility_cyl_cubic(z, x, y, q, z_min, r_min, nr, dz, dr, chi, gamma):
     """ Calculate charge distribution assuming cubic particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -140,7 +142,8 @@ def deposit_susceptibility_cyl_cubic(z, x, y, q, z_min, r_min, nr, dz, dr, chi):
         x_i = x[i]
         y_i = y[i]
         z_i = z[i]
-        w_i = q2_over_m_e0 * inv_gamma[i] * q[i]  # TODO: update according to deposit_chi_numba_linear/cubic
+        q2_over_m_e0 = (ct.e ** 2 / ct.m_e) / ct.epsilon_0
+        w_i = q2_over_m_e0 / gamma[i] * q[i]
 
         # Calculate radius.
         r_i = math.sqrt(x_i ** 2 + y_i ** 2)

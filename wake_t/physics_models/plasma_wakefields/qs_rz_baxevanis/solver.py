@@ -122,7 +122,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
 
     # Calculate the plasma susceptibility of the initial column:
     chi = np.zeros((n_xi + 4, n_r + 4))
-    chi = deposit_susceptibility_cyl(np.full_like(r, xi_max), r_arr, np.zeros_like(r), q, xi_arr[0], r[0], n_part, dxi, dr_p, chi, p_shape=p_shape)
+    chi = deposit_susceptibility_cyl(np.full_like(r, xi_max), r_arr, np.zeros_like(r), q, xi_arr[0], r[0], n_part, dxi, dr_p, chi, np.ones_like(r), p_shape=p_shape)
 
     # Main loop.
     for step in np.arange(n_xi):
@@ -149,7 +149,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
         rho = charge_distribution_cyl(np.full_like(r, xi), r, np.zeros_like(r), q, xi_arr[0], r[0], n_xi, n_part, dxi, dr_p, rho, p_shape=p_shape)
 
         # Deposit chi of updated plasma column using (r,0,xi):
-        chi = deposit_susceptibility_cyl(np.full_like(r, xi), r, np.zeros_like(r), q, xi_arr[0], r[0], n_part, dxi, dr_p, chi, p_shape=p_shape)
+        chi = deposit_susceptibility_cyl(np.full_like(r, xi), r, np.zeros_like(r), q, xi_arr[0], r[0], n_part, dxi, dr_p, chi, np.ones_like(r), p_shape=p_shape)
 
         i = -1 - step
 
@@ -809,9 +809,10 @@ def get_beam_function(beam_part, n_r, n_xi, n_p, r_arr, xi_arr, p_shape):
     # Calculate particle weights.
     w = q / ct.e / (2 * np.pi * dr * dxi * s_d ** 3 * n_p)
 
+    q_dist = np.zeros((n_xi + 4, n_r + 4))
     # Obtain charge distribution (using cubic particle shape by default).
     q_dist = charge_distribution_cyl(
-        xi_n, x_n, y_n, w, xi_min, r_min, n_xi, n_r, dxi, dr, p_shape=p_shape)
+        xi_n, x_n, y_n, w, xi_min, r_min, n_xi, n_r, dxi, dr, q_dist, p_shape=p_shape)
 
     # Calculate radial integral (Eq. (18)).
     r_int = np.cumsum(q_dist, axis=1) / np.abs(r_grid_g) * dr
