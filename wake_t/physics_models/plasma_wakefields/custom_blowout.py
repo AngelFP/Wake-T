@@ -5,7 +5,7 @@ from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
 
 
 class CustomBlowoutWakefield(Wakefield):
-    def __init__(self, n_p, driver, lon_field=None, lon_field_slope=None,
+    def __init__(self, n_p, laser, lon_field=None, lon_field_slope=None,
                  foc_strength=None, xi_fields=None):
         """
         [n_p] = m^-3
@@ -13,7 +13,7 @@ class CustomBlowoutWakefield(Wakefield):
         super().__init__()
         self.n_p = n_p
         self.xi_fields = xi_fields
-        self.driver = driver
+        self.laser = laser
         self._calculate_base_quantities(lon_field, lon_field_slope,
                                         foc_strength)
 
@@ -22,8 +22,8 @@ class CustomBlowoutWakefield(Wakefield):
         self.g_x = foc_strength
         self.E_z_0 = lon_field
         self.E_z_p = lon_field_slope
-        self.l_c = self.driver.xi_c
-        self.b_w = self.driver.get_group_velocity(self.n_p)
+        self.l_c = self.laser.xi_c
+        self.b_w = self.laser.get_group_velocity(self.n_p)
 
     def Wx(self, x, y, xi, px, py, pz, q, t):
         return ct.c*self.g_x*x
