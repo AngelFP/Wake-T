@@ -33,9 +33,3 @@ class SimpleBlowoutWakefield(Wakefield):
     def Wz(self, x, y, xi, px, py, pz, q, t):
         return self.E_z_p * (self.l_p/2 + xi - self.l_c - self.field_off +
                              (1-self.b_w)*ct.c*t)
-
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        return self.g_x*np.ones_like(x)
-
-    def Ez_p(self, x, y, xi, px, py, pz, q, t):
-        return self.E_z_p*np.ones_like(x)

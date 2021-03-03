@@ -168,13 +168,3 @@ class WakefieldFromPICSimulation(Wakefield):
             R = np.array([np.sqrt(np.square(x)+np.square(y)),
                           xi + (1-self.b_w)*ct.c*t]).T
         return self.E_z(R)
-
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        geom = self.dc.GetSimulationDimension()
-        # matrix of coordinate points
-        if geom == "3D":
-            R = np.array([x, y, xi + (1-self.b_w)*ct.c*t]).T
-        elif geom == "thetaMode":
-            R = np.array([np.sqrt(np.square(x)+np.square(y)),
-                          xi + (1-self.b_w)*ct.c*t]).T
-        return self.K_x(R)

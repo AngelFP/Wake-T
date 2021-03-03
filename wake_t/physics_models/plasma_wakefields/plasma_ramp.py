@@ -20,10 +20,6 @@ class PlasmaRampBlowoutField(Wakefield):
     def Wz(self, x, y, xi, px, py, pz, q, t):
         return np.zeros(len(xi))
 
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        kx = self.calculate_focusing(xi, t)
-        return np.ones(len(xi))*kx
-
     def calculate_focusing(self, xi, t):
         z = t*ct.c + xi  # z postion of each particle at time t
         n_p = self.density_function(z)

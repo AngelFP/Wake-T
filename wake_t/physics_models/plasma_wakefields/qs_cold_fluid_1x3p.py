@@ -3,8 +3,7 @@ import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particles.charge_deposition import charge_distribution_cyl
-from wake_t.particles.interpolation import (
-    gather_field_cyl_linear, gather_main_fields_cyl_linear)
+from wake_t.particles.interpolation import gather_main_fields_cyl_linear
 from wake_t.utilities.other import generate_field_diag_dictionary
 from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
 
@@ -103,15 +102,11 @@ class NonLinearColdFluidWakefield(Wakefield):
             u_2[-2-i] = u_2[-1-i] + 1/6*(A[1] + 2*B[1] + 2*C[1] + D[1])
             z_arr[-2-i] = z - dz
         E_z = -np.gradient(u_1, dz, axis=0, edge_order=2)
-        E_z_p = np.gradient(E_z, dz, axis=0, edge_order=2)
         W_r = -np.gradient(u_1, dr, axis=1, edge_order=2)
-        K_r = np.gradient(W_r, dr, axis=1, edge_order=2)
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
 
         self.E_z = E_z*E_0
         self.W_x = W_r*E_0
-        self.K_x = K_r*E_0/s_d/ct.c
-        self.E_z_p = E_z_p*E_0/s_d
         self.xi_fld = z_arr * s_d
         self.r_fld = r * s_d
 
@@ -129,16 +124,6 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         self.__interpolate_fields_to_particles(x, y, xi, t)
         return self.ez_part
-
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        return gather_field_cyl_linear(
-            self.K_x, self.xi_fld, self.r_fld, x, y, xi)
-
-    def Ez_p(self, x, y, xi, px, py, pz, q, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        return gather_field_cyl_linear(
-            self.E_z_p, self.xi_fld, self.r_fld, x, y, xi)
 
     def __interpolate_fields_to_particles(self, x, y, xi, t):
         if (self.current_t_interp is None) or (self.current_t_interp != t):

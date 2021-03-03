@@ -36,9 +36,3 @@ class CustomBlowoutWakefield(Wakefield):
             self.xi_fields = np.average(xi, weights=q)
         return self.E_z_0 + self.E_z_p*(xi - self.xi_fields
                                         + (1-self.b_w)*ct.c*t)
-
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        return self.g_x*np.ones_like(x)
-
-    def Kz(self, x, y, xi, px, py, pz, q, t):
-        return self.E_z_p*np.ones_like(x)
