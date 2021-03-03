@@ -812,8 +812,9 @@ class PlasmaRamp():
 
         if callable(self.profile):
             parallel = False
-            print('Parallel computation not available for user predefined density functions')
-        
+            print('Parallel computation not available '
+                  'for user predefined callable density functions')
+
         if parallel:
             if n_proc is None:
                 num_proc = cpu_count()
@@ -914,11 +915,10 @@ class PlasmaRamp():
         return np.sqrt(1 + px**2 + py**2 + pz**2)
 
     def calculate_density(self, z):
-        if callable(self.profile):
-            return self.profile(z)
-
         if self.ramp_type == 'upramp':
             z = self.length - z
+        if callable(self.profile):
+            return self.profile(z)
         if self.profile == 'linear':
             b = -((self.plasma_dens_top - self.plasma_dens_down)
                   / self.position_down)
