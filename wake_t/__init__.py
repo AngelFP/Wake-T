@@ -7,4 +7,4 @@ from .particles.particle_bunch import ParticleBunch
 
 __all__ = ['__version__', 'PlasmaStage', 'PlasmaRamp', 'ActivePlasmaLens',
            'Drift', 'Dipole', 'Quadrupole', 'Sextupole', 'Beamline',
-           'set_csr_settings','LaserPulse', 'ParticleBunch']
+           'set_csr_settings', 'LaserPulse', 'ParticleBunch']

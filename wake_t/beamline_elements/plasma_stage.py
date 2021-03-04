@@ -277,7 +277,7 @@ class PlasmaStage():
                     0., t_step, [bunch_list[-1]])
         # get start time
         start = time.time()
-        
+
         st_0 = "Tracking in {} step(s)... ".format(self.n_out)
         for s in np.arange(self.n_out):
             print_progress_bar(st_0, s, self.n_out-1)
