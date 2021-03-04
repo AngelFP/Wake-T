@@ -69,13 +69,13 @@ def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     # Precalculate particle shape coefficients needed to satisfy charge
     # conservation during deposition (see work by W.M. Ruyten
     # https://doi.org/10.1006/jcph.1993.1070).
-    r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
-    cell_volume = np.pi * dz * (
-            (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
-    cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
-    cell_number = np.arange(nr) + 1
-    ruyten_coef = 6. / cell_number * (
-            np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 1. / 24)
+    # r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
+    # cell_volume = np.pi * dz * (
+    #         (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
+    # cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
+    # cell_number = np.arange(nr) + 1
+    # ruyten_coef = 6. / cell_number * (
+    #         np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 1. / 24)
 
     # Loop over particles.
     for i in range(z.shape[0]):
@@ -97,16 +97,20 @@ def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         iz_cell = int(math.ceil(z_cell)) + 1
 
         # Get corresponding coefficient for corrected shape factor.
-        ir = min(int(math.ceil(r_cell)), nr)
-        rc = ruyten_coef[ir]
+        # ir = min(int(math.ceil(r_cell)), nr-1)
+        # rc = ruyten_coef[ir]
 
         # Particle position wrt left neighbor gridpoint in r.
-        u = r_cell - int(math.ceil(r_cell)) + 1
+        if r_cell < 0:
+            # Force all charge to be deposited above axis
+            u = 1.
+        else:
+            u = r_cell - int(math.ceil(r_cell)) + 1
 
         # Precalculate quantities.
         zsl_0 = math.ceil(z_cell) - z_cell
         zsl_1 = 1 - zsl_0
-        rsl_0 = (1. - u) + rc * (1. - u) * u
+        rsl_0 = (1. - u)  # + rc * (1. - u) * u
         rsl_1 = 1 - rsl_0
 
         # Add contribution of particle to charge distribution.
@@ -125,14 +129,14 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
 
     # Precalculate particle shape coefficients needed to satisfy charge
     # conservation during deposition (see work by W.M. Ruyten
-    # https://doi.org/10.1006/jcph.1993.1070).
-    r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
-    cell_volume = np.pi * dz * (
-            (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
-    cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
-    cell_number = np.arange(nr) + 1
-    ruyten_coef = 6. / cell_number * (
-            np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 0.125)
+    # # https://doi.org/10.1006/jcph.1993.1070).
+    # r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
+    # cell_volume = np.pi * dz * (
+    #         (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
+    # cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
+    # cell_number = np.arange(nr) + 1
+    # ruyten_coef = 6. / cell_number * (
+    #         np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 0.125)
 
     # Loop over particles.
     for i in range(z.shape[0]):
@@ -163,8 +167,8 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         v_r = 1. - u_r
 
         # Get corresponding coefficient for corrected shape factor.
-        ir = min(int(math.ceil(r_cell)), nr)
-        rc = ruyten_coef[ir]
+        # ir = min(int(math.ceil(r_cell)), nr)
+        # rc = ruyten_coef[ir]
 
         # Cubic particle shape coefficients in z and r.
         zsc_0 = inv_6 * v_z ** 3
@@ -172,9 +176,18 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         zsc_2 = inv_6 * (3. * v_z ** 3 - 6. * v_z ** 2 + 4.)
         zsc_3 = inv_6 * u_z ** 3
         rsc_0 = inv_6 * v_r ** 3
-        rsc_1 = inv_6 * (3. * u_r ** 3 - 6. * u_r ** 2 + 4.) + rc * v_r * u_r
-        rsc_2 = inv_6 * (3. * v_r ** 3 - 6. * v_r ** 2 + 4.) - rc * v_r * u_r
+        rsc_1 = inv_6 * (3. * u_r ** 3 - 6. * u_r ** 2 + 4.)  #+ rc * v_r * u_r
+        rsc_2 = inv_6 * (3. * v_r ** 3 - 6. * v_r ** 2 + 4.)  #- rc * v_r * u_r
         rsc_3 = inv_6 * u_r ** 3
+        
+        if r_cell < 0.:
+            rsc_3 += rsc_0
+            rsc_2 += rsc_1
+            rsc_0 = 0.
+            rsc_1 = 0.
+        elif r_cell < 1.:
+            rsc_1 += rsc_0
+            rsc_0 = 0.
 
         # Add contribution of particle to charge distribution.
         rho[iz_cell + 0, ir_cell + 0] += zsc_0 * rsc_0 * w_i
