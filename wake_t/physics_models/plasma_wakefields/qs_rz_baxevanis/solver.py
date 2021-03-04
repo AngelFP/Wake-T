@@ -96,7 +96,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     q = dr_p * r
 
     # Iteration steps.
-    dxi = (xi_max - xi_min) / n_xi
+    dxi = (xi_max - xi_min) / (n_xi -1)
 
     # Initialize field arrays.
     psi_mesh = np.zeros((n_r, n_xi))
@@ -114,11 +114,8 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     else:
         beam_source = None
 
-# use line 92 for radius, initialize using (r,0,xi_max)
-
-    # Calculate the charge distribution of the initial column
+    # Preallocate charge density array (with guard cells)
     rho = np.zeros((n_xi + 4, n_r + 4))
-    rho = charge_distribution_cyl(np.full_like(r, xi_max), r, np.zeros_like(r), q, xi_arr[0], r[0], n_xi, n_r, dxi, dr, rho, p_shape=p_shape)
 
     # Calculate the plasma susceptibility of the initial column:
     chi = np.zeros((n_xi + 4, n_r + 4))
@@ -128,34 +125,39 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     for step in np.arange(n_xi):
         xi = xi_max - dxi * step
 
-        # Evolve plasma to next xi step.
-        r, pr = evolve_plasma(
-            r, pr, q, xi, dxi, laser_params, beam_source, s_d)
-
-        # Remove plasma particles leaving simulation boundaries (plus margin).
-        idx_keep = np.where(r <= r_max + 0.1)
-        r = r[idx_keep]
-        pr = pr[idx_keep]
-        gamma = gamma[idx_keep]
-        q = q[idx_keep]
-
-        if r.shape[0] == 0:
-            break
-        # Calculate fields at specified r locations.
+        # Calculate fields at specified radii for current plasma column.
         fields = calculate_fields(r_arr, xi, r, pr, q,
                                   laser_params, beam_source, s_d)
 
-        # Deposit charge of updated plasma column using (r, 0, xi)
-        rho = charge_distribution_cyl(np.full_like(r, xi), r, np.zeros_like(r), q, xi_arr[0], r[0], n_xi, n_r, dxi, dr, rho, p_shape=p_shape)
+        # Unpack fields.
+        i = -1 - step
+        (psi_mesh[:, i], dr_psi_mesh[:, i], dxi_psi_mesh[:, i],
+         b_theta_bar_mesh[:, i], b_theta_0_mesh[:, i]) = fields
+
+        # Deposit charge of plasma column
+        charge_distribution_cyl(
+            np.full_like(r, xi), r, np.zeros_like(r), q, xi_min, 0.,
+            n_xi, n_r, dxi, dr, rho, p_shape=p_shape)
+
+        if step < n_xi-1:
+            # Evolve plasma to next xi step.
+            r, pr = evolve_plasma(
+                r, pr, q, xi, dxi, laser_params, beam_source, s_d)
+
+            # Remove particles leaving simulation boundaries (plus margin).
+            idx_keep = np.where(r <= r_max + 0.1)
+            r = r[idx_keep]
+            pr = pr[idx_keep]
+            gamma = gamma[idx_keep]
+            q = q[idx_keep]
+
+            if r.shape[0] == 0:
+                break
+
 
         # Deposit chi of updated plasma column using (r,0,xi):
         # chi = deposit_susceptibility_cyl(np.full_like(r, xi), r, np.zeros_like(r), q, xi_arr[0], r[0], n_part, dxi, dr_p, chi, np.ones_like(r), p_shape=p_shape)
 
-        i = -1 - step
-
-        # Unpack fields.
-        (psi_mesh[:, i], dr_psi_mesh[:, i], dxi_psi_mesh[:, i],
-         b_theta_bar_mesh[:, i], b_theta_0_mesh[:, i]) = fields
 
     # Calculate derived fields (E_r, n_p, K_r and E_z').
     dr_psi_mesh, dxi_psi_mesh = np.gradient(psi_mesh, dr, dxi, edge_order=2)
