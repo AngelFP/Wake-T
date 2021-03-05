@@ -8,21 +8,24 @@ implemented in FBPIC (https://github.com/fbpic/fbpic).
 """
 
 import math
-import numpy as np
 from numba import njit
 
 
-def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                            charge_dist, p_shape='cubic'):
+def deposit_3d_distribution(z, x, y, w, z_min, r_min, nr, dz, dr,
+                            deposition_array, p_shape='cubic'):
     """
-    Deposit the charge of a partice distribution in a 2D grid (cylindrical
-    symmetry) to obtain the spatial charge distribution.
+    Deposit the the weight of each particle of a 3D distribution into a 2D
+    grid (cylindrical symmetry).
 
     Parameters:
     -----------
-    z, x, y, q : arrays
+    z, x, y : arrays
         Arrays containing the longitudinal and transverse coordinates of the
-        particles as well as their charge.
+        particles.
+
+    w : array
+        Weight of the particles (any quantity) which will be deposited into
+        the grid.
 
     z_min : float
         Position of the first field value along z.
@@ -30,31 +33,27 @@ def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     r_min : float
         Position of the first field value along r.
 
-    nz, nr : int
-        Number of grid cells (excluding guard cells) along the longitudinal
-        and radial direction.
+    nr : int
+        Number of grid cells (excluding guard cells) along the radial\direction.
 
     dz, dr : float
         Grid step size along the longitudinal and radial direction.
 
-    charge_dist : array
-        The 2D array containing the charge distribution.
+    deposition_array : array
+        The 2D array of size (nr+4, nz+4) (including two guard cells at each
+        boundary) into which the weight will be deposited (will be
+        modified within this function)
 
     p_shape : str
         Particle shape to be used. Possible values are 'linear' or 'cubic'.
 
-    Returns:
-    --------
-    A (nz+4)*(nr+4) 2D array (i.e. including 2 guard cells on each side)
-    containing the charge distribution.
-
     """
     if p_shape == 'linear':
-        return charge_distribution_cyl_linear(
-            z, x, y, q, z_min, r_min, nz, nr, dz, dr, charge_dist)
+        return deposit_3d_distribution_linear(
+            z, x, y, w, z_min, r_min, nr, dz, dr, deposition_array)
     elif p_shape == 'cubic':
-        return charge_distribution_cyl_cubic(
-            z, x, y, q, z_min, r_min, nz, nr, dz, dr, charge_dist)
+        return deposit_3d_distribution_cubic(
+            z, x, y, w, z_min, r_min, nr, dz, dr, deposition_array)
     else:
         err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
                       "Possible values are 'linear' or 'cubic'.")
@@ -62,8 +61,8 @@ def charge_distribution_cyl(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
 
 
 @njit
-def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                                   rho):
+def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nr, dz, dr,
+                                   deposition_array):
     """ Calculate charge distribution assuming linear particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -114,17 +113,17 @@ def charge_distribution_cyl_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         rsl_1 = 1 - rsl_0
 
         # Add contribution of particle to charge distribution.
-        rho[iz_cell + 0, ir_cell + 0] += zsl_0 * rsl_0 * w_i
-        rho[iz_cell + 0, ir_cell + 1] += zsl_0 * rsl_1 * w_i
-        rho[iz_cell + 1, ir_cell + 0] += zsl_1 * rsl_0 * w_i
-        rho[iz_cell + 1, ir_cell + 1] += zsl_1 * rsl_1 * w_i
+        deposition_array[iz_cell + 0, ir_cell + 0] += zsl_0 * rsl_0 * w_i
+        deposition_array[iz_cell + 0, ir_cell + 1] += zsl_0 * rsl_1 * w_i
+        deposition_array[iz_cell + 1, ir_cell + 0] += zsl_1 * rsl_0 * w_i
+        deposition_array[iz_cell + 1, ir_cell + 1] += zsl_1 * rsl_1 * w_i
 
-    return rho
+    return
 
 
 @njit
-def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                                  rho):
+def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nr, dz, dr,
+                                  deposition_array):
     """ Calculate charge distribution assuming cubic particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
@@ -190,21 +189,21 @@ def charge_distribution_cyl_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             rsc_0 = 0.
 
         # Add contribution of particle to charge distribution.
-        rho[iz_cell + 0, ir_cell + 0] += zsc_0 * rsc_0 * w_i
-        rho[iz_cell + 0, ir_cell + 1] += zsc_0 * rsc_1 * w_i
-        rho[iz_cell + 0, ir_cell + 2] += zsc_0 * rsc_2 * w_i
-        rho[iz_cell + 0, ir_cell + 3] += zsc_0 * rsc_3 * w_i
-        rho[iz_cell + 1, ir_cell + 0] += zsc_1 * rsc_0 * w_i
-        rho[iz_cell + 1, ir_cell + 1] += zsc_1 * rsc_1 * w_i
-        rho[iz_cell + 1, ir_cell + 2] += zsc_1 * rsc_2 * w_i
-        rho[iz_cell + 1, ir_cell + 3] += zsc_1 * rsc_3 * w_i
-        rho[iz_cell + 2, ir_cell + 0] += zsc_2 * rsc_0 * w_i
-        rho[iz_cell + 2, ir_cell + 1] += zsc_2 * rsc_1 * w_i
-        rho[iz_cell + 2, ir_cell + 2] += zsc_2 * rsc_2 * w_i
-        rho[iz_cell + 2, ir_cell + 3] += zsc_2 * rsc_3 * w_i
-        rho[iz_cell + 3, ir_cell + 0] += zsc_3 * rsc_0 * w_i
-        rho[iz_cell + 3, ir_cell + 1] += zsc_3 * rsc_1 * w_i
-        rho[iz_cell + 3, ir_cell + 2] += zsc_3 * rsc_2 * w_i
-        rho[iz_cell + 3, ir_cell + 3] += zsc_3 * rsc_3 * w_i
+        deposition_array[iz_cell + 0, ir_cell + 0] += zsc_0 * rsc_0 * w_i
+        deposition_array[iz_cell + 0, ir_cell + 1] += zsc_0 * rsc_1 * w_i
+        deposition_array[iz_cell + 0, ir_cell + 2] += zsc_0 * rsc_2 * w_i
+        deposition_array[iz_cell + 0, ir_cell + 3] += zsc_0 * rsc_3 * w_i
+        deposition_array[iz_cell + 1, ir_cell + 0] += zsc_1 * rsc_0 * w_i
+        deposition_array[iz_cell + 1, ir_cell + 1] += zsc_1 * rsc_1 * w_i
+        deposition_array[iz_cell + 1, ir_cell + 2] += zsc_1 * rsc_2 * w_i
+        deposition_array[iz_cell + 1, ir_cell + 3] += zsc_1 * rsc_3 * w_i
+        deposition_array[iz_cell + 2, ir_cell + 0] += zsc_2 * rsc_0 * w_i
+        deposition_array[iz_cell + 2, ir_cell + 1] += zsc_2 * rsc_1 * w_i
+        deposition_array[iz_cell + 2, ir_cell + 2] += zsc_2 * rsc_2 * w_i
+        deposition_array[iz_cell + 2, ir_cell + 3] += zsc_2 * rsc_3 * w_i
+        deposition_array[iz_cell + 3, ir_cell + 0] += zsc_3 * rsc_0 * w_i
+        deposition_array[iz_cell + 3, ir_cell + 1] += zsc_3 * rsc_1 * w_i
+        deposition_array[iz_cell + 3, ir_cell + 2] += zsc_3 * rsc_2 * w_i
+        deposition_array[iz_cell + 3, ir_cell + 3] += zsc_3 * rsc_3 * w_i
 
-    return rho
+    return

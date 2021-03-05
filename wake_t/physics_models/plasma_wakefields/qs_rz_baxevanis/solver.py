@@ -12,7 +12,7 @@ from numba import njit
 import scipy.interpolate as scint
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.particles.charge_deposition import charge_distribution_cyl
+from wake_t.particles.charge_deposition import deposit_3d_distribution
 from wake_t.particles.susceptibility_deposition import deposit_susceptibility_cyl
 
 
@@ -147,9 +147,9 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
          b_theta_bar_mesh[:, i], b_theta_0_mesh[:, i]) = fields
 
         # Deposit charge of plasma column
-        charge_distribution_cyl(
+        deposit_3d_distribution(
             np.full_like(r, xi), r, np.zeros_like(r), q/(dr*r*(1-pz/gamma)), xi_min, r_arr[0],
-            n_xi, n_r, dxi, dr, rho, p_shape=p_shape)
+            n_r, dxi, dr, rho, p_shape=p_shape)
 
         if step < n_xi-1:
             # Evolve plasma to next xi step.
@@ -872,8 +872,8 @@ def get_beam_function(beam_part, n_r, n_xi, n_p, r_arr, xi_arr, p_shape):
 
     q_dist = np.zeros((n_xi + 4, n_r + 4))
     # Obtain charge distribution (using cubic particle shape by default).
-    q_dist = charge_distribution_cyl(
-        xi_n, x_n, y_n, w, xi_min, r_min, n_xi, n_r, dxi, dr, q_dist, p_shape=p_shape)
+    deposit_3d_distribution(
+        xi_n, x_n, y_n, w, xi_min, r_min, n_r, dxi, dr, q_dist, p_shape=p_shape)
 
     # Calculate radial integral (Eq. (18)).
     r_int = np.cumsum(q_dist, axis=1) / np.abs(r_grid_g) * dr
