@@ -1,8 +1,8 @@
 """
-This module contains the methods for depositing the charge of a particle
+This module contains the methods for depositing the weights of a particle
 distribution on a regular grid.
 
-The charge deposition is based on an adaptation of the same algorithm that is
+The deposition method is based on an adaptation of the same algorithm that is
 implemented in FBPIC (https://github.com/fbpic/fbpic).
 
 """
