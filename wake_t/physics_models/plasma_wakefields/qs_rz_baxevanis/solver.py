@@ -21,7 +21,7 @@ from wake_t.particles.susceptibility_deposition import deposit_susceptibility_cy
 # np.seterr(all='raise')
 # import matplotlib
 # matplotlib.use('Qt5agg')
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 
 def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
@@ -92,6 +92,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     n_part = n_r * ppc
     r = np.linspace(dr_p / 2, r_max - dr_p / 2, n_part)
     pr = np.zeros_like(r)
+    pz = np.zeros_like(r)
     gamma = np.ones_like(r)
     q = dr_p * r
 
@@ -125,9 +126,20 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     for step in np.arange(n_xi):
         xi = xi_max - dxi * step
 
+        # Calculate source terms at position of plasma particles.
+        nabla_a, a2, b_theta_0 = calculate_sources_at_particles(
+            xi, r, laser_params, beam_source, s_d)
+        
+        # Calculate wakefield potential and derivatives at plasma particles.
+        psi, dr_psi, dxi_psi = calculate_psi_and_derivatives_at_particles(
+            r, pr, q)
+
+        # Update gamma and pz of plasma particles
+        update_gamma_and_pz(gamma, pz, pr, a2, psi)
+
         # Calculate fields at specified radii for current plasma column.
-        fields = calculate_fields(r_arr, xi, r, pr, q,
-                                  laser_params, beam_source, s_d)
+        fields = calculate_fields(r_arr, xi, r, pr, q, gamma, psi, dr_psi,
+                                  dxi_psi, b_theta_0, nabla_a, beam_source)
 
         # Unpack fields.
         i = -1 - step
@@ -136,13 +148,12 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
 
         # Deposit charge of plasma column
         charge_distribution_cyl(
-            np.full_like(r, xi), r, np.zeros_like(r), q, xi_min, 0.,
+            np.full_like(r, xi), r, np.zeros_like(r), q/(dr*r*(1-pz/gamma)), xi_min, r_arr[0],
             n_xi, n_r, dxi, dr, rho, p_shape=p_shape)
 
         if step < n_xi-1:
             # Evolve plasma to next xi step.
-            r, pr = evolve_plasma(
-                r, pr, q, xi, dxi, laser_params, beam_source, s_d)
+            evolve_plasma(r, pr, q, xi, dxi, laser_params, beam_source, s_d)
 
             # Remove particles leaving simulation boundaries (plus margin).
             idx_keep = np.where(r <= r_max + 0.1)
@@ -349,10 +360,11 @@ def update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr):
     if idx_neg[0].size > 0:
         r[idx_neg] *= -1.
         pr[idx_neg] *= -1.
-    return r, pr
+    return
 
 
-def calculate_fields(r_arr, xi, r, pr, q, laser_params, beam_source, s_d):
+def calculate_fields(r_arr, xi, r, pr, q, gamma, psi, dr_psi, dxi_psi,
+                     b_theta_0, nabla_a, beam_source):
     """
     Calculates the wakefield potential and its derivatives, as well as the
     azimuthal magnetic field from the plasma and beam particles at the
@@ -369,14 +381,49 @@ def calculate_fields(r_arr, xi, r, pr, q, laser_params, beam_source, s_d):
         fields. It should also correspond to the current longitudinal
         position of the plasma particles.
 
+    r, pr, q, gamma : ndarray
+        Arrays containing the radial position, radial momentum, charge and
+        gamma factor of the plasma particles.
+
+    psi, dr_psi, dxi_psi : ndarray
+        Arrays containing the value of the wakefield potential and its
+        derivatives at the position of the plasma particles.
+
+    b_theta_0 : ndarray
+        Array containing the value of the beam source term at the position
+        ot the plasma particles.
+
+    nabla_a : ndarray
+        Array containing the gradient of the normalized vector potential
+        of the laser at the position of the plasma particles.
+
+    beam_source : function
+        Interpolator function for the azimuthal magnetic field from the
+        beam particle distribution, if present. Otherwise this parameter
+        is None.
+
+    """
+    # Calculate all fields at the specified r_arr locations.
+    b_theta_0_r = beam_source(r_arr, xi)
+    psi_r, dr_psi_r, dxi_psi_r = calculate_psi_and_derivatives(r_arr, r, pr, q)
+    b_theta_bar_r = calculate_b_theta(
+        r_arr, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a)
+    return psi_r, dr_psi_r, dxi_psi_r, b_theta_bar_r, b_theta_0_r
+
+
+def calculate_sources_at_particles(xi, r, laser_params, beam_source, s_d):
+    """
+    Calculates source terms (from laser and electron beams) at the position
+    of the plasma particles.
+
+    Parameters:
+    -----------
+    xi : float
+        Current longitudinal position (speed-of-light frame) of the plasma
+        column.
+
     r : ndarray
         Array containing the radial position of the plasma particles.
-
-    pr : ndarray
-        Array containing the radial momentum of the plasma particles.
-
-    q : ndarray
-        Array containing the charge of the plasma particles.
 
     laser_params : list
         List containing the relevant parameters of the laser pulse,if
@@ -404,16 +451,28 @@ def calculate_fields(r_arr, xi, r, pr, q, laser_params, beam_source, s_d):
         a2 = np.zeros(r.shape)
     b_theta_0 = beam_source(r, xi)
 
-    # Calculate wakefield potential and derivatives at plasma particles.
-    psi, dr_psi, dxi_psi = calculate_psi_and_derivatives_at_particles(r, pr, q)
-    gamma = (1 + pr ** 2 + a2 / 2 + (1 + psi) ** 2) / (2 * (1 + psi))
+    return nabla_a, a2, b_theta_0
 
-    # Calculate all fields at the specified r_arr locations.
-    b_theta_0_r = beam_source(r_arr, xi)
-    psi_r, dr_psi_r, dxi_psi_r = calculate_psi_and_derivatives(r_arr, r, pr, q)
-    b_theta_bar_r = calculate_b_theta(
-        r_arr, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a)
-    return psi_r, dr_psi_r, dxi_psi_r, b_theta_bar_r, b_theta_0_r
+
+@njit
+def update_gamma_and_pz(gamma, pz, pr, a2, psi):
+    """
+    Update the gamma factor and longitudinal momentum of the plasma particles.
+
+    Parameters:
+    -----------
+    gamma, pz : ndarray
+        Arrays containing the current gamma factor and longitudinal momentum
+        of the plasma particles (will be modified here).
+
+    pr, a2, psi : ndarray
+        Arrays containing the radial momentum of the particles and the
+        value of a2 and psi at the position of the particles.
+
+    """
+    for i in range(pr.shape[0]):
+        gamma[i] = (1 + pr[i]**2 + a2[i]/2 + (1+psi[i])**2) / (2 * (1+psi[i]))
+        pz[i] = (1 + pr[i]**2 + a2[i]/2 - (1+psi[i])**2) / (2 * (1+psi[i]))
 
 
 @njit()
