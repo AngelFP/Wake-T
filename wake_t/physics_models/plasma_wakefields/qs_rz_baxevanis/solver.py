@@ -13,7 +13,6 @@ import scipy.interpolate as scint
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particles.deposition import deposit_3d_distribution
-from wake_t.particles.susceptibility_deposition import deposit_susceptibility_cyl
 
 
 # For debugging
@@ -21,7 +20,7 @@ from wake_t.particles.susceptibility_deposition import deposit_susceptibility_cy
 # np.seterr(all='raise')
 # import matplotlib
 # matplotlib.use('Qt5agg')
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
@@ -97,7 +96,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     q = dr_p * r
 
     # Iteration steps.
-    dxi = (xi_max - xi_min) / (n_xi -1)
+    dxi = (xi_max - xi_min) / (n_xi - 1)
 
     # Initialize field arrays.
     psi_mesh = np.zeros((n_r, n_xi))
@@ -126,7 +125,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
         # Calculate source terms at position of plasma particles.
         nabla_a, a2, b_theta_0 = calculate_sources_at_particles(
             xi, r, laser_params, beam_source, s_d)
-        
+
         # Calculate wakefield potential and derivatives at plasma particles.
         psi, dr_psi, dxi_psi = calculate_psi_and_derivatives_at_particles(
             r, pr, q)
@@ -166,7 +165,6 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
 
             if r.shape[0] == 0:
                 break
-
 
     # Calculate derived fields (E_r, n_p, K_r and E_z').
     dr_psi_mesh, dxi_psi_mesh = np.gradient(psi_mesh, dr, dxi, edge_order=2)
@@ -868,10 +866,10 @@ def get_beam_function(beam_part, n_r, n_xi, n_p, r_arr, xi_arr, p_shape):
     # Calculate particle weights.
     w = q / ct.e / (2 * np.pi * dr * dxi * s_d ** 3 * n_p)
 
-    q_dist = np.zeros((n_xi + 4, n_r + 4))
     # Obtain charge distribution (using cubic particle shape by default).
-    deposit_3d_distribution(
-        xi_n, x_n, y_n, w, xi_min, r_min, n_r, dxi, dr, q_dist, p_shape=p_shape)
+    q_dist = np.zeros((n_xi + 4, n_r + 4))
+    deposit_3d_distribution(xi_n, x_n, y_n, w, xi_min, r_min, n_r, dxi, dr,
+                            q_dist, p_shape=p_shape)
 
     # Calculate radial integral (Eq. (18)).
     r_int = np.cumsum(q_dist, axis=1) / np.abs(r_grid_g) * dr
@@ -890,9 +888,8 @@ def get_nabla_a(xi, r, a_0, l_0, w_0, tau, xi_c, pol='linear', dz_foc=0):
     avg_amplitude = a_0
     if pol == 'linear':
         avg_amplitude /= np.sqrt(2)
-    return - 2 * (avg_amplitude / w_fac) ** 2 * r / s_r ** 2 * (
-                np.exp(-r ** 2 / (s_r ** 2)) * np.exp(
-            -(xi - xi_c) ** 2 / (s_z ** 2)))
+    return - 2 * (avg_amplitude / w_fac)**2 * r / s_r**2 * (
+        np.exp(-r**2 / (s_r**2)) * np.exp(-(xi - xi_c)**2 / (s_z ** 2)))
 
 
 @njit()
@@ -905,6 +902,5 @@ def get_a2(xi, r, a_0, l_0, w_0, tau, xi_c, pol='linear', dz_foc=0):
     avg_amplitude = a_0
     if pol == 'linear':
         avg_amplitude /= np.sqrt(2)
-    return (avg_amplitude / w_fac) ** 2 * (np.exp(-(r) ** 2 / (s_r ** 2)) *
-                                           np.exp(
-                                               -(xi - xi_c) ** 2 / (s_z ** 2)))
+    return (avg_amplitude / w_fac)**2 * (np.exp(-(r)**2 / (s_r**2)) *
+                                         np.exp(-(xi - xi_c)**2 / (s_z**2)))

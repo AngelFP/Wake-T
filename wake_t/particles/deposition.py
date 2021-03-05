@@ -34,7 +34,8 @@ def deposit_3d_distribution(z, x, y, w, z_min, r_min, nr, dz, dr,
         Position of the first field value along r.
 
     nr : int
-        Number of grid cells (excluding guard cells) along the radial\direction.
+        Number of grid cells (excluding guard cells) along the radial
+        direction.
 
     dz, dr : float
         Grid step size along the longitudinal and radial direction.
@@ -171,14 +172,14 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nr, dz, dr,
 
         # Cubic particle shape coefficients in z and r.
         zsc_0 = inv_6 * v_z ** 3
-        zsc_1 = inv_6 * (3. * u_z ** 3 - 6. * u_z ** 2 + 4.)
-        zsc_2 = inv_6 * (3. * v_z ** 3 - 6. * v_z ** 2 + 4.)
+        zsc_1 = inv_6 * (3. * u_z**3 - 6. * u_z**2 + 4.)
+        zsc_2 = inv_6 * (3. * v_z**3 - 6. * v_z**2 + 4.)
         zsc_3 = inv_6 * u_z ** 3
         rsc_0 = inv_6 * v_r ** 3
-        rsc_1 = inv_6 * (3. * u_r ** 3 - 6. * u_r ** 2 + 4.)  #+ rc * v_r * u_r
-        rsc_2 = inv_6 * (3. * v_r ** 3 - 6. * v_r ** 2 + 4.)  #- rc * v_r * u_r
+        rsc_1 = inv_6 * (3. * u_r**3 - 6. * u_r**2 + 4.)  # + rc * v_r * u_r
+        rsc_2 = inv_6 * (3. * v_r**3 - 6. * v_r**2 + 4.)  # - rc * v_r * u_r
         rsc_3 = inv_6 * u_r ** 3
-        
+
         if r_cell < 0.:
             rsc_3 += rsc_0
             rsc_2 += rsc_1
