@@ -14,12 +14,6 @@ class Wakefield():
     def Wz(self, x, y, xi, px, py, pz, q, t):
         raise NotImplementedError
 
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        raise NotImplementedError
-
-    def Ez_p(self, x, y, xi, px, py, pz, q, t):
-        raise NotImplementedError
-
     def get_openpmd_diagnostics_data(self):
         if self.openpmd_diag_supported:
             return self._get_openpmd_diagnostics_data()

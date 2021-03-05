@@ -25,9 +25,3 @@ class CombinedWakefield(Wakefield):
         for wf in self.wakefield_list:
             wz += wf.Wz(x, y, xi, px, py, pz, q, t)
         return wz
-
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        kx = np.zeros(x.shape[0])
-        for wf in self.wakefield_list:
-            kx += wf.Kx(x, y, xi, px, py, pz, q, t)
-        return kx

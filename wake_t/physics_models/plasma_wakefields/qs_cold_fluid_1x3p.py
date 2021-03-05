@@ -3,20 +3,19 @@ import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particles.deposition import deposit_3d_distribution
-from wake_t.particles.interpolation import (
-    gather_field_cyl_linear, gather_main_fields_cyl_linear)
+from wake_t.particles.interpolation import gather_main_fields_cyl_linear
 from wake_t.utilities.other import generate_field_diag_dictionary
 from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
 
 
 class NonLinearColdFluidWakefield(Wakefield):
-    def __init__(self, density_function, driver=None, laser_evolution=False,
+    def __init__(self, density_function, laser=None, laser_evolution=False,
                  laser_z_foc=0, r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, beam_wakefields=False, p_shape='linear'):
         super().__init__()
         self.openpmd_diag_supported = True
         self.density_function = density_function
-        self.driver = driver
+        self.laser = laser
         self.laser_evolution = laser_evolution
         self.laser_z_foc = laser_z_foc
         self.r_max = r_max
@@ -47,7 +46,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         n_p = self.density_function(z_beam)
 
         if n_p == self.current_n_p and not self.laser_evolution:
-            # If density has not changed and driver does not evolve, it is
+            # If density has not changed and laser does not evolve, it is
             # not necessary to recompute fields.
             return
         self.current_n_p = n_p
@@ -80,10 +79,10 @@ class NonLinearColdFluidWakefield(Wakefield):
         for i in np.arange(n_iter):
             z = z_arr[-1] - i*dz
             # get laser a0 at z, z+dz/2 and z+dz
-            if self.driver is not None:
-                a0_0 = self.driver.get_a0_profile(r*s_d, z*s_d, dz_foc)
-                a0_1 = self.driver.get_a0_profile(r*s_d, (z-dz/2)*s_d, dz_foc)
-                a0_2 = self.driver.get_a0_profile(r*s_d, (z-dz)*s_d, dz_foc)
+            if self.laser is not None:
+                a0_0 = self.laser.get_a0_profile(r*s_d, z*s_d, dz_foc)
+                a0_1 = self.laser.get_a0_profile(r*s_d, (z-dz/2)*s_d, dz_foc)
+                a0_2 = self.laser.get_a0_profile(r*s_d, (z-dz)*s_d, dz_foc)
             else:
                 a0_0 = np.zeros(r.shape[0])
                 a0_1 = np.zeros(r.shape[0])
@@ -104,15 +103,11 @@ class NonLinearColdFluidWakefield(Wakefield):
             u_2[-2-i] = u_2[-1-i] + 1/6*(A[1] + 2*B[1] + 2*C[1] + D[1])
             z_arr[-2-i] = z - dz
         E_z = -np.gradient(u_1, dz, axis=0, edge_order=2)
-        E_z_p = np.gradient(E_z, dz, axis=0, edge_order=2)
         W_r = -np.gradient(u_1, dr, axis=1, edge_order=2)
-        K_r = np.gradient(W_r, dr, axis=1, edge_order=2)
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
 
         self.E_z = E_z*E_0
         self.W_x = W_r*E_0
-        self.K_x = K_r*E_0/s_d/ct.c
-        self.E_z_p = E_z_p*E_0/s_d
         self.xi_fld = z_arr * s_d
         self.r_fld = r * s_d
 
@@ -130,16 +125,6 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
         self.__interpolate_fields_to_particles(x, y, xi, t)
         return self.ez_part
-
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        return gather_field_cyl_linear(
-            self.K_x, self.xi_fld, self.r_fld, x, y, xi)
-
-    def Ez_p(self, x, y, xi, px, py, pz, q, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        return gather_field_cyl_linear(
-            self.E_z_p, self.xi_fld, self.r_fld, x, y, xi)
 
     def __interpolate_fields_to_particles(self, x, y, xi, t):
         if (self.current_t_interp is None) or (self.current_t_interp != t):

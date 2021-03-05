@@ -3,8 +3,7 @@ import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
 from .solver import calculate_wakefields
-from wake_t.particles.interpolation import (
-    gather_field_cyl_linear, gather_main_fields_cyl_linear)
+from wake_t.particles.interpolation import gather_main_fields_cyl_linear
 from wake_t.utilities.other import generate_field_diag_dictionary
 from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
 
@@ -50,16 +49,6 @@ class Quasistatic2DWakefield(Wakefield):
         self.__interpolate_fields_to_particles(x, y, xi, t)
         return self.ez_part
 
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        return gather_field_cyl_linear(
-            self.K_x, self.xi_fld, self.r_fld, x, y, xi)
-
-    def Ez_p(self, x, y, xi, px, py, pz, q, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        return gather_field_cyl_linear(
-            self.E_z_p, self.xi_fld, self.r_fld, x, y, xi)
-
     def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
         self.current_t = t
         if self.current_t_wf is None:
@@ -81,7 +70,7 @@ class Quasistatic2DWakefield(Wakefield):
         flds = calculate_wakefields(
             self.laser, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, n_p, dz_foc, p_shape=self.p_shape)
-        n_p_mesh, W_r, E_z, E_z_p, K_r, psi_mesh, xi_arr, r_arr = flds
+        n_p_mesh, W_r, E_z, psi_mesh, xi_arr, r_arr = flds
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
         s_d = ge.plasma_skin_depth(n_p*1e-6)
@@ -89,8 +78,6 @@ class Quasistatic2DWakefield(Wakefield):
         self.rho = n_p_mesh.T
         self.E_z = E_z.T*E_0
         self.W_x = W_r.T*E_0
-        self.K_x = K_r.T*E_0/s_d/ct.c
-        self.E_z_p = E_z_p.T*E_0/s_d
         self.xi_fld = xi_arr*s_d
         self.r_fld = r_arr*s_d
 
@@ -131,30 +118,3 @@ class Quasistatic2DWakefield(Wakefield):
             part_boundary_params, current_smoothing, charge_correction)
 
         return diag_data
-
-
-class PlasmaRampBlowoutField(Wakefield):
-    def __init__(self, density_function):
-        super().__init__()
-        self.density_function = density_function
-
-    def Wx(self, x, y, xi, px, py, pz, q, t):
-        kx = self.calculate_focusing(xi, t)
-        return ct.c*kx*x
-
-    def Wy(self, x, y, xi, px, py, pz, q, t):
-        kx = self.calculate_focusing(xi, t)
-        return ct.c*kx*y
-
-    def Wz(self, x, y, xi, px, py, pz, q, t):
-        return np.zeros(len(xi))
-
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        kx = self.calculate_focusing(xi, t)
-        return np.ones(len(xi))*kx
-
-    def calculate_focusing(self, xi, t):
-        z = t*ct.c + xi  # z postion of each particle at time t
-        n_p = self.density_function(z)
-        w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
-        return (ct.m_e/(2*ct.e*ct.c))*w_p**2

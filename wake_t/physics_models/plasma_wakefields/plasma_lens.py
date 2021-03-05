@@ -23,10 +23,6 @@ class PlasmaLensField(Wakefield):
         gamma = np.sqrt(1 + px*px + py*py + pz*pz)
         return (px*(-x*self.dB_r) - py*y*self.dB_r)*ct.c/gamma
 
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        # not really important
-        return np.ones(len(x))*self.dB_r
-
 
 class PlasmaLensFieldRelativistic(Wakefield):
     def __init__(self, k_x):
@@ -41,6 +37,3 @@ class PlasmaLensFieldRelativistic(Wakefield):
 
     def Wz(self, x, y, xi, px, py, pz, q, t):
         return np.zeros(len(x))
-
-    def Kx(self, x, y, xi, px, py, pz, q, t):
-        return np.ones(len(x))*self.k_x
