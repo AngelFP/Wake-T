@@ -9,7 +9,7 @@ import scipy.constants as ct
 from openpmd_api import (Series, Access, Dataset, Mesh_Record_Component,
                          Unit_Dimension, Geometry)
 
-from wake_t.__version__ import __version__
+from wake_t import __version__
 
 
 SCALAR = Mesh_Record_Component.SCALAR
