@@ -2,7 +2,7 @@ import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.particles.charge_deposition import charge_distribution_cyl
+from wake_t.particles.deposition import deposit_3d_distribution
 from wake_t.particles.interpolation import (
     gather_field_cyl_linear, gather_main_fields_cyl_linear)
 from wake_t.utilities.other import generate_field_diag_dictionary
@@ -58,9 +58,10 @@ class NonLinearColdFluidWakefield(Wakefield):
         r = np.linspace(dr/2, self.r_max/s_d-dr/2, self.n_r)
 
         # Get charge distribution and remove guard cells.
-        beam_hist = charge_distribution_cyl(
-            xi/s_d, x/s_d, y/s_d, q/ct.e, self.xi_min/s_d, r[0], self.n_xi,
-            self.n_r, dz, dr, p_shape=self.p_shape)
+        beam_hist = np.zeros((self.n_xi+4, self.n_r+4))
+        deposit_3d_distribution(
+            xi/s_d, x/s_d, y/s_d, q/ct.e, self.xi_min/s_d, r[0],
+            self.n_r, dz, dr, beam_hist, p_shape=self.p_shape)
         beam_hist = beam_hist[2:-2, 2:-2]
 
         n = np.arange(self.n_r)
