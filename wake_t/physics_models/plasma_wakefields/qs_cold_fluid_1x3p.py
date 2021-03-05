@@ -2,7 +2,7 @@ import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.particles.charge_deposition import deposit_3d_distribution
+from wake_t.particles.deposition import deposit_3d_distribution
 from wake_t.particles.interpolation import (
     gather_field_cyl_linear, gather_main_fields_cyl_linear)
 from wake_t.utilities.other import generate_field_diag_dictionary

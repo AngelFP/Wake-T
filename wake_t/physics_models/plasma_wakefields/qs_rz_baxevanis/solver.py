@@ -12,7 +12,7 @@ from numba import njit
 import scipy.interpolate as scint
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.particles.charge_deposition import deposit_3d_distribution
+from wake_t.particles.deposition import deposit_3d_distribution
 from wake_t.particles.susceptibility_deposition import deposit_susceptibility_cyl
 
 
