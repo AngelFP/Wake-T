@@ -115,12 +115,9 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
     else:
         beam_source = None
 
-    # Preallocate charge density array (with guard cells)
+    # Preallocate charge density susceptibility arrays (with guard cells)
     rho = np.zeros((n_xi + 4, n_r + 4))
-
-    # Calculate the plasma susceptibility of the initial column:
     chi = np.zeros((n_xi + 4, n_r + 4))
-    # chi = deposit_susceptibility_cyl(np.full_like(r, xi_max), r_arr, np.zeros_like(r), q, xi_arr[0], r[0], n_part, dxi, dr_p, chi, np.ones_like(r), p_shape=p_shape)
 
     # Main loop.
     for step in np.arange(n_xi):
@@ -146,10 +143,15 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
         (psi_mesh[:, i], dr_psi_mesh[:, i], dxi_psi_mesh[:, i],
          b_theta_bar_mesh[:, i], b_theta_0_mesh[:, i]) = fields
 
-        # Deposit charge of plasma column
+        # Deposit rho and chi of plasma column
+        w_rho = q / (dr * r * (1 - pz/gamma))
+        w_chi = w_rho / gamma
         deposit_3d_distribution(
-            np.full_like(r, xi), r, np.zeros_like(r), q/(dr*r*(1-pz/gamma)), xi_min, r_arr[0],
+            np.full_like(r, xi), r, np.zeros_like(r), w_rho, xi_min, r_arr[0],
             n_r, dxi, dr, rho, p_shape=p_shape)
+        deposit_3d_distribution(
+            np.full_like(r, xi), r, np.zeros_like(r), w_chi, xi_min, r_arr[0],
+            n_r, dxi, dr, chi, p_shape=p_shape)
 
         if step < n_xi-1:
             # Evolve plasma to next xi step.
@@ -164,10 +166,6 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
 
             if r.shape[0] == 0:
                 break
-
-
-        # Deposit chi of updated plasma column using (r,0,xi):
-        # chi = deposit_susceptibility_cyl(np.full_like(r, xi), r, np.zeros_like(r), q, xi_arr[0], r[0], n_part, dxi, dr_p, chi, np.ones_like(r), p_shape=p_shape)
 
 
     # Calculate derived fields (E_r, n_p, K_r and E_z').
