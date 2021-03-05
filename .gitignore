@@ -16,3 +16,4 @@ __pycache__
 # Other
 *.pdf
 *.pptx
+/venv
