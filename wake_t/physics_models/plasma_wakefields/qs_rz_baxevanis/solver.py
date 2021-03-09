@@ -161,6 +161,7 @@ def calculate_wakefields(laser, beam_part, r_max, xi_min, xi_max, n_r, n_xi,
             r = r[idx_keep]
             pr = pr[idx_keep]
             gamma = gamma[idx_keep]
+            pz = pz[idx_keep]
             q = q[idx_keep]
 
             if r.shape[0] == 0:
