@@ -15,7 +15,7 @@ from numba import njit, prange
 
 
 @njit()
-def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
+def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
     """
     Interpolate a 2D field defined on an r-z grid to the particle positions
     of a 3D distribution.
@@ -26,11 +26,14 @@ def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
     fld : 2darray
         The field to be interpolated.
 
-    z_fld : 1darray
-        The position of the field grid points along z.
+    z_min, z_max : float
+        Position of the first and last field values along z.
 
-    r_fld : 1darray
-        The position of the field grid points along r.
+    r_min,r_max : float
+        Position of the first and last field values along r.
+
+    dz, dr : float
+        Grid step size along the longitudinal and radial direction.
 
     x, y, z : 1darray
         Coordinates of the particle distribution.
@@ -43,20 +46,11 @@ def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
     """
     n_part = x.shape[0]
 
-    # Calculate needed parameters.
-    dr = r_fld[1] - r_fld[0]
-    dz = z_fld[1] - z_fld[0]
-    z_min_grid = z_fld[0]
-    r_min_grid = r_fld[0]
-    z_max_grid = z_fld[-1]
-    r_max_grid = r_fld[-1]
-
     # Preallocate output array with field values.
     fld_part = np.zeros(n_part)
 
     # Iterate over all particles.
-    for i in prange(n_part):
-
+    for i in range(n_part):
         # Get particle position.
         x_i = x[i]
         y_i = y[i]
@@ -64,10 +58,10 @@ def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
         r_i = math.sqrt(x_i**2 + y_i**2)
 
         # Gather field only if particle is within field boundaries.
-        if z_i > z_min_grid and z_i < z_max_grid and r_i < r_max_grid:
+        if z_i >= z_min and z_i <= z_max and r_i <= r_max:
             # Position in cell units.
-            r_i_cell = (r_i - r_min_grid)/dr
-            z_i_cell = (z_i - z_min_grid)/dz
+            r_i_cell = (r_i - r_min)/dr + 2.
+            z_i_cell = (z_i - z_min)/dz + 2.
 
             # Indices of upper and lower cells in r and z.
             ir_lower = int(math.floor(r_i_cell))
@@ -76,8 +70,8 @@ def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
             iz_upper = iz_lower + 1
 
             # If lower r cell is below axis, assume same value as first cell.
-            if ir_lower < 0:
-                ir_lower = 0
+            if ir_lower < 2:
+                ir_lower = 2
 
             # Get field value at each bounding cell.
             fld_ll = fld[iz_lower, ir_lower]
@@ -99,7 +93,8 @@ def gather_field_cyl_linear(fld, z_fld, r_fld, x, y, z):
 
 
 @njit()
-def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
+def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
+                                  x, y, z):
     """
     Convenient method for interpolating at once (more efficient) the transverse
     and longitudinal wakefields.
@@ -110,14 +105,17 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
     wx : 2darray
         The transverse wakefield.
 
-    wx : 2darray
+    ez : 2darray
         The longitudinal wakefield.
 
-    z_fld : 1darray
-        The position of the field grid points along z.
+    z_min, z_max : float
+        Position of the first and last field values along z.
 
-    r_fld : 1darray
-        The position of the field grid points along r.
+    r_min,r_max : float
+        Position of the first and last field values along r.
+
+    dz, dr : float
+        Grid step size along the longitudinal and radial direction.
 
     x, y, z : 1darray
         Coordinates of the particle distribution.
@@ -130,14 +128,6 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
 
     """
     n_part = x.shape[0]
-
-    # Calculate needed parameters.
-    dr = r_fld[1] - r_fld[0]
-    dz = z_fld[1] - z_fld[0]
-    z_min_grid = z_fld[0]
-    r_min_grid = r_fld[0]
-    z_max_grid = z_fld[-1]
-    r_max_grid = r_fld[-1]
 
     # Preallocate output arrays with field values.
     wx_part = np.zeros(n_part)
@@ -155,10 +145,10 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
         inv_r_i = 1./r_i
 
         # Gather field only if particle is within field boundaries.
-        if z_i > z_min_grid and z_i < z_max_grid and r_i < r_max_grid:
+        if z_i >= z_min and z_i <= z_max and r_i <= r_max:
             # Position in cell units.
-            r_i_cell = (r_i - r_min_grid)/dr
-            z_i_cell = (z_i - z_min_grid)/dz
+            r_i_cell = (r_i - r_min)/dr + 2
+            z_i_cell = (z_i - z_min)/dz + 2
 
             # Indices of upper and lower cells in r and z.
             ir_lower = int(math.floor(r_i_cell))
@@ -170,8 +160,8 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
             # for `ez` and sign inverse of the first cell value for `wx`. This
             # assures that wx=0 on axis.
             wx_corr = 1
-            if ir_lower < 0:
-                ir_lower = 0
+            if ir_lower < 2:
+                ir_lower = 2
                 wx_corr = -1
 
             # Get field value at each bounding cell.
@@ -200,3 +190,4 @@ def gather_main_fields_cyl_linear(wx, ez, z_fld, r_fld, x, y, z):
             wy_part[i] = w * y_i * inv_r_i
             ez_part[i] = dr_u*ez_z_1 + dr_l*ez_z_2
     return wx_part, wy_part, ez_part
+
