@@ -4,7 +4,6 @@ This module contains the class definitions for different laser pulses.
 """
 import numpy as np
 import scipy.constants as ct
-import aptools.plasma_accel.general_equations as ge
 
 
 class LaserPulse():
