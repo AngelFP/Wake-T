@@ -1,4 +1,3 @@
-import cmath
 import numpy as np
 from numba import njit
 
@@ -196,15 +195,23 @@ def TDMA(a, b, c, d):
 
 
 @njit()
-def solve_2d(k0p, zmin, zmax, nz, rmax, nr, dt, nt, a0, aold):
+def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt):
     """
     Solve the 2D envelope equation
     (\nabla_tr^2+2i*k0/kp*d/dt+2*d^2/(dzdt)-d^2/dt^2)â = chi*â
 
     Parameters
     ----------
-    k0p : float
-        k0/kp, laser wave number divided by the plasma skin depth.
+    a0 : array
+        Initial value for â at tau=0. Dimension: nz*nr.
+    aold : array
+        Initial value for â at tau=-1. Dimension: nz*nr.
+    chi : array
+        Arrays of the values of the susceptibility. Dimension nz*nr.
+    k0 : float
+        Laser wave number.
+    kp : float
+        Plasma skin depth.
     zmin : float
         Minimum value for zeta.
     zmax : float
@@ -219,10 +226,6 @@ def solve_2d(k0p, zmin, zmax, nz, rmax, nr, dt, nt, a0, aold):
         Tau step size.
     nt : int
         Number of tau steps.
-    a0 : array
-        Initial value for â at tau=0. Dimension: nz*nr.
-    aold : array
-        Initial value for â at tau=-1. Dimension: nz*nr.
 
     """
     # Add 2 rows of ghost points in the zeta direction.
@@ -245,9 +248,9 @@ def solve_2d(k0p, zmin, zmax, nz, rmax, nr, dt, nt, a0, aold):
     dz = (zmax - zmin) / (nz - 1)
     dr = rmax / nr
 
+    k0p = k0/kp
+
     for n in range(0, nt):
-        if n % 100 == 0:
-            print("Time =", n * dt)
         # Getting the phases of the envelope at the radius.
         phases = np.angle(a[:, 0])
         for j in range(nz - 1, -1, -1):
@@ -260,7 +263,7 @@ def solve_2d(k0p, zmin, zmax, nz, rmax, nr, dt, nt, a0, aold):
                 sol[k] = rhs(a_old, a, a_new, j, dz, k, dr, nr, dt, k0p, th,
                              th1, th2)
                 d_main[k] = (C(1, k, k0p, dt, dz, dr)
-                             - chi() / 2
+                             - chi[j, k] / 2
                              + 1j / dt * D(th, th1, th2, dz))
                 if k < nr - 1:
                     d_upper[k] = L(1, k, dr) / 2
