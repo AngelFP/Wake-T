@@ -1,3 +1,11 @@
+"""
+This module contains the envelope solver. This module is strongly based on the
+paper 'An accurate and efficient laser-envelope solver for the modeling of
+laser-plasma accelerators', written bij C Benedetti et al in 2018.
+
+Authors: Wilbert den Hertog, Ángel Ferran Pousa, Carlo Benedetti
+"""
+
 import numpy as np
 from numba import njit
 
@@ -55,14 +63,8 @@ def C(sign, k, k0p, dt, dz, dr):
         Rho step size.
 
     """
-    if dr == 0:  # 1D case
-        return (L(-1, k, dr) / 2
-                + sign * 1j * k0p / dt - sign * 3 / 2
-                * 1 / (dt * dz) - 1 / dt ** 2)
-    else:  # 2D case
-        return (L(0, k, dr) / 2
-                + sign * 1j * k0p / dt - sign * 3 / 2
-                * 1 / (dt * dz) - 1 / dt ** 2)
+    return (L(0, k, dr) / 2 + sign * 1j * k0p / dt
+            - sign * 3 / 2 * 1 / (dt * dz) - 1 / dt ** 2)
 
 
 @njit()
@@ -102,12 +104,7 @@ def D(th, th1, th2, dz):
 
 
 @njit()
-def chi():
-    return 0
-
-
-@njit()
-def rhs(a_old, a, a_new, j, dz, k, dr, nr, dt, k0p, th, th1, th2):
+def rhs(a_old, a, a_new, chi, j, dz, k, dr, nr, dt, k0p, th, th1, th2):
     """
     The right-hand side of equation 7 in Benedetti, 2018.
 
@@ -120,6 +117,8 @@ def rhs(a_old, a, a_new, j, dz, k, dr, nr, dt, k0p, th, th1, th2):
     a_new : array
         The array of the values of â at next time step, at z=j+1 and z=j+2.
         Dimension: 2*nr.
+    chi : array
+        The array of the values of the plasma susceptibility. Dimension: nz*nr
     j : int
         The zeta grid coordinate: 0<=j<nz.
     dz : float
@@ -144,7 +143,7 @@ def rhs(a_old, a, a_new, j, dz, k, dr, nr, dt, k0p, th, th1, th2):
     """
     sol = (- 2 / dt ** 2 * a[j, k]
            - (C(-1, k, k0p, dt, dz, dr)
-              - chi() / 2
+              - chi[j, k] / 2
               - 1j / dt * D(th, th1, th2, dz)) * a_old[j, k]
            - 2 * np.exp(1j * (th - th1)) / (dz * dt)
            * (a_new[0, k] - a_old[j + 1, k])
@@ -248,7 +247,7 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt):
     dz = (zmax - zmin) / (nz - 1)
     dr = rmax / nr
 
-    k0p = k0/kp
+    k0p = k0 / kp
 
     for n in range(0, nt):
         # Getting the phases of the envelope at the radius.
@@ -260,8 +259,8 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt):
 
             # Fill the vectors according to the numerical scheme.
             for k in range(0, nr):
-                sol[k] = rhs(a_old, a, a_new, j, dz, k, dr, nr, dt, k0p, th,
-                             th1, th2)
+                sol[k] = rhs(a_old, a, a_new, chi, j, dz, k, dr, nr, dt, k0p,
+                             th, th1, th2)
                 d_main[k] = (C(1, k, k0p, dt, dz, dr)
                              - chi[j, k] / 2
                              + 1j / dt * D(th, th1, th2, dz))
