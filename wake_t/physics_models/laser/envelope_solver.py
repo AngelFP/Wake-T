@@ -280,4 +280,4 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt):
         # few values in the a_old and a arrays.
         a_old[0:2] = a[0:2]
         a[0] = a_new[0]
-    return a
+    return a_old, a
