@@ -28,7 +28,7 @@ class LaserPulse():
         self.solver_params = None
 
     def set_envelope_solver_params(self, xi_min, xi_max, r_max, nz, nr, dt,
-                                   n_p):
+                                   n_p, nt=1):
         """
         Set the parameters for the laser envelope solver.
 
@@ -42,9 +42,16 @@ class LaserPulse():
         nz, nr : int
             Number of grid points along the longitudinal and radial directions.
         dt : float
-            Time step in SI units.
+            Time step, in SI units, that the laser pulse should advance every
+            time `evolve` is called.
         n_p : float
             Plasma density in SI units.
+        nt : int
+            Number of sub-time-steps that should be computed every time
+            `evolve` is called. The internal time step used by the solver is
+            therefore dt/nt, so that the laser effectively advances by `dt`
+            every time `evolve` is called. All these time steps are therefore
+            computed using the same `chi`.
 
         """
         k_p = np.sqrt(ct.e**2 * n_p / (ct.m_e*ct.epsilon_0)) / ct.c
@@ -54,8 +61,8 @@ class LaserPulse():
             'rmax': r_max * k_p,
             'nz': nz,
             'nr': nr,
-            'nt': 1,
-            'dt': dt * ct.c * k_p,
+            'nt': nt,
+            'dt': dt * ct.c * k_p / nt,
             'kp': k_p
         }
 
