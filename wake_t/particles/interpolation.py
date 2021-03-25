@@ -191,3 +191,105 @@ def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
             ez_part[i] = dr_u*ez_z_1 + dr_l*ez_z_2
     return wx_part, wy_part, ez_part
 
+
+@njit()
+def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
+                                r_max, dz, dr, r, z):
+    """
+    Convenient method for gathering at once the three source fields needed
+    by the Baxevanis wakefield model (a2 and nabla_a from the laser, and
+    b_theta_0 from the beam) into the plasma particles. This method is also
+    catered to cylindrical geometry and assumes all plasma particles have the
+    same longitudinal position (which is the case in a quasistatic model,
+    where there is only a single column of particles).
+
+    Parameters:
+    -----------
+
+    fld_1, fld_2, fld_3 : ndarray
+        The three source fields. Each of them is a (nr+4, nr+4) array,
+        including 2 guard cells in each boundary.
+
+    z_min, z_max : float
+        Position of the first and last field values along z.
+
+    r_min, r_max : float
+        Position of the first and last field values along r.
+
+    dz, dr : float
+        Grid step size along the longitudinal and radial direction.
+
+    r : 1darray
+        Transverse position of the plasma particles.
+
+    z : int
+        Longitudinal position of the column of plasma particles.
+
+    Returns:
+    --------
+
+    A tuple with three 1darray containing the gathered field values at the
+    position of each particle.
+
+    """
+    n_part = r.shape[0]
+
+    # Preallocate output arrays with field values.
+    fld_1_part = np.zeros(n_part)
+    fld_2_part = np.zeros(n_part)
+    fld_3_part = np.zeros(n_part)
+
+    # Iterate over all particles.
+    for i in prange(n_part):
+
+        # Get particle position.
+        z_i = z
+        r_i = r[i]
+
+        # Gather field only if particle is within field boundaries.
+        if z_i >= z_min and z_i <= z_max and r_i <= r_max:
+            # Position in cell units.
+            r_i_cell = (r_i - r_min)/dr + 2
+            z_i_cell = (z_i - z_min)/dz + 2
+
+            # Indices of upper and lower cells in r and z.
+            ir_lower = int(math.floor(r_i_cell))
+            ir_upper = ir_lower + 1
+            iz_lower = int(math.floor(z_i_cell))
+            iz_upper = iz_lower + 1
+
+            # If lower r cell is below axis, assume same value as first cell
+            if ir_lower < 2:
+                ir_lower = 2
+
+            # Get field value at each bounding cell.
+            fld_1_ll = fld_1[iz_lower, ir_lower]
+            fld_1_lu = fld_1[iz_lower, ir_upper]
+            fld_1_ul = fld_1[iz_upper, ir_lower]
+            fld_1_uu = fld_1[iz_upper, ir_upper]
+            fld_2_ll = fld_2[iz_lower, ir_lower]
+            fld_2_lu = fld_2[iz_lower, ir_upper]
+            fld_2_ul = fld_2[iz_upper, ir_lower]
+            fld_2_uu = fld_2[iz_upper, ir_upper]
+            fld_3_ll = fld_3[iz_lower, ir_lower]
+            fld_3_lu = fld_3[iz_lower, ir_upper]
+            fld_3_ul = fld_3[iz_upper, ir_lower]
+            fld_3_uu = fld_3[iz_upper, ir_upper]
+
+            # Interpolate in z
+            dz_u = iz_upper - z_i_cell
+            dz_l = z_i_cell - iz_lower
+            fld_1_z_1 = dz_u*fld_1_ll + dz_l*fld_1_ul
+            fld_1_z_2 = dz_u*fld_1_lu + dz_l*fld_1_uu
+            fld_2_z_1 = dz_u*fld_2_ll + dz_l*fld_2_ul
+            fld_2_z_2 = dz_u*fld_2_lu + dz_l*fld_2_uu
+            fld_3_z_1 = dz_u*fld_3_ll + dz_l*fld_3_ul
+            fld_3_z_2 = dz_u*fld_3_lu + dz_l*fld_3_uu
+
+            # Interpolate in r
+            dr_u = ir_upper - r_i_cell
+            dr_l = 1 - dr_u
+            fld_1_part[i] = dr_u*fld_1_z_1 + dr_l*fld_1_z_2
+            fld_2_part[i] = dr_u*fld_2_z_1 + dr_l*fld_2_z_2
+            fld_3_part[i] = dr_u*fld_3_z_1 + dr_l*fld_3_z_2
+    return fld_1_part, fld_2_part, fld_3_part
