@@ -97,9 +97,9 @@ class LaserPulse():
         
         """
         k_0 = 2*np.pi / self.l_0
-        a_env = evolve_envelope(self.a_env, self.a_env_old, chi, k_0,
+        a_env_old, a_env = evolve_envelope(self.a_env, self.a_env_old, chi, k_0,
                         **self.solver_params)
-        self.a_env_old[:] = self.a_env
+        self.a_env_old[:] = a_env_old[0: -2]
         self.a_env = a_env[0: -2]
 
     def get_group_velocity(self, n_p):
