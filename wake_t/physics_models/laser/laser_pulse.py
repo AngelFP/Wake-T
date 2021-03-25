@@ -5,6 +5,8 @@ This module contains the class definitions for different laser pulses.
 import numpy as np
 import scipy.constants as ct
 
+from .envelope_solver import evolve_envelope
+
 
 class LaserPulse():
 
@@ -47,13 +49,14 @@ class LaserPulse():
         """
         k_p = np.sqrt(ct.e**2 * n_p / (ct.m_e*ct.epsilon_0)) / ct.c
         self.solver_params = {
-            'xi_min': xi_min * k_p,
-            'xi_max': xi_max * k_p,
-            'r_max': r_max * k_p,
+            'zmin': xi_min * k_p,
+            'zmax': xi_max * k_p,
+            'rmax': r_max * k_p,
             'nz': nz,
             'nr': nr,
+            'nt': 1,
             'dt': dt * ct.c * k_p,
-            'k_p': k_p
+            'kp': k_p
         }
 
     def initialize_envelope(self):
@@ -65,17 +68,17 @@ class LaserPulse():
             raise ValueError(
                 'Envelope solver parameters not yet set.'
                 'Cannot initialize envelope.')
-        k_p = self.solver_params['k_p']
-        z_min = self.solver_params['xi_min'] / k_p
-        z_max = self.solver_params['xi_max'] / k_p
-        r_max = self.solver_params['r_max'] / k_p
+        k_p = self.solver_params['kp']
+        z_min = self.solver_params['zmin'] / k_p
+        z_max = self.solver_params['zmax'] / k_p
+        r_max = self.solver_params['rmax'] / k_p
         nz = self.solver_params['nz']
         nr = self.solver_params['nr']
         dt = self.solver_params['dt'] / (ct.c * k_p)
         dr = r_max / nr
         z = np.linspace(z_min, z_max, nz)
         r = np.linspace(dr/2, r_max-dr/2, nr)
-        ZZ, RR = np.meshgrid(z, r)
+        ZZ, RR = np.meshgrid(z, r, indexing='ij')
         self.a_env = self.envelope_function(ZZ, RR, 0.)
         self.a_env_old = self.envelope_function(ZZ, RR, -dt*ct.c)
 
@@ -94,8 +97,10 @@ class LaserPulse():
         
         """
         k_0 = 2*np.pi / self.l_0
-        # evolve_envelope(self.a_env, self.a_env_old, chi, k_0,
-        #                 **self.solver_params)
+        a_env = evolve_envelope(self.a_env, self.a_env_old, chi, k_0,
+                        **self.solver_params)
+        self.a_env_old[:] = self.a_env
+        self.a_env = a_env[0: -2]
 
     def get_group_velocity(self, n_p):
         """
