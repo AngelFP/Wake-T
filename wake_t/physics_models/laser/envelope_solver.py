@@ -19,7 +19,7 @@ def L(sign, k, dr):
     Parameters
     ----------
     sign : int
-        1, 0 or 1, which defines the -, 0, + symbol respectively.
+        1, 0 or -1, which defines the +, 0, - symbol respectively.
     k : int
         The rho grid coordinate: 0<=k<=Np-1.
     dr : float
