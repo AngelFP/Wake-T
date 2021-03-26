@@ -115,12 +115,14 @@ class Quasistatic2DWakefield(Wakefield):
         grid_global_offset = [0., self.current_t*ct.c+self.xi_min]
         # Cell-centered in 'r' anf 'z'. TODO: check correctness.
         fld_position = [0.5, 0.5]
-        fld_names = ['E', 'W', 'rho']
-        fld_comps = [['z'], ['r'], None]
+        fld_names = ['E', 'W', 'rho', 'chi', 'a']
+        fld_comps = [['z'], ['r'], None, None, None]
         fld_arrays = [
             [np.ascontiguousarray(self.E_z.T[2:-2, 2:-2])],
             [np.ascontiguousarray(self.W_x.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.rho.T[2:-2, 2:-2])]
+            [np.ascontiguousarray(self.rho.T[2:-2, 2:-2])],
+            [np.ascontiguousarray(self.chi.T[2:-2, 2:-2])],
+            [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))]
             ]
         fld_comp_pos = [fld_position] * len(fld_names)
 
