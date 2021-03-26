@@ -117,7 +117,11 @@ class Quasistatic2DWakefield(Wakefield):
         fld_position = [0.5, 0.5]
         fld_names = ['E', 'W', 'rho']
         fld_comps = [['z'], ['r'], None]
-        fld_arrays = [[self.E_z.T[2:-2, 2:-2]], [self.W_x.T[2:-2, 2:-2]], [self.rho.T[2:-2, 2:-2]]]
+        fld_arrays = [
+            [np.ascontiguousarray(self.E_z.T[2:-2, 2:-2])],
+            [np.ascontiguousarray(self.W_x.T[2:-2, 2:-2])],
+            [np.ascontiguousarray(self.rho.T[2:-2, 2:-2])]
+            ]
         fld_comp_pos = [fld_position] * len(fld_names)
 
         # Generate dictionary for openPMD diagnostics.
