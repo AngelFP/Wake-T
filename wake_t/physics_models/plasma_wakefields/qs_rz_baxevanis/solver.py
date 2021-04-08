@@ -254,7 +254,7 @@ def motion_derivatives(dxi, dr_p, xi, r, pr, q, a2_rz, nabla_a2_rz,
     dr, dpr = calculate_derivatives(dxi, dr_p, r_max_plasma, r, pr, q,
                                     b_theta_0, nabla_a2, a2)
 
-    # For particles which crossed the axis and where inverted, invert now 
+    # For particles which crossed the axis and where inverted, invert now
     # back the sign of the derivatives.
     if idx_neg[0].size > 0:
         dr[idx_neg] *= -1.
@@ -459,11 +459,11 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p):
                          - 0.25 * r_max ** 2
                          - 0.5 * r_max**2 * (np.log(r_right)-np.log(r_max)))
             dr_psi_right = sum_1_new / r_right - 0.5 * r_max**2 / r_right
-        
+
         # Interpolate psi.
         b_1 = (psi_right - psi_left) / (r_right - r_left)
         a_1 = psi_left - b_1*r_left
-        psi[i] =  a_1 + b_1*r_i
+        psi[i] = a_1 + b_1*r_i
 
         # Interpolate dr_psi.
         b_2 = (dr_psi_right - dr_psi_left) / (r_right - r_left)
@@ -482,7 +482,7 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p):
     else:
         # Force potential to be zero after the last particle.
         psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_max ** 2
-                     - 0.5 * r_max**2 * (np.log(r_N) -np.log(r_max)))
+                     - 0.5 * r_max**2 * (np.log(r_N) - np.log(r_max)))
 
     # In theory, psi cannot be smaller than -1. However, it has been observed
     # than in very strong blowouts, near the peak, values below -1 can appear
@@ -528,7 +528,7 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p):
         dxi_psi[i] = a + b*r_i
         sum_3 = sum_3_new
 
-    # Apply longitudinal derivative of the boundary conditions of psi. 
+    # Apply longitudinal derivative of the boundary conditions of psi.
     if r_right <= r_max:
         dxi_psi = dxi_psi + sum_3
     else:
@@ -619,7 +619,7 @@ def calculate_psi(r_fld, r, q, r_max):
                 psi[j] = (sum_1_arr[i]*np.log(r_j) - sum_2_arr[i]
                           - 0.25*r_max**2
                           - 0.5 * r_max**2 * (np.log(r_j)-np.log(r_max)))
-    
+
     # Apply boundary conditions.
     if r_N <= r_max:
         psi = psi - (sum_1 * np.log(r_max) - sum_2 - 0.25 * r_max ** 2)
@@ -758,7 +758,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
 
     # Preallocate field array.
     b_theta_bar = np.zeros(n_part)
-    
+
     # Calculate field value at plasma particles by interpolating between two
     # neighboring values. Same as with psi and its derivaties.
     for i_sort in range(n_part):
