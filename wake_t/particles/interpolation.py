@@ -158,7 +158,7 @@ def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
 
             # If lower r cell is below axis, assume same value as first cell
             # for `ez` and sign inverse of the first cell value for `wx`. This
-            # assures that wx=0 on axis.
+            # ensures that wx=0 on axis.
             wx_corr = 1
             if ir_lower < 2:
                 ir_lower = 2
@@ -207,8 +207,9 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
     -----------
 
     fld_1, fld_2, fld_3 : ndarray
-        The three source fields. Each of them is a (nr+4, nr+4) array,
-        including 2 guard cells in each boundary.
+        The three source fields, corresponding respectively to a2, nabla_a2
+        and b_theta_0. Each of them is a (nr+4, nr+4) array, including 2 guard
+        cells in each boundary.
 
     z_min, z_max : float
         Position of the first and last field values along z.
@@ -258,18 +259,21 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
             iz_lower = int(math.floor(z_i_cell))
             iz_upper = iz_lower + 1
 
-            # If lower r cell is below axis, assume same value as first cell
+            # If lower r cell is below axis, assume same value as first cell.
+            # For `nabla_a2`, invert the sign to ensure `nabla_a2=0` on axis.
+            sign = 1
             if ir_lower < 2:
                 ir_lower = 2
+                sign = -1
 
             # Get field value at each bounding cell.
             fld_1_ll = fld_1[iz_lower, ir_lower]
             fld_1_lu = fld_1[iz_lower, ir_upper]
             fld_1_ul = fld_1[iz_upper, ir_lower]
             fld_1_uu = fld_1[iz_upper, ir_upper]
-            fld_2_ll = fld_2[iz_lower, ir_lower]
+            fld_2_ll = fld_2[iz_lower, ir_lower] * sign
             fld_2_lu = fld_2[iz_lower, ir_upper]
-            fld_2_ul = fld_2[iz_upper, ir_lower]
+            fld_2_ul = fld_2[iz_upper, ir_lower] * sign
             fld_2_uu = fld_2[iz_upper, ir_upper]
             fld_3_ll = fld_3[iz_lower, ir_lower]
             fld_3_lu = fld_3[iz_lower, ir_upper]
