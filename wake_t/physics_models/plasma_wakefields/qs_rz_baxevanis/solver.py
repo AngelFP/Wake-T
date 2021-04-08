@@ -67,8 +67,10 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     # Initialize plasma particles.
     dr = r_max / n_r
     dr_p = dr / ppc
-    n_part = n_r * ppc
-    r = np.linspace(dr_p / 2, r_max - dr_p / 2, n_part)
+    # Maximum radial extent of the plasma. TODO: expose as input parameter.
+    r_max_plasma = r_max
+    n_part = int(r_max_plasma / dr) * ppc
+    r = np.linspace(dr_p / 2, r_max_plasma - dr_p / 2, n_part)
     pr = np.zeros_like(r)
     pz = np.zeros_like(r)
     gamma = np.ones_like(r)
@@ -81,7 +83,7 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     a2_rz = np.zeros((n_xi+4, n_r+4))
     nabla_a2_rz = np.zeros((n_xi+4, n_r+4))
     a2_rz[2:-2, 2:-2] = laser_a2
-    nabla_a2_rz[2:-2, 2:-2] = np.gradient(laser_a2, dr, axis=1)
+    nabla_a2_rz[2:-2, 2:-2] = np.gradient(laser_a2, dr, axis=1, edge_order=2)
 
     # Initialize field arrays, including guard cells.
     rho = np.zeros((n_xi+4, n_r+4))
@@ -110,15 +112,25 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
             r_fld[0], r_fld[-1], dxi, dr, r, xi)
 
         # Calculate wakefield potential and derivatives at plasma particles.
-        out = calculate_psi_and_derivatives_at_particles(r, pr, q)
+        out = calculate_psi_and_derivatives_at_particles(
+            r, pr, q, r_max_plasma, dr_p)
         psi_p, dr_psi_p, dxi_psi_p = out
 
         # Update gamma and pz of plasma particles
         update_gamma_and_pz(gamma, pz, pr, a2, psi_p)
 
+        # If particles violate the quasistatic condition, slow them down again.
+        # This preserves the charge and shows better behavior than directly
+        # removing them.
+        max_gamma = 10.  # TODO: expose as input parameter.
+        idx_keep = np.where(gamma >= max_gamma)
+        pz[idx_keep] = 0.
+        gamma[idx_keep] = 1.
+        pr[idx_keep] = 0.
+
         # Calculate fields at specified radii for current plasma column.
         i = -1 - step
-        psi[i-2, 2:-2] = calculate_psi(r_fld, r, q)
+        psi[i-2, 2:-2] = calculate_psi(r_fld, r, q, r_max_plasma)
         b_theta_bar[i-2, 2:-2] = calculate_b_theta(
             r_fld, r, pr, q, gamma, psi_p, dr_psi_p, dxi_psi_p, b_theta_0,
             nabla_a2)
@@ -136,19 +148,8 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
 
         if step < n_xi-1:
             # Evolve plasma to next xi step.
-            evolve_plasma(r, pr, q, xi, dxi, a2_rz, nabla_a2_rz,
-                          b_theta_0_mesh, xi_fld, r_fld)
-
-            # Remove particles leaving simulation boundaries (plus margin).
-            idx_keep = np.where(r <= r_max + 0.1)
-            r = r[idx_keep]
-            pr = pr[idx_keep]
-            gamma = gamma[idx_keep]
-            pz = pz[idx_keep]
-            q = q[idx_keep]
-
-            if r.shape[0] == 0:
-                break
+            evolve_plasma(r, pr, q, xi, dxi, dr_p, a2_rz, nabla_a2_rz,
+                          b_theta_0_mesh, xi_fld, r_fld, r_max_plasma)
 
     # Calculate derived fields (E_z, W_r, and E_r).
     dxi_psi, dr_psi = np.gradient(psi[2:-2, 2:-2], dxi, dr, edge_order=2)
@@ -158,8 +159,8 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     return rho, chi, W_r, E_z, xi_fld, r_fld
 
 
-def evolve_plasma(r, pr, q, xi, dxi, a2_rz, nabla_a2_rz, b_theta_0_mesh,
-                  xi_fld, r_fld):
+def evolve_plasma(r, pr, q, xi, dxi, dr_p, a2_rz, nabla_a2_rz, b_theta_0_mesh,
+                  xi_fld, r_fld, r_max_plasma):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
     using a Runge-Kutta method of 4th order.
@@ -184,6 +185,10 @@ def evolve_plasma(r, pr, q, xi, dxi, a2_rz, nabla_a2_rz, b_theta_0_mesh,
     dxi : float
         Longitudinal step for the Runge-Kutta solver.
 
+    dr_p : float
+        Initial spacing between plasma macroparticles. Corresponds also the
+        width of the plasma sheet represented by the macroparticle.
+
     a2_rz, nabla_a2_rz, b_theta_0_mesh : ndarray
         (nz+4, nr+4) arrays containing the source fields, i.e., the square
         of the laser envelope and its derivative as well as the azimuthal
@@ -192,23 +197,27 @@ def evolve_plasma(r, pr, q, xi, dxi, a2_rz, nabla_a2_rz, b_theta_0_mesh,
     xi_fld, r_fld : array
         Arrays containing the position of the field points.
 
+    r_max_plasma : float
+        Maximum radial extent of the plasma column.
+
     """
     Ar, Apr = motion_derivatives(
-        dxi, xi, r, pr, q, a2_rz, nabla_a2_rz, b_theta_0_mesh, xi_fld, r_fld)
+        dxi, dr_p, xi, r, pr, q, a2_rz, nabla_a2_rz, b_theta_0_mesh, xi_fld,
+        r_fld, r_max_plasma)
     Br, Bpr = motion_derivatives(
-        dxi, xi - dxi / 2, r + Ar / 2, pr + Apr / 2, q, a2_rz, nabla_a2_rz,
-        b_theta_0_mesh, xi_fld, r_fld)
+        dxi, dr_p, xi - dxi / 2, r + Ar / 2, pr + Apr / 2, q, a2_rz,
+        nabla_a2_rz, b_theta_0_mesh, xi_fld, r_fld, r_max_plasma)
     Cr, Cpr = motion_derivatives(
-        dxi, xi - dxi / 2, r + Br / 2, pr + Bpr / 2, q, a2_rz, nabla_a2_rz,
-        b_theta_0_mesh, xi_fld, r_fld)
+        dxi, dr_p, xi - dxi / 2, r + Br / 2, pr + Bpr / 2, q, a2_rz,
+        nabla_a2_rz, b_theta_0_mesh, xi_fld, r_fld, r_max_plasma)
     Dr, Dpr = motion_derivatives(
-        dxi, xi - dxi, r + Cr, pr + Cpr, q, a2_rz, nabla_a2_rz,
-        b_theta_0_mesh, xi_fld, r_fld)
+        dxi, dr_p, xi - dxi, r + Cr, pr + Cpr, q, a2_rz, nabla_a2_rz,
+        b_theta_0_mesh, xi_fld, r_fld, r_max_plasma)
     return update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr)
 
 
-def motion_derivatives(dxi, xi, r, pr, q, a2_rz, nabla_a2_rz, b_theta_0_mesh,
-                       xi_fld, r_fld):
+def motion_derivatives(dxi, dr_p, xi, r, pr, q, a2_rz, nabla_a2_rz,
+                       b_theta_0_mesh, xi_fld, r_fld, r_max_plasma):
     """
     Return the derivatives of the radial position and momentum of the plasma
     particles.
@@ -242,11 +251,19 @@ def motion_derivatives(dxi, xi, r, pr, q, a2_rz, nabla_a2_rz, b_theta_0_mesh,
         dxi, dr, r, xi)
 
     # Calculate motion derivatives in jittable method.
-    return calculate_derivatives(dxi, r, pr, q, b_theta_0, nabla_a2, a2)
+    dr, dpr = calculate_derivatives(dxi, dr_p, r_max_plasma, r, pr, q,
+                                    b_theta_0, nabla_a2, a2)
+
+    # For particles which crossed the axis and where inverted, invert now
+    # back the sign of the derivatives.
+    if idx_neg[0].size > 0:
+        dr[idx_neg] *= -1.
+        dpr[idx_neg] *= -1.
+    return dr, dpr
 
 
 @njit()
-def calculate_derivatives(dxi, r, pr, q, b_theta_0, nabla_a2, a2):
+def calculate_derivatives(dxi, dr_p, r_max, r, pr, q, b_theta_0, nabla_a2, a2):
     """
     Jittable method to which the calculation of the motion derivatives is
     outsourced.
@@ -259,6 +276,13 @@ def calculate_derivatives(dxi, r, pr, q, b_theta_0, nabla_a2, a2):
     r, pr, q : ndarray
         Arrays containing the radial position, momentum and charge of the
         particles.
+
+    dr_p : float
+        Initial spacing between plasma macroparticles. Corresponds also the
+        width of the plasma sheet represented by the macroparticle.
+
+    r_max : float
+        Maximum radial extent of the plasma column.
 
     b_theta_0 : ndarray
         Array containing the value of the azimuthal magnetic field from
@@ -280,7 +304,8 @@ def calculate_derivatives(dxi, r, pr, q, b_theta_0, nabla_a2, a2):
     gamma = np.empty(n_part)
 
     # Calculate wakefield potential and its derivaties at particle positions.
-    psi, dr_psi, dxi_psi = calculate_psi_and_derivatives_at_particles(r, pr, q)
+    psi, dr_psi, dxi_psi = calculate_psi_and_derivatives_at_particles(
+        r, pr, q, r_max, dr_p)
 
     # Calculate gamma (Lorentz factor) of particles.
     for i in range(n_part):
@@ -290,7 +315,7 @@ def calculate_derivatives(dxi, r, pr, q, b_theta_0, nabla_a2, a2):
 
     # Calculate azimuthal magnetic field from plasma at particle positions.
     b_theta_bar = calculate_b_theta_at_particles(
-        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2)
+        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2, dr_p)
 
     # Calculate derivatives of r and pr.
     for i in range(n_part):
@@ -342,12 +367,12 @@ def update_gamma_and_pz(gamma, pz, pr, a2, psi):
 
     """
     for i in range(pr.shape[0]):
-        gamma[i] = (1 + pr[i]**2 + a2[i]/2 + (1+psi[i])**2) / (2 * (1+psi[i]))
-        pz[i] = (1 + pr[i]**2 + a2[i]/2 - (1+psi[i])**2) / (2 * (1+psi[i]))
+        gamma[i] = (1 + pr[i]**2 + a2[i] + (1+psi[i])**2) / (2 * (1+psi[i]))
+        pz[i] = (1 + pr[i]**2 + a2[i] - (1+psi[i])**2) / (2 * (1+psi[i]))
 
 
 @njit()
-def calculate_psi_and_derivatives_at_particles(r, pr, q):
+def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p):
     """
     Calculate the wakefield potential and its derivatives at the position
     of the plasma particles. This is done by using Eqs. (29) - (32) in
@@ -363,6 +388,13 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q):
         Arrays containing the radial position, momentum and charge of the
         plasma particles.
 
+    r_max : float
+        Maximum radial extent of the plasma column.
+
+    dr_p : float
+        Initial spacing between plasma macroparticles. Corresponds also the
+        width of the plasma sheet represented by the macroparticle.
+
     """
     # Initialize arrays.
     n_part = r.shape[0]
@@ -376,32 +408,94 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q):
     sum_3 = 0.
 
     # Calculate psi and dr_psi.
+    # Their value at the position of each plasma particle is calculated
+    # by doing a linear interpolation between two values at the left and
+    # right of the particle. The left point is the middle position between the
+    # particle and its closest left neighbor, and the same for the right.
     idx = np.argsort(r)
     for i_sort in range(n_part):
         i = idx[i_sort]
         r_i = r[i]
-        pr_i = pr[i]
         q_i = q[i]
 
         # Calculate new sums.
         sum_1_new = sum_1 + q_i
         sum_2_new = sum_2 + q_i * np.log(r_i)
 
-        # Calculate average.
-        sum_1_avg = 0.5 * (sum_1 + sum_1_new)
-        sum_2_avg = 0.5 * (sum_2 + sum_2_new)
+        # If this is not the first particle, calculate the left point (r_left)
+        # and the field values there (psi_left and dr_psi_left) as usual.
+        if i_sort > 0:
+            r_im1 = r[idx[i_sort-1]]
+            r_left = (r_im1 + r_i) / 2
+            if r_left <= r_max:
+                psi_left = sum_1 * np.log(r_left) - sum_2 - 0.25 * r_left ** 2
+                dr_psi_left = sum_1 / r_left - 0.5 * r_left
+            else:
+                psi_left = (sum_1 * np.log(r_left) - sum_2 - 0.25 * r_max ** 2
+                            - 0.5 * r_max**2 * (np.log(r_left)-np.log(r_max)))
+                dr_psi_left = sum_1 / r_left - 0.5 * r_max**2 / r_left
+        # Otherwise, take r=0 as the location of the left point.
+        else:
+            r_left = 0.
+            psi_left = 0.
+            dr_psi_left = 0.
 
-        # Calculate psi and dr_psi.
-        psi[i] = sum_1_avg * np.log(r_i) - sum_2_avg - 0.25 * r_i ** 2
-        dr_psi[i] = sum_1_avg / r_i - 0.5 * r_i
+        # If this is not the last particle, calculate the r_right as
+        # middle point.
+        if i_sort < n_part - 1:
+            r_ip1 = r[idx[i_sort+1]]
+            r_right = (r_i + r_ip1) / 2
+        # Otherwise, since the particle represents a charge sheet of width
+        # dr_p, take the right point as r_i + dr_p/2.
+        else:
+            r_right = r_i + dr_p/2
+        # Calculate field values ar r_right.
+        if r_right <= r_max:
+            psi_right = (sum_1_new * np.log(r_right) - sum_2_new
+                         - 0.25 * r_right ** 2)
+            dr_psi_right = sum_1_new / r_right - 0.5 * r_right
+        else:
+            psi_right = (sum_1_new * np.log(r_right) - sum_2_new
+                         - 0.25 * r_max ** 2
+                         - 0.5 * r_max**2 * (np.log(r_right)-np.log(r_max)))
+            dr_psi_right = sum_1_new / r_right - 0.5 * r_max**2 / r_right
+
+        # Interpolate psi.
+        b_1 = (psi_right - psi_left) / (r_right - r_left)
+        a_1 = psi_left - b_1*r_left
+        psi[i] = a_1 + b_1*r_i
+
+        # Interpolate dr_psi.
+        b_2 = (dr_psi_right - dr_psi_left) / (r_right - r_left)
+        a_2 = dr_psi_left - b_2*r_left
+        dr_psi[i] = a_2 + b_2*r_i
 
         # Update value of sums.
         sum_1 = sum_1_new
         sum_2 = sum_2_new
-    r_N = r[-1]
-    psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_N ** 2)
 
-    # Calculate dxi_psi.
+    # Boundary condition for psi.
+    r_N = r_right
+    if r_N <= r_max:
+        # Force potential to be zero at the plasma edge.
+        psi = psi - (sum_1 * np.log(r_max) - sum_2 - 0.25 * r_max ** 2)
+    else:
+        # Force potential to be zero after the last particle.
+        psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_max ** 2
+                     - 0.5 * r_max**2 * (np.log(r_N) - np.log(r_max)))
+
+    # In theory, psi cannot be smaller than -1. However, it has been observed
+    # than in very strong blowouts, near the peak, values below -1 can appear
+    # in this numerical method. In addition, values very close to -1 will lead
+    # to particles with gamma >> 10, which will also lead to problems.
+    # This condition here makes sure that this does not happen, improving
+    # the stability of the solver.
+    for i in range(n_part):
+        # Should only happen close to the peak of very strong blowouts.
+        if psi[i] < -0.90:
+            psi[i] = -0.90
+
+    # Calculate dxi_psi (also by interpolation).
     for i_sort in range(n_part):
         i = idx[i_sort]
         r_i = r[i]
@@ -410,14 +504,50 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q):
         psi_i = psi[i]
 
         sum_3_new = sum_3 + (q_i * pr_i) / (r_i * (1 + psi_i))
-        dxi_psi[i] = -0.5 * (sum_3 + sum_3_new)
+
+        # Check if it is the first particle.
+        if i_sort > 0:
+            r_im1 = r[idx[i_sort-1]]
+            r_left = (r_im1 + r_i) / 2
+            dxi_psi_left = -sum_3
+        else:
+            r_left = 0.
+            dxi_psi_left = 0.
+
+        # Check if it is the last particle.
+        if i_sort < n_part - 1:
+            r_ip1 = r[idx[i_sort+1]]
+            r_right = (r_i + r_ip1) / 2
+        else:
+            r_right = r_i + dr_p/2
+        dxi_psi_right = -sum_3_new
+
+        # Do interpolation.
+        b = (dxi_psi_right - dxi_psi_left) / (r_right - r_left)
+        a = dxi_psi_left - b*r_left
+        dxi_psi[i] = a + b*r_i
         sum_3 = sum_3_new
-    dxi_psi = dxi_psi + sum_3
+
+    # Apply longitudinal derivative of the boundary conditions of psi.
+    if r_right <= r_max:
+        dxi_psi = dxi_psi + sum_3
+    else:
+        dxi_psi = dxi_psi + sum_3 - (sum_1-r_max**2/2) * pr_i / r_right
+
+    # Again, near the peak of a strong blowout, very large and unphysical
+    # values could appear. This condition makes sure a threshold us not
+    # exceeded.
+    for i in range(n_part):
+        if dxi_psi[i] > 3.:
+            dxi_psi[i] = 3.
+        if dxi_psi[i] < -3.:
+            dxi_psi[i] = -3.
+
     return psi, dr_psi, dxi_psi
 
 
 @njit()
-def calculate_psi(r_fld, r, q):
+def calculate_psi(r_fld, r, q, r_max):
     """
     Calculate the wakefield potential at the radial
     positions specified in r_fld. This is done by using Eq. (29) in
@@ -432,10 +562,12 @@ def calculate_psi(r_fld, r, q):
         Arrays containing the radial position, and charge of the
         plasma particles.
 
+    r_max : float
+        Maximum radial extent of the plasma column.
+
     """
     # Initialize arrays with values of psi and sums at plasma particles.
     n_part = r.shape[0]
-    psi_part = np.zeros(n_part)
     sum_1_arr = np.zeros(n_part)
     sum_2_arr = np.zeros(n_part)
     sum_1 = 0.
@@ -452,9 +584,7 @@ def calculate_psi(r_fld, r, q):
         sum_2 += q_i * np.log(r_i)
         sum_1_arr[i] = sum_1
         sum_2_arr[i] = sum_2
-        psi_part[i] = sum_1 * np.log(r_i) - sum_2 - 0.25 * r_i ** 2
-    r_N = r[-1]
-    psi_part += - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_N ** 2)
+    r_N = r_i
 
     # Initialize array for psi at r_fld locations.
     n_points = r_fld.shape[0]
@@ -473,12 +603,29 @@ def calculate_psi(r_fld, r, q):
                 i_last -= 1
                 break
         # Calculate fields at r_j.
-        if i_last == -1:
-            psi[j] = -0.25 * r_j ** 2
+        if r_j < r_max:
+            # Apply equations for location within plasma column.
+            if i_last == -1:
+                psi[j] = -0.25 * r_j ** 2
+            else:
+                i = idx[i_last]
+                psi[j] = sum_1_arr[i]*np.log(r_j) - sum_2_arr[i] - 0.25*r_j**2
         else:
-            i_p = idx[i_last]
-            psi[j] = sum_1_arr[i_p]*np.log(r_j) - sum_2_arr[i_p] - 0.25*r_j**2
-    psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_N ** 2)
+            # Apply equations for location outside of plasma column.
+            if i_last == -1:
+                psi[j] = -0.25 * r_max ** 2
+            else:
+                i = idx[i_last]
+                psi[j] = (sum_1_arr[i]*np.log(r_j) - sum_2_arr[i]
+                          - 0.25*r_max**2
+                          - 0.5 * r_max**2 * (np.log(r_j)-np.log(r_max)))
+
+    # Apply boundary conditions.
+    if r_N <= r_max:
+        psi = psi - (sum_1 * np.log(r_max) - sum_2 - 0.25 * r_max ** 2)
+    else:
+        psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_max ** 2
+                     - 0.5 * r_max**2 * (np.log(r_N) - np.log(r_max)))
     return psi
 
 
@@ -572,7 +719,7 @@ def calculate_psi_and_derivatives(r_fld, r, pr, q):
 
 @njit()
 def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
-                                   b_theta_0, nabla_a2):
+                                   b_theta_0, nabla_a2, dr_p):
     """
     Calculate the azimuthal magnetic field from the plasma at the location
     of the plasma particles using Eqs. (24), (26) and (27) from the paper
@@ -597,6 +744,10 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
         azimuthal magnetic field due to the beam distribution, and the second
         the gradient of the normalized vector potential of the laser.
 
+    dr_p : float
+        Initial spacing between plasma macroparticles. Corresponds also the
+        width of the plasma sheet represented by the macroparticle.
+
     """
     # Calculate a_i and b_i, as well as a_0 and the sorted particle indices.
     a_i, b_i, a_0, idx = calculate_ai_bi_from_edge(
@@ -604,17 +755,46 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
 
     # Calculate field at particles as average between neighboring values.
     n_part = r.shape[0]
-    a_im1 = a_0
-    b_im1 = 0.
-    a_i_avg = np.zeros(n_part)
-    b_i_avg = np.zeros(n_part)
+
+    # Preallocate field array.
+    b_theta_bar = np.zeros(n_part)
+
+    # Calculate field value at plasma particles by interpolating between two
+    # neighboring values. Same as with psi and its derivaties.
     for i_sort in range(n_part):
         i = idx[i_sort]
-        a_i_avg[i] = 0.5 * (a_i[i] + a_im1)
-        b_i_avg[i] = 0.5 * (b_i[i] + b_im1)
+        r_i = r[i]
+        if i_sort > 0:
+            r_im1 = r[idx[i_sort-1]]
+            a_im1 = a_i[idx[i_sort-1]]
+            b_im1 = b_i[idx[i_sort-1]]
+            r_left = (r_im1 + r_i) / 2
+            b_theta_left = a_im1 * r_left + b_im1 / r_left
+        else:
+            b_theta_left = 0.
+            r_left = 0.
+        if i_sort < n_part - 1:
+            r_ip1 = r[idx[i_sort+1]]
+        else:
+            r_ip1 = r[i] * dr_p / 2
+        r_right = (r_i + r_ip1) / 2
+        b_theta_right = a_i[i] * r_right + b_i[i] / r_right
+
+        # Do interpolation.
+        b = (b_theta_right - b_theta_left) / (r_right - r_left)
+        a = b_theta_left - b*r_left
+        b_theta_bar[i] = a + b*r_i
+
+        # Near the peak of a strong blowout, very large and unphysical
+        # values could appear. This condition makes sure a threshold us not
+        # exceeded.
+        if b_theta_bar[i] > 3.:
+            b_theta_bar[i] = 3.
+        if b_theta_bar[i] < -3.:
+            b_theta_bar[i] = -3.
+
         a_im1 = a_i[i]
         b_im1 = b_i[i]
-    b_theta_bar = a_i_avg * r + b_i_avg / r
     return b_theta_bar
 
 
@@ -912,9 +1092,9 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
     # Get a_0 (value on-axis) and make sure a_i and b_i only contain the values
     # at the plasma particles.
-    a_0 = a_i[0]
-    a_i = a_i[1:]
-    b_i = b_i[1:]
+    a_0 = a_i[idx[0]]
+    a_i = np.delete(a_i, idx[0])
+    b_i = np.delete(b_i, idx[0])
 
     return a_i, b_i, a_0, idx
 
