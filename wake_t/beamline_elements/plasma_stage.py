@@ -263,9 +263,9 @@ class PlasmaStage():
         t_final = self.length/ct.c
         t_step = t_final/self.n_out
         dt = self._get_optimized_dt(bunch)
-        iterations = int(t_final/dt)
+        iterations = int(np.ceil(t_final/dt))
         # force at least 1 iteration per step
-        it_per_step = max(int(iterations/self.n_out), 1)
+        it_per_step = int(max(np.ceil(iterations/self.n_out), 1))
         iterations = it_per_step*self.n_out
         dt_adjusted = t_final/iterations
         # initialize list to store the distribution at each step
