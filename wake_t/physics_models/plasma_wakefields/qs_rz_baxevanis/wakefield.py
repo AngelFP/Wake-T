@@ -57,8 +57,7 @@ class Quasistatic2DWakefield(Wakefield):
             self.current_t_wf = t
         else:
             return
-        z_beam = t*ct.c + np.average(xi)  # z postion of beam center
-        n_p = self.density_function(z_beam)
+        n_p = self.density_function(t*ct.c)
 
         # Evolve laser envelope
         if t == 0.:
