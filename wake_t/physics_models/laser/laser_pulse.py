@@ -55,7 +55,7 @@ class LaserPulse():
 
         """
         k_p = np.sqrt(ct.e**2 * n_p / (ct.m_e*ct.epsilon_0)) / ct.c
-        self.solver_params = {
+        solver_params = {
             'zmin': xi_min * k_p,
             'zmax': xi_max * k_p,
             'rmax': r_max * k_p,
@@ -65,29 +65,34 @@ class LaserPulse():
             'dt': dt * ct.c * k_p / nt,
             'kp': k_p
         }
+        if self.a_env is not None and solver_params != self.solver_params:
+            raise ValueError(
+                'Solver parameters cannot be changed once envelope has been '
+                'initialized.'
+            )
+        else:
+            self.solver_params = solver_params
 
     def initialize_envelope(self):
         """ Initialize laser envelope arrays. """
-        if self.a_env is not None:
-            raise ValueError(
-                'Envelope model already initialized.')
         if self.solver_params is None:
             raise ValueError(
                 'Envelope solver parameters not yet set.'
                 'Cannot initialize envelope.')
-        k_p = self.solver_params['kp']
-        z_min = self.solver_params['zmin'] / k_p
-        z_max = self.solver_params['zmax'] / k_p
-        r_max = self.solver_params['rmax'] / k_p
-        nz = self.solver_params['nz']
-        nr = self.solver_params['nr']
-        dt = self.solver_params['dt'] / (ct.c * k_p)
-        dr = r_max / nr
-        z = np.linspace(z_min, z_max, nz)
-        r = np.linspace(dr/2, r_max-dr/2, nr)
-        ZZ, RR = np.meshgrid(z, r, indexing='ij')
-        self.a_env = self.envelope_function(ZZ, RR, 0.)
-        self.a_env_old = self.envelope_function(ZZ, RR, -dt*ct.c)
+        if self.a_env is None:
+            k_p = self.solver_params['kp']
+            z_min = self.solver_params['zmin'] / k_p
+            z_max = self.solver_params['zmax'] / k_p
+            r_max = self.solver_params['rmax'] / k_p
+            nz = self.solver_params['nz']
+            nr = self.solver_params['nr']
+            dt = self.solver_params['dt'] / (ct.c * k_p)
+            dr = r_max / nr
+            z = np.linspace(z_min, z_max, nz)
+            r = np.linspace(dr/2, r_max-dr/2, nr)
+            ZZ, RR = np.meshgrid(z, r, indexing='ij')
+            self.a_env = self.envelope_function(ZZ, RR, 0.)
+            self.a_env_old = self.envelope_function(ZZ, RR, -dt*ct.c)
 
     def get_envelope(self):
         """ Get the current laser envelope array. """
