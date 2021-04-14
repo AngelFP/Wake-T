@@ -181,7 +181,7 @@ class GaussianPulse(LaserPulse):
         Complex envelope of a Gaussian beam in the paraxial approximation.
         
         """
-        z = xi + z_pos - self.z_foc
+        z = xi + z_pos
         diff_factor = 1. + 1j * (z - self.z_foc) / self.z_r
         s_z = self.tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
         # Phases
