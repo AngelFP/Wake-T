@@ -8,6 +8,7 @@ Authors: Wilbert den Hertog, Ángel Ferran Pousa, Carlo Benedetti
 
 import numpy as np
 from numba import njit
+import scipy.constants as ct
 
 
 @njit()
@@ -244,8 +245,9 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt):
     a_old[0:-2] = aold
     a[0:-2] = a0
 
-    dz = (zmax - zmin) / (nz - 1)
-    dr = rmax / nr
+    dz = (zmax - zmin) * kp / (nz - 1)
+    dr = rmax * kp / nr
+    dt = dt * ct.c * kp
 
     k0p = k0 / kp
 
