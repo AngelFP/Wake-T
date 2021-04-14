@@ -28,7 +28,7 @@ class LaserPulse():
         self.solver_params = None
 
     def set_envelope_solver_params(self, xi_min, xi_max, r_max, nz, nr, dt,
-                                   n_p, nt=1):
+                                   nt=1):
         """
         Set the parameters for the laser envelope solver.
 
@@ -44,8 +44,6 @@ class LaserPulse():
         dt : float
             Time step, in SI units, that the laser pulse should advance every
             time `evolve` is called.
-        n_p : float
-            Plasma density in SI units.
         nt : int
             Number of sub-time-steps that should be computed every time
             `evolve` is called. The internal time step used by the solver is
@@ -54,16 +52,14 @@ class LaserPulse():
             computed using the same `chi`.
 
         """
-        k_p = np.sqrt(ct.e**2 * n_p / (ct.m_e*ct.epsilon_0)) / ct.c
         solver_params = {
-            'zmin': xi_min * k_p,
-            'zmax': xi_max * k_p,
-            'rmax': r_max * k_p,
+            'zmin': xi_min,
+            'zmax': xi_max,
+            'rmax': r_max,
             'nz': nz,
             'nr': nr,
             'nt': nt,
-            'dt': dt * ct.c * k_p / nt,
-            'kp': k_p
+            'dt': dt / nt
         }
         if self.a_env is not None and solver_params != self.solver_params:
             raise ValueError(
@@ -80,13 +76,12 @@ class LaserPulse():
                 'Envelope solver parameters not yet set.'
                 'Cannot initialize envelope.')
         if self.a_env is None:
-            k_p = self.solver_params['kp']
-            z_min = self.solver_params['zmin'] / k_p
-            z_max = self.solver_params['zmax'] / k_p
-            r_max = self.solver_params['rmax'] / k_p
+            z_min = self.solver_params['zmin']
+            z_max = self.solver_params['zmax']
+            r_max = self.solver_params['rmax']
             nz = self.solver_params['nz']
             nr = self.solver_params['nr']
-            dt = self.solver_params['dt'] / (ct.c * k_p)
+            dt = self.solver_params['dt']
             dr = r_max / nr
             z = np.linspace(z_min, z_max, nz)
             r = np.linspace(dr/2, r_max-dr/2, nr)
@@ -98,7 +93,7 @@ class LaserPulse():
         """ Get the current laser envelope array. """
         return self.a_env
 
-    def evolve(self, chi):
+    def evolve(self, chi, n_p):
         """
         Evolve laser envelope to next time step.
 
@@ -106,11 +101,14 @@ class LaserPulse():
         -----------
         chi : ndarray
             A (nz x nr) array containing the plasma susceptibility.
+        n_p : float
+            Plasma density in SI units.
         
         """
         k_0 = 2*np.pi / self.l_0
-        a_env_old, a_env = evolve_envelope(self.a_env, self.a_env_old, chi, k_0,
-                        **self.solver_params)
+        k_p = np.sqrt(ct.e**2 * n_p / (ct.m_e*ct.epsilon_0)) / ct.c
+        a_env_old, a_env = evolve_envelope(
+            self.a_env, self.a_env_old, chi, k_0, k_p, **self.solver_params)
         self.a_env_old[:] = a_env_old[0: -2]
         self.a_env = a_env[0: -2]
 

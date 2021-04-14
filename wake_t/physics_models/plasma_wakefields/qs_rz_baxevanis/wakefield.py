@@ -63,11 +63,11 @@ class Quasistatic2DWakefield(Wakefield):
         if t == 0.:
             self.laser.set_envelope_solver_params(
                 self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
-                self.dz_fields/ct.c, n_p)
+                self.dz_fields/ct.c)
             self.laser.initialize_envelope()
         elif self.laser_evolution:
             # Evolve laser in the current chi (removing guard cells).
-            self.laser.evolve(self.chi[2:-2, 2:-2])
+            self.laser.evolve(self.chi[2:-2, 2:-2], n_p)
 
         # Laser envelope
         a_env = np.abs(self.laser.get_envelope()) ** 2
