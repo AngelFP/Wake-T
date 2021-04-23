@@ -28,8 +28,8 @@ class Quasistatic2DWakefield(Wakefield):
         self.p_shape = p_shape
         # Last time at which the fields where requested.
         self.current_t = None
-        # Last time at which the fields where calculated.
-        self.current_t_wf = None
+        # Last step at which the fields where calculated.
+        self.current_wf_step = None
         # Last time at which the fields where interpolated to the particles.
         self.current_t_interp = None
 
@@ -50,24 +50,27 @@ class Quasistatic2DWakefield(Wakefield):
 
     def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
         self.current_t = t
-        if self.current_t_wf is None:
-            self.current_t_wf = t
-        elif (self.current_t_wf != t and
-              t >= self.current_t_wf + self.dz_fields/ct.c):
-            self.current_t_wf = t
+        required_wf_step = int(np.round(t * ct.c / self.dz_fields))
+        if self.current_wf_step is None:
+            self.current_wf_step = required_wf_step
+            # Initialize laser.
+            self.laser.set_envelope_solver_params(
+                self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
+                self.dz_fields/ct.c)
+            self.laser.initialize_envelope()
+            d_step = required_wf_step
+        elif required_wf_step > self.current_wf_step:
+            d_step = required_wf_step - self.current_wf_step
+            self.current_wf_step = required_wf_step
         else:
             return
         n_p = self.density_function(t*ct.c)
 
         # Evolve laser envelope
-        if t == 0.:
-            self.laser.set_envelope_solver_params(
-                self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
-                self.dz_fields/ct.c)
-            self.laser.initialize_envelope()
-        elif self.laser_evolution:
-            # Evolve laser in the current chi (removing guard cells).
-            self.laser.evolve(self.chi[2:-2, 2:-2], n_p)
+        if self.laser_evolution:
+            for s in range(d_step):
+                # Evolve laser in the current chi (removing guard cells).
+                self.laser.evolve(self.chi[2:-2, 2:-2], n_p)
 
         # Laser envelope
         a_env = np.abs(self.laser.get_envelope()) ** 2
