@@ -33,7 +33,7 @@ def gaussian_profile(z, decay_length=None, density_top=None,
 
 
 ramp_profiles = {
-    'inverse square': inverse_square_profile,
+    'inverse_square': inverse_square_profile,
     'exponential': exponential_profile,
     'gaussian': gaussian_profile
 }
@@ -43,7 +43,7 @@ class PlasmaRamp(PlasmaStage):
 
     """ Convenience class to define a plasma density ramp """
 
-    def __init__(self, length, profile='inverse square', ramp_type='upramp',
+    def __init__(self, length, profile='inverse_square', ramp_type='upramp',
                  wakefield_model='focusing_blowout', decay_length=None,
                  plasma_dens_top=None, plasma_dens_down=None,
                  position_down=None, n_out=None, **model_params):
