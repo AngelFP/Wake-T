@@ -69,7 +69,9 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     dr_p = dr / ppc
     # Maximum radial extent of the plasma. TODO: expose as input parameter.
     r_max_plasma = r_max
-    n_part = int(r_max_plasma / dr) * ppc
+    n_part = int(np.round(r_max_plasma / dr * ppc))
+    # Readjust plasma extent to match number of particles.
+    r_max_plasma = n_part * dr_p
     r = np.linspace(dr_p / 2, r_max_plasma - dr_p / 2, n_part)
     pr = np.zeros_like(r)
     pz = np.zeros_like(r)
