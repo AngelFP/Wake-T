@@ -294,7 +294,7 @@ class PlasmaStage():
             )
             if opmd_diag is not False:
                 opmd_diag.write_diagnostics(
-                    s*t_step, t_step, [bunch_list[-1]], self.wakefield)
+                    (s+1)*t_step, t_step, [bunch_list[-1]], self.wakefield)
         # print computing time
         end = time.time()
         print("Done ({:1.3f} seconds).".format(end-start))
