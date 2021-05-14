@@ -182,8 +182,8 @@ class PlasmaStage():
             never updated throughout the simulation.
 
         r_max_plasma : float
-            Maximum radial extension of the plasma column. If `None`, the plasma
-            extends up to the `r_max` boundary of the simulation box.
+            Maximum radial extension of the plasma column. If `None`, the
+            plasma extends up to the `r_max` boundary of the simulation box.
 
         p_shape : str
             Particle shape to be used for the beam charge deposition. Possible

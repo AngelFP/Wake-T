@@ -103,7 +103,7 @@ class LaserPulse():
             A (nz x nr) array containing the plasma susceptibility.
         n_p : float
             Plasma density in SI units.
-        
+
         """
         k_0 = 2*np.pi / self.l_0
         k_p = np.sqrt(ct.e**2 * n_p / (ct.m_e*ct.epsilon_0)) / ct.c
@@ -134,7 +134,7 @@ class LaserPulse():
     def envelope_function(self, xi, r, z_pos):
         """
         Complex envelope of a Gaussian beam in the paraxial approximation.
-        
+
         """
         return np.zeros_like(r)
 
@@ -142,7 +142,7 @@ class LaserPulse():
 class GaussianPulse(LaserPulse):
 
     """ Class defining a Gaussian laser pulse. """
-    
+
     def __init__(self, xi_c, l_0, w_0, a_0=None, tau=None, z_foc=None,
                  polarization='linear'):
         """
@@ -179,7 +179,7 @@ class GaussianPulse(LaserPulse):
     def envelope_function(self, xi, r, z_pos):
         """
         Complex envelope of a Gaussian beam in the paraxial approximation.
-        
+
         """
         z = xi + z_pos
         diff_factor = 1. + 1j * (z - self.z_foc) / self.z_r

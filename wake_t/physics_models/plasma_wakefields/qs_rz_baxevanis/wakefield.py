@@ -78,7 +78,7 @@ class Quasistatic2DWakefield(Wakefield):
 
             # Laser envelope
             a_env = np.abs(self.laser.get_envelope()) ** 2
-        
+
         else:
             a_env = np.zeros((self.n_xi, self.n_r))
 
