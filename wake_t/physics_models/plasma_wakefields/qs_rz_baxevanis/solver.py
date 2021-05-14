@@ -1111,9 +1111,6 @@ def calculate_beam_source(bunch, n_p, n_r, n_xi, r_min, xi_min, dr, dxi,
     # Plasma skin depth.
     s_d = ge.plasma_skin_depth(n_p / 1e6)
 
-    # Grid arrays with guard cells.
-    r_grid_g = (0.5 + np.arange(-2, n_r + 2)) * dr
-
     # Get and normalize particle coordinate arrays.
     xi_n = bunch.xi / s_d
     x_n = bunch.x / s_d
@@ -1127,8 +1124,20 @@ def calculate_beam_source(bunch, n_p, n_r, n_xi, r_min, xi_min, dr, dxi,
     deposit_3d_distribution(xi_n, x_n, y_n, w, xi_min, r_min, n_xi, n_r, dxi,
                             dr, q_dist, p_shape=p_shape)
 
-    # Calculate radial integral (Eq. (18)).
-    r_int = np.cumsum(q_dist, axis=1) / np.abs(r_grid_g) * dr
+    # Remove guard cells
+    q_dist = q_dist[2:-2, 2:-2]
+
+    # Calculate radial integral (Eq. (18)) using trapezoidal rule.
+    # First calculate area of trapezoids.
+    tz_area = np.zeros((n_xi, n_r))
+    tz_area[:, 1:] = (q_dist[:, :-1] + q_dist[:, 1:])/2 * dr
+    # Assume q_dist = 0 at exactly r = 0.
+    tz_area[:, 0] = q_dist[:, 0] / 2 * dr / 2
+    # Radial position of the grid points.
+    r_grid_g = (0.5 + np.arange(n_r)) * dr
+    # Compute integral.
+    r_int = np.zeros((n_xi+4, n_r+4))
+    r_int[2:-2, 2:-2] = np.cumsum(tz_area, axis=1) / np.abs(r_grid_g)
 
     return r_int
 
@@ -1143,9 +1152,6 @@ def calculate_beam_source_from_particles(
     # Plasma skin depth.
     s_d = ge.plasma_skin_depth(n_p / 1e6)
 
-    # Grid arrays with guard cells.
-    r_grid_g = (0.5 + np.arange(-2, n_r + 2)) * dr
-
     # Get and normalize particle coordinate arrays.
     xi_n = xi / s_d
     x_n = x / s_d
@@ -1159,7 +1165,18 @@ def calculate_beam_source_from_particles(
     deposit_3d_distribution(xi_n, x_n, y_n, w, xi_min, r_min, n_xi, n_r, dxi,
                             dr, q_dist, p_shape=p_shape)
 
-    # Calculate radial integral (Eq. (18)).
-    r_int = np.cumsum(q_dist, axis=1) / np.abs(r_grid_g) * dr
+    # Remove guard cells
+    q_dist = q_dist[2:-2, 2:-2]
 
+    # Calculate radial integral (Eq. (18)) using trapezoidal rule.
+    # First calculate area of trapezoids.
+    tz_area = np.zeros((n_xi, n_r))
+    tz_area[:, 1:] = (q_dist[:, :-1] + q_dist[:, 1:])/2 * dr
+    # Assume q_dist = 0 at exactly r = 0.
+    tz_area[:, 0] = q_dist[:, 0] / 2 * dr / 2
+    # Radial position of the grid points.
+    r_grid_g = (0.5 + np.arange(n_r)) * dr
+    # Compute integral.
+    r_int = np.zeros((n_xi+4, n_r+4))
+    r_int[2:-2, 2:-2] = np.cumsum(tz_area, axis=1) / np.abs(r_grid_g)
     return r_int
