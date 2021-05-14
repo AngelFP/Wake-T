@@ -53,11 +53,12 @@ class Quasistatic2DWakefield(Wakefield):
         required_wf_step = int(np.round(t * ct.c / self.dz_fields))
         if self.current_wf_step is None:
             self.current_wf_step = required_wf_step
-            # Initialize laser.
-            self.laser.set_envelope_solver_params(
-                self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
-                self.dz_fields/ct.c)
-            self.laser.initialize_envelope()
+            if self.laser is not None:
+                # Initialize laser.
+                self.laser.set_envelope_solver_params(
+                    self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
+                    self.dz_fields/ct.c)
+                self.laser.initialize_envelope()
             d_step = required_wf_step
         elif required_wf_step > self.current_wf_step:
             d_step = required_wf_step - self.current_wf_step
@@ -66,14 +67,18 @@ class Quasistatic2DWakefield(Wakefield):
             return
         n_p = self.density_function(t*ct.c)
 
-        # Evolve laser envelope
-        if self.laser_evolution:
-            for s in range(d_step):
-                # Evolve laser in the current chi (removing guard cells).
-                self.laser.evolve(self.chi[2:-2, 2:-2], n_p)
+        if self.laser is not None:
+            # Evolve laser envelope
+            if self.laser_evolution:
+                for s in range(d_step):
+                    # Evolve laser in the current chi (removing guard cells).
+                    self.laser.evolve(self.chi[2:-2, 2:-2], n_p)
 
-        # Laser envelope
-        a_env = np.abs(self.laser.get_envelope()) ** 2
+            # Laser envelope
+            a_env = np.abs(self.laser.get_envelope()) ** 2
+        
+        else:
+            a_env = np.zeros((self.n_xi, self.n_r))
 
         # Calculate plasma wakefields
         rho, chi, W_r, E_z, xi_arr, r_arr = calculate_wakefields(
@@ -118,15 +123,20 @@ class Quasistatic2DWakefield(Wakefield):
         grid_global_offset = [0., self.current_t*ct.c+self.xi_min]
         # Cell-centered in 'r' anf 'z'. TODO: check correctness.
         fld_position = [0.5, 0.5]
-        fld_names = ['E', 'W', 'rho', 'chi', 'a']
-        fld_comps = [['z'], ['r'], None, None, None]
+        fld_names = ['E', 'W', 'rho', 'chi']
+        fld_comps = [['z'], ['r'], None, None]
         fld_arrays = [
             [np.ascontiguousarray(self.E_z.T[2:-2, 2:-2])],
             [np.ascontiguousarray(self.W_x.T[2:-2, 2:-2])],
             [np.ascontiguousarray(self.rho.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.chi.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))]
+            [np.ascontiguousarray(self.chi.T[2:-2, 2:-2])]
             ]
+        if self.laser is not None:
+            fld_names.append('a')
+            fld_comps.append(None)
+            fld_arrays.append(
+                [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))]
+            )
         fld_comp_pos = [fld_position] * len(fld_names)
 
         # Generate dictionary for openPMD diagnostics.
