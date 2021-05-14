@@ -132,11 +132,12 @@ class Quasistatic2DWakefield(Wakefield):
             [np.ascontiguousarray(self.chi.T[2:-2, 2:-2])]
             ]
         if self.laser is not None:
-            fld_names.append('a')
-            fld_comps.append(None)
-            fld_arrays.append(
-                [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))]
-            )
+            fld_names += ['a', 'aphi']
+            fld_comps += [None, None]
+            fld_arrays += [
+                [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))],
+                [np.ascontiguousarray(np.angle(self.laser.get_envelope().T))]
+            ]
         fld_comp_pos = [fld_position] * len(fld_names)
 
         # Generate dictionary for openPMD diagnostics.
