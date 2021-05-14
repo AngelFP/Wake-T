@@ -260,7 +260,8 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
             iz_upper = iz_lower + 1
 
             # If lower r cell is below axis, assume same value as first cell.
-            # For `nabla_a2`, invert the sign to ensure `nabla_a2=0` on axis.
+            # For `nabla_a2` and `b_theta_0`, invert the sign to ensure they
+            # are `0` on axis.
             sign = 1
             if ir_lower < 2:
                 ir_lower = 2
@@ -275,9 +276,9 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
             fld_2_lu = fld_2[iz_lower, ir_upper]
             fld_2_ul = fld_2[iz_upper, ir_lower] * sign
             fld_2_uu = fld_2[iz_upper, ir_upper]
-            fld_3_ll = fld_3[iz_lower, ir_lower]
+            fld_3_ll = fld_3[iz_lower, ir_lower] * sign
             fld_3_lu = fld_3[iz_lower, ir_upper]
-            fld_3_ul = fld_3[iz_upper, ir_lower]
+            fld_3_ul = fld_3[iz_upper, ir_lower] * sign
             fld_3_uu = fld_3[iz_upper, ir_upper]
 
             # Interpolate in z
