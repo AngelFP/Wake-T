@@ -106,7 +106,7 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             # rc = ruyten_coef[ir]
 
             # Particle position wrt left neighbor gridpoint in r.
-            if r_cell < 0:
+            if r_cell <= 0:
                 # Force all charge to be deposited above axis
                 u = 1.
             else:
@@ -190,12 +190,13 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             rsc_2 = inv_6 * (3. * v_r**3 - 6. * v_r**2 + 4.)  # - rc*v_r*u_r
             rsc_3 = inv_6 * u_r ** 3
 
-            if r_cell < 0.:
+            # Force all charge to be deposited above axis.
+            if r_cell <= 0.:
                 rsc_3 += rsc_0
                 rsc_2 += rsc_1
                 rsc_0 = 0.
                 rsc_1 = 0.
-            elif r_cell < 1.:
+            elif r_cell <= 1.:
                 rsc_1 += rsc_0
                 rsc_0 = 0.
 
