@@ -4,9 +4,7 @@
 [![PyPI](https://img.shields.io/pypi/v/Wake-T)](https://pypi.org/project/Wake-T/)
 [![License](https://img.shields.io/github/license/AngelFP/Wake-T)](https://github.com/AngelFP/Wake-T/blob/master/LICENSE)
 
-<p align="center">
-  <img alt="Wake-T logo" src="other/WakeT_logo_dot.png" width="300px" />
-</p>
+![Highlight image](other/header.png)
 
 ## Overview
  `Wake-T` (**Wake**field particle **T**racker) is a tracking code for plasma wakefield accelerators which aims at providing a fast alternative to Particle-in-Cell (PIC) simulations. Instead of relying on the computationally-expensive PIC algorithm for simulating the plasma wakefields and the beam evolution, `Wake-T` uses a Runge-Kutta solver to track the evolution of the beam electrons in the wakefields, which, at the same time, are computed from reduced models. This allows for a significant speed-up of the simulations, which can be performed in a matter of seconds instead or hours/days. An overview of this strategy can be seen in the following figure:
