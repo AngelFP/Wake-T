@@ -445,13 +445,9 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p,
         if i_sort > 0:
             r_im1 = r[idx[i_sort-1]]
             r_left = (r_im1 + r_i) / 2
-            if r_left <= r_max:
-                psi_left = sum_1 * np.log(r_left) - sum_2 - 0.25 * r_left ** 2 - parabolic_coef*r_left**4/16
-                dr_psi_left = sum_1 / r_left - 0.5 * r_left - 0.25*parabolic_coef*r_left**3
-            else:
-                psi_left = (sum_1 * np.log(r_left) - sum_2 - 0.25 * r_max ** 2 - parabolic_coef*r_max**4/16
-                            - (0.5 * r_max**2 + 0.25*parabolic_coef*r_max**4 )* (np.log(r_left)-np.log(r_max)))
-                dr_psi_left = sum_1 / r_left - (0.5 * r_max**2 + 0.25*parabolic_coef*r_max**4 ) / r_left
+            psi_left = delta_psi_eq(r_left, sum_1, sum_2, r_max,
+                                    parabolic_coef)
+            dr_psi_left = dr_psi_eq(r_left, sum_1, r_max, parabolic_coef)
         # Otherwise, take r=0 as the location of the left point.
         else:
             r_left = 0.
@@ -468,15 +464,9 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p,
         else:
             r_right = r_i + dr_p/2
         # Calculate field values ar r_right.
-        if r_right <= r_max:
-            psi_right = (sum_1_new * np.log(r_right) - sum_2_new
-                         - 0.25 * r_right ** 2 - parabolic_coef*r_right**4/16)
-            dr_psi_right = sum_1_new / r_right - 0.5 * r_right - 0.25*parabolic_coef*r_right**3
-        else:
-            psi_right = (sum_1_new * np.log(r_right) - sum_2_new
-                         - 0.25 * r_max ** 2 - parabolic_coef*r_max**4/16
-                         - (0.5 * r_max**2 + 0.25*parabolic_coef*r_max**4 ) * (np.log(r_right)-np.log(r_max)))
-            dr_psi_right = sum_1_new / r_right - (0.5 * r_max**2 + 0.25*parabolic_coef*r_max**4 ) / r_right
+        psi_right = delta_psi_eq(r_right, sum_1_new, sum_2_new, r_max,
+                                 parabolic_coef)
+        dr_psi_right = dr_psi_eq(r_right, sum_1_new, r_max, parabolic_coef)
 
         # Interpolate psi.
         b_1 = (psi_right - psi_left) / (r_right - r_left)
@@ -492,15 +482,10 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p,
         sum_1 = sum_1_new
         sum_2 = sum_2_new
 
-    # Boundary condition for psi.
-    r_N = r_right
-    if r_N <= r_max:
-        # Force potential to be zero at the plasma edge.
-        psi = psi - (sum_1 * np.log(r_max) - sum_2 - 0.25 * r_max ** 2 - parabolic_coef*r_max**4/16)
-    else:
-        # Force potential to be zero after the last particle.
-        psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_max ** 2  - parabolic_coef*r_max**4/16
-                     - (0.5 * r_max**2 + 0.25*parabolic_coef*r_max**4 ) * (np.log(r_N) - np.log(r_max)))
+    # Boundary condition for psi (Force potential to be zero either at the
+    # plasma edge or after the last particle, whichever is further away).
+    r_furthest = max(r_right, r_max)
+    psi = psi - delta_psi_eq(r_furthest, sum_1, sum_2, r_max, parabolic_coef)
 
     # In theory, psi cannot be smaller than -1. However, it has been observed
     # than in very strong blowouts, near the peak, values below -1 can appear
@@ -550,7 +535,8 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p,
     if r_right <= r_max:
         dxi_psi = dxi_psi + sum_3
     else:
-        dxi_psi = dxi_psi + sum_3 - (sum_1-r_max**2/2) * pr_i / r_right
+        dxi_psi = dxi_psi + sum_3 - ((sum_1-r_max**2/2-parabolic_coef*r_max/4)
+                                     * pr_i / (r_right * (1 + psi_i)))
 
     # Again, near the peak of a strong blowout, very large and unphysical
     # values could appear. This condition makes sure a threshold us not
@@ -621,30 +607,44 @@ def calculate_psi(r_fld, r, q, r_max, parabolic_coef):
                 i_last -= 1
                 break
         # Calculate fields at r_j.
-        if r_j < r_max:
-            # Apply equations for location within plasma column.
-            if i_last == -1:
-                psi[j] = -0.25 * r_j ** 2
-            else:
-                i = idx[i_last]
-                psi[j] = sum_1_arr[i]*np.log(r_j) - sum_2_arr[i] - 0.25*r_j**2 - parabolic_coef*r_j**4/16
+        if i_last == -1:
+            sum_1_j = 0.
+            sum_2_j = 0.
         else:
-            # Apply equations for location outside of plasma column.
-            if i_last == -1:
-                psi[j] = -0.25 * r_max ** 2
-            else:
-                i = idx[i_last]
-                psi[j] = (sum_1_arr[i]*np.log(r_j) - sum_2_arr[i]
-                          - 0.25*r_max**2 - parabolic_coef*r_max**4/16
-                          - (0.5 * r_max**2 + 0.25*parabolic_coef*r_max**4) * (np.log(r_j)-np.log(r_max)))
+            i = idx[i_last]
+            sum_1_j = sum_1_arr[i]
+            sum_2_j = sum_2_arr[i]
+        psi[j] = delta_psi_eq(r_j, sum_1_j, sum_2_j, r_max, parabolic_coef)
 
     # Apply boundary conditions.
-    if r_N <= r_max:
-        psi = psi - (sum_1 * np.log(r_max) - sum_2 - 0.25 * r_max ** 2 - parabolic_coef*r_max**4/16)
-    else:
-        psi = psi - (sum_1 * np.log(r_N) - sum_2 - 0.25 * r_max ** 2 - parabolic_coef*r_max**4/16
-                     - (0.5 * r_max**2 + 0.25*parabolic_coef*r_max**4) * (np.log(r_N) - np.log(r_max)))
+    r_furthest = max(r_N, r_max)
+    psi = psi - delta_psi_eq(r_furthest, sum_1, sum_2, r_max, parabolic_coef)
     return psi
+
+
+@njit()
+def delta_psi_eq(r, sum_1, sum_2, r_max, parabolic_coef):
+    """ Adapted equation (29) from original paper. """
+    delta_psi_elec = sum_1*np.log(r) - sum_2
+    if r <= r_max:
+        delta_psi_ion = 0.25*r**2 + parabolic_coef*r**4/16
+    else:
+        delta_psi_ion = (
+            0.25*r_max**2 + parabolic_coef*r_max**4/16 +
+            (0.5 * r_max**2 + 0.25*parabolic_coef*r_max**4) * (
+                np.log(r)-np.log(r_max)))
+    return delta_psi_elec - delta_psi_ion
+
+
+@njit()
+def dr_psi_eq(r, sum_1, r_max, parabolic_coef):
+    """ Adapted equation (31) from original paper. """
+    dr_psi_elec = sum_1 / r
+    if r <= r_max:
+        dr_psi_ion = 0.5 * r + 0.25 * parabolic_coef * r ** 3
+    else:
+        dr_psi_ion = (0.5 * r_max**2 + 0.25 * parabolic_coef * r_max**4) / r
+    return dr_psi_elec - dr_psi_ion
 
 
 @njit()
