@@ -185,6 +185,12 @@ class PlasmaStage():
             Maximum radial extension of the plasma column. If `None`, the
             plasma extends up to the `r_max` boundary of the simulation box.
 
+        parabolic_coefficient : float
+            The coefficient for the transverse parabolic density profile. The
+            radial density distribution is calculated as
+            `n_r = n_p * (1 + parabolic_coefficient * r**2)`, where n_p is the
+            local on-axis plasma density.
+
         p_shape : str
             Particle shape to be used for the beam charge deposition. Possible
             values are 'linear' or 'cubic'.
