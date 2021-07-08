@@ -62,7 +62,7 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     parabolic_coefficient : float
         The coefficient for the transverse parabolic density profile. The
         radial density distribution is calculated as
-        `n_r = n_p * (1 + parabolic_coefficient * r**2)`, where n_p is the
+        `n_r = n_p * (1 + parabolic_coefficient * r**2)`, where `n_p` is the
         local on-axis plasma density.
 
     p_shape : str
