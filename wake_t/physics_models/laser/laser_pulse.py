@@ -16,8 +16,7 @@ from .envelope_solver import evolve_envelope
 
 
 class LaserPulse():
-
-    """ Base class for all Laser pulses. """
+    """Base class for all Laser pulses."""
 
     def __init__(self, l_0):
         """
@@ -27,7 +26,6 @@ class LaserPulse():
         -----------
         l_0 : float
             Laser wavelength in units of m.
-
         """
         self.l_0 = l_0
         self.a_env_old = None
@@ -35,7 +33,7 @@ class LaserPulse():
         self.solver_params = None
 
     def __add__(self, pulse_2):
-        """ Overload the add operator to allow summing of laser pulses. """
+        """Overload the add operator to allow summing of laser pulses."""
         return SummedPulse(self, pulse_2)
 
     def set_envelope_solver_params(self, xi_min, xi_max, r_max, nz, nr, dt,
@@ -61,7 +59,6 @@ class LaserPulse():
             therefore dt/nt, so that the laser effectively advances by `dt`
             every time `evolve` is called. All these time steps are therefore
             computed using the same `chi`.
-
         """
         solver_params = {
             'zmin': xi_min,
@@ -81,7 +78,7 @@ class LaserPulse():
             self.solver_params = solver_params
 
     def initialize_envelope(self):
-        """ Initialize laser envelope arrays. """
+        """Initialize laser envelope arrays."""
         if self.solver_params is None:
             raise ValueError(
                 'Envelope solver parameters not yet set.'
@@ -101,7 +98,7 @@ class LaserPulse():
             self.a_env_old = self.envelope_function(ZZ, RR, -dt*ct.c)
 
     def get_envelope(self):
-        """ Get the current laser envelope array. """
+        """Get the current laser envelope array."""
         return self.a_env
 
     def evolve(self, chi, n_p):
@@ -114,7 +111,6 @@ class LaserPulse():
             A (nz x nr) array containing the plasma susceptibility.
         n_p : float
             Plasma density in SI units.
-
         """
         k_0 = 2*np.pi / self.l_0
         k_p = np.sqrt(ct.e**2 * n_p / (ct.m_e*ct.epsilon_0)) / ct.c
@@ -135,7 +131,6 @@ class LaserPulse():
         Returns:
         --------
         A float containing the group velocity.
-
         """
         w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
         k = 2*np.pi/self.l_0
@@ -143,15 +138,12 @@ class LaserPulse():
         return v_g
 
     def envelope_function(self, xi, r, z_pos):
-        """
-        Complex envelope of a Gaussian beam in the paraxial approximation.
-
-        """
+        """Return the complex envelope of the laser pulse."""
         return np.zeros_like(r)
 
 
 class SummedPulse(LaserPulse):
-    """ Class defining a laser pulse made up of the addition of two pulses. """
+    """Class defining a laser pulse made up of the addition of two pulses."""
 
     def __init__(self, pulse_1, pulse_2):
         """
@@ -173,18 +165,17 @@ class SummedPulse(LaserPulse):
         self.pulse_2 = pulse_2
 
     def envelope_function(self, xi, r, z_pos):
-        """ Return the summed envelope of the two pulses. """
+        """Return the summed envelope of the two pulses."""
         a_env_1 = self.pulse_1.envelope_function(xi, r, z_pos)
         a_env_2 = self.pulse_2.envelope_function(xi, r, z_pos)
         return a_env_1 + a_env_2
 
 
 class GaussianPulse(LaserPulse):
+    """Class defining a Gaussian laser pulse."""
 
-    """ Class defining a Gaussian laser pulse. """
-
-    def __init__(self, xi_c, l_0, w_0, a_0=None, tau=None, z_foc=None,
-                 polarization='linear'):
+    def __init__(self, xi_c, a_0, w_0, tau, z_foc=None, l_0=0.8e-6,
+                 cep_phase=0., polarization='linear'):
         """
         Initialize Gaussian pulse.
 
@@ -192,20 +183,24 @@ class GaussianPulse(LaserPulse):
         -----------
         xi_c : float
             Initial central position of the pulse along xi in units of m.
-        l_0 : float
-            Laser wavelength in units of m.
-        w_0 : float
-            Spot size (w_0) of the laser pulse in units of m.
         a_0 : float
-            Peak normalized vector potential.
+            The peak normalized vector potential at the focal plane.
+        w_0 : float
+            Spot size of the laser pulse, in units of m, at the focal plane.
         tau : float
             Longitudinal pulse length (FWHM in intensity) in units of s.
         z_foc : float
             Focal position of the pulse.
+        l_0 : float
+            Laser wavelength in units of m. By default, a Ti:Sa laser with
+            `l_0=0.8e-6` is assumed.
+        cep_phase: float
+            The Carrier Envelope Phase (CEP) in radian. This is the phase of
+            the laser oscillation at the position where the envelope is
+            maximum.
         polarization : str
             Polarization of the laser pulse. Accepted values are 'linear'
             (default) or 'circular'.
-
         """
         super().__init__(l_0)
         self.xi_c = xi_c
@@ -214,21 +209,22 @@ class GaussianPulse(LaserPulse):
         self.w_0 = w_0
         self.z_foc = z_foc
         self.z_r = np.pi * w_0**2 / l_0
+        self.cep_phase = cep_phase
         self.polarization = polarization
 
     def envelope_function(self, xi, r, z_pos):
         """
         Complex envelope of a Gaussian beam in the paraxial approximation.
-
         """
         z = xi + z_pos
         diff_factor = 1. + 1j * (z - self.z_foc) / self.z_r
         s_z = self.tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
         # Phases
-        exp_r = r**2 / (self.w_0**2 * diff_factor)
-        exp_z = (xi-self.xi_c)**2 / (2*s_z**2)
+        exp_cep = -1j * self.cep_phase
+        exp_r = -r**2 / (self.w_0**2 * diff_factor)
+        exp_z = -(xi-self.xi_c)**2 / (2*s_z**2)
         # Profile
-        gaussian_profile = np.exp(- exp_r - exp_z)
+        gaussian_profile = np.exp(exp_cep + exp_r + exp_z)
         # Amplitude
         avg_amplitude = self.a_0
         if self.polarization == 'linear':
@@ -237,39 +233,44 @@ class GaussianPulse(LaserPulse):
 
 
 class LaguerreGaussPulse(LaserPulse):
-
-    """ Class defining a Laguerre-Gauss pulse. """
+    """Class defining a Laguerre-Gauss pulse."""
 
     def __init__(self, xi_c, p, a_0, w_0, tau, z_foc=None,
                  l_0=0.8e-6, cep_phase=0., polarization='linear'):
         """
-        Define a Laguerre-Gauss laser profile. Only the `0` azimuthal mode
+        Initialize a Laguerre-Gauss laser profile.
+
+        Due to the cylindrical geometry of Wake-T, only the `0` azimuthal mode
         is supported.
 
         Parameters
         ----------
         xi_c : float
             Initial central position of the pulse along xi in units of m.
-        p: int (positive)
+        p : int (positive)
             The order of the Laguerre polynomial. Increasing ``p`` increases
             the number of "rings" in the radial intensity profile of the laser.
-        a_0: float (dimensionless)
-            The amplitude of the pulse, defined so that the total
-            energy of the pulse is the same as that of a Gaussian pulse
-            with the same :math:`a_0`, :math:`w_0` and :math:`\\tau`.
-            (i.e. The energy of the pulse is independent of ``p``.)
-        w_0: float (in meter)
-            Laser waist at the focal plane.
-        tau: float (in second)
-            Longitudinal pulse duration (FWHM in intensity).
+        a_0 : float
+            The peak normalized vector potential at the focal plane, defined
+            so that the total energy of the pulse is the same as that of a
+            Gaussian pulse with the same `a_0`, `w_0` `tau`.
+            (i.e. The energy of the pulse is independent of `p`.)
+        w_0 : float
+            Spot size of the laser pulse, in units of m, at the focal plane.
+        tau : float
+            Longitudinal pulse length (FWHM in intensity) in units of s.
         z_foc : float
             Focal position of the pulse.
-        l_0: float (in meter), optional
-            The wavelength of the laser.
-        cep_phase: float (in radian), optional
-            The Carrier Envelope Phase (CEP), i.e. the phase of the laser
-            oscillation, at the position where the laser envelope is maximum.
-
+        l_0 : float
+            Laser wavelength in units of m. By default, a Ti:Sa laser with
+            `l_0=0.8e-6` is assumed.
+        cep_phase: float
+            The Carrier Envelope Phase (CEP) in radian. This is the phase of
+            the laser oscillation at the position where the envelope is
+            maximum.
+        polarization : str
+            Polarization of the laser pulse. Accepted values are 'linear'
+            (default) or 'circular'.
         """
         # Initialize parent class
         super().__init__(l_0)
@@ -280,7 +281,7 @@ class LaguerreGaussPulse(LaserPulse):
 
         # Store the parameters
         self.p = p
-        self.laguerre_pm = genlaguerre(self.p, 0) # Laguerre polynomial
+        self.laguerre_pm = genlaguerre(self.p, 0)  # Laguerre polynomial
         self.z_r = np.pi * w_0**2 / l_0
         self.z_foc = z_foc
         self.xi_c = xi_c
@@ -291,7 +292,7 @@ class LaguerreGaussPulse(LaserPulse):
         self.polarization = polarization
 
     def envelope_function(self, xi, r, z_pos):
-        """ Complex envelope of a Laguerre-Gauss beam. """
+        """Complex envelope of a Laguerre-Gauss beam."""
         z = xi + z_pos
         # Diffraction factor, waist and Gouy phase
         diffract_factor = 1. + 1j * (z - self.z_foc) / self.z_r
@@ -304,7 +305,7 @@ class LaguerreGaussPulse(LaserPulse):
         exp_argument = - 1j*self.cep_phase \
             - r**2 / (self.w0**2 * diffract_factor) \
             - (xi-self.xi_c)**2 / (2*s_z**2) \
-            - 1j*(2*self.p)*psi # *Additional* Gouy phase
+            - 1j*(2*self.p)*psi  # *Additional* Gouy phase
         # Get the transverse profile
         profile = (np.exp(exp_argument) / diffract_factor
                    * self.laguerre_pm(scaled_radius_squared))
@@ -316,13 +317,14 @@ class LaguerreGaussPulse(LaserPulse):
 
 
 class FlattenedGaussianPulse(LaserPulse):
-
-    """Class defining a flattened Gaussian pulse"""
+    """Class defining a flattened Gaussian pulse."""
 
     def __init__(self, xi_c, a_0, w_0, tau, N=6, z_foc=None, l_0=0.8e-6,
                  cep_phase=0., polarization='linear'):
         """
-        Define a laser pulse such that the transverse intensity
+        Initialize flattened Gaussian pulse.
+
+        The laser pulse is defined such that the transverse intensity
         profile is a flattened Gaussian far from focus, and a distribution
         with rings in the focal plane. (See `Santarsiero et al., J.
         Modern Optics, 1997 <http://doi.org/10.1080/09500349708232927>`_)
@@ -334,54 +336,54 @@ class FlattenedGaussianPulse(LaserPulse):
         ----------
         xi_c : float
             Initial central position of the pulse along xi in units of m.
-        a_0: float (dimensionless)
+        a_0: float
             The peak normalized vector potential at the focal plane.
-        w_0: float (in meter)
-            Laser spot size in the focal plane, defined as :math:`w_0` in the
-            above formula.
-        tau: float (in second)
-            Longitudinal pulse duration (FWHM in intensity).
-        N: int
+        w_0 : float
+            Spot size of the laser pulse, in units of m, at the focal plane.
+        tau : float
+            Longitudinal pulse length (FWHM in intensity) in units of s.
+        N : int
             Determines the "flatness" of the transverse profile, far from
             focus.
             Default: ``N=6`` ; somewhat close to an 8th order supergaussian.
         z_foc : float
             Focal position of the pulse.
-        l_0: float (in meter), optional
-            The wavelength of the laser.
-        cep_phase: float (in radian), optional
-            The Carrier Envelope Phase (CEP), i.e. the phase of the laser
-            oscillation, at the position where the laser envelope is maximum.
-
+        l_0 : float
+            Laser wavelength in units of m. By default, a Ti:Sa laser with
+            `l_0=0.8e-6` is assumed.
+        cep_phase: float
+            The Carrier Envelope Phase (CEP) in radian. This is the phase of
+            the laser oscillation at the position where the envelope is
+            maximum.
+        polarization : str
+            Polarization of the laser pulse. Accepted values are 'linear'
+            (default) or 'circular'.
         """
-        # Initialize parent class
+        # Initialize parent class.
         super().__init__(l_0)
 
-        # Ensure that N is an integer
+        # Ensure that N is an integer.
         N = int(round(N))
-        # Calculate effective waist of the Laguerre-Gauss modes, at focus
+        # Calculate effective waist of the Laguerre-Gauss modes, at focus.
         w_foc = w_0*(N+1)**.5
 
-        # Sum the Laguerre-Gauss modes that constitute this pulse
-        # See equation 2 and 3 in Santarsiero et al.
+        # Sum the Laguerre-Gauss modes that constitute this pulse.
+        # See equation (2) and (3) in Santarsiero et al.
         for n in range(N+1):
             cep_phase_n = cep_phase + (2*n+1)*np.pi/2
             m_values = np.arange(n, N+1)
-            cn = (-1)**n * np.sum((1./2)**m_values * binom(m_values,n)) / (N+1)
+            cn = (-1)**n * np.sum(0.5**m_values * binom(m_values, n)) / (N+1)
             pulse = LaguerreGaussPulse(
                 xi_c=xi_c, p=n, a_0=cn*a_0, cep_phase=cep_phase_n, w_0=w_foc,
                 tau=tau, z_foc=z_foc, l_0=l_0, polarization=polarization)
-            if n==0:
+            if n == 0:
                 summed_pulse = pulse
             else:
                 summed_pulse += pulse
 
-        # Register the summed_pulse
+        # Register the summed_pulse.
         self.summed_pulse = summed_pulse
 
-
     def envelope_function(self, xi, r, z_pos):
-        """
-        Complex envelope of the flattened Gaussian beam.
-        """
+        """Complex envelope of the flattened Gaussian beam."""
         return self.summed_pulse.envelope_function(xi, r, z_pos)
