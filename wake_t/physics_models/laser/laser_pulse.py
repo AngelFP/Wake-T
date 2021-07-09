@@ -373,7 +373,7 @@ class FlattenedGaussianPulse(LaserPulse):
         # Sum the Laguerre-Gauss modes that constitute this pulse.
         # See equation (2) and (3) in Santarsiero et al.
         for n in range(N+1):
-            cep_phase_n = cep_phase + (2*n+1)*np.pi/2
+            cep_phase_n = cep_phase + 2*n*np.pi/2
             m_values = np.arange(n, N+1)
             cn = (-1)**n * np.sum(0.5**m_values * binom(m_values, n)) / (N+1)
             pulse = LaguerreGaussPulse(
