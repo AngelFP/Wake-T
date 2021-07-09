@@ -362,6 +362,9 @@ class FlattenedGaussianPulse(LaserPulse):
         # Initialize parent class.
         super().__init__(l_0)
 
+        # Store parameters.
+        self.xi_c = xi_c
+
         # Ensure that N is an integer.
         N = int(round(N))
         # Calculate effective waist of the Laguerre-Gauss modes, at focus.
