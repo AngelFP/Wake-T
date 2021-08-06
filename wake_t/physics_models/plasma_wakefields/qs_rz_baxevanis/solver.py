@@ -13,6 +13,7 @@ import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particles.deposition import deposit_3d_distribution
 from wake_t.particles.interpolation import gather_sources_qs_baxevanis
+from wake_t.utilities.other import radial_gradient
 
 
 def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
@@ -100,7 +101,7 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     a2_rz = np.zeros((n_xi+4, n_r+4))
     nabla_a2_rz = np.zeros((n_xi+4, n_r+4))
     a2_rz[2:-2, 2:-2] = laser_a2
-    nabla_a2_rz[2:-2, 2:-2] = np.gradient(laser_a2, dr, axis=1, edge_order=2)
+    nabla_a2_rz[2:-2, 2:-2] = radial_gradient(laser_a2, dr)
 
     # Initialize field arrays, including guard cells.
     rho = np.zeros((n_xi+4, n_r+4))
