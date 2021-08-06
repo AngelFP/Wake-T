@@ -100,6 +100,7 @@ class Quasistatic2DWakefield(Wakefield):
         self.W_x = W_r*E_0
         self.xi_fld = xi_arr*s_d
         self.r_fld = r_arr*s_d
+        self.n_p = n_p
 
     def __interpolate_fields_to_particles(self, x, y, xi, t):
         if (self.current_t_interp is None) or (self.current_t_interp != t):
@@ -129,13 +130,12 @@ class Quasistatic2DWakefield(Wakefield):
         grid_global_offset = [0., self.current_t*ct.c+self.xi_min]
         # Cell-centered in 'r' anf 'z'. TODO: check correctness.
         fld_position = [0.5, 0.5]
-        fld_names = ['E', 'W', 'rho', 'chi']
+        fld_names = ['E', 'W', 'rho']
         fld_comps = [['z'], ['r'], None, None]
         fld_arrays = [
             [np.ascontiguousarray(self.E_z.T[2:-2, 2:-2])],
             [np.ascontiguousarray(self.W_x.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.rho.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.chi.T[2:-2, 2:-2])]
+            [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * self.n_p * (-ct.e)]
             ]
         if self.laser is not None:
             fld_names += ['a', 'aphi']
