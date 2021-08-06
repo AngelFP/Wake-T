@@ -131,7 +131,7 @@ class Quasistatic2DWakefield(Wakefield):
         # Cell-centered in 'r' anf 'z'. TODO: check correctness.
         fld_position = [0.5, 0.5]
         fld_names = ['E', 'W', 'rho']
-        fld_comps = [['z'], ['r'], None, None]
+        fld_comps = [['z'], ['r'], None]
         fld_arrays = [
             [np.ascontiguousarray(self.E_z.T[2:-2, 2:-2])],
             [np.ascontiguousarray(self.W_x.T[2:-2, 2:-2])],
