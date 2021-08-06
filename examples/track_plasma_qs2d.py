@@ -12,17 +12,18 @@ import matplotlib.pyplot as plt
 from aptools.plotting.quick_diagnostics import slice_analysis
 
 from wake_t.beamline_elements import PlasmaStage
-from wake_t import LaserPulse
+from wake_t import GaussianPulse
 from wake_t.utilities.bunch_generation import get_matched_bunch
 from wake_t.diagnostics import analyze_bunch_list
 
 
 # Create laser driver.
-laser = LaserPulse(100e-6, l_0=800e-9, w_0=50e-6, a_0=3, tau=30e-15)
+laser = GaussianPulse(100e-6, l_0=800e-9, w_0=50e-6, a_0=3,
+                      tau=30e-15, z_foc=0.)
 
 
 # Create bunch (matched to a blowout at a density of 10^{23} m^{-3}).
-en = 0.3e-6  # m
+en = 1e-6  # m
 ene = 200  # units of beta*gamma
 ene_sp = 0.3  # %
 xi_c = laser.xi_c - 55e-6  # m
@@ -36,12 +37,12 @@ bunch = get_matched_bunch(en, en, ene, ene_sp, s_t, xi_c, q_tot, n_part,
 # Create plasma stage.
 plasma = PlasmaStage(
     1e-2, 1e23, laser=laser, wakefield_model='quasistatic_2d', n_out=50,
-    laser_evolution=True, laser_z_foc=0, r_max=200e-6,  xi_min=30e-6,
-    xi_max=120e-6, n_r=200, n_xi=180, dz_fields=0.5e-3, ppc=10)
+    laser_evolution=True, r_max=200e-6, r_max_plasma=120e-6, xi_min=30e-6,
+    xi_max=120e-6, n_r=200, n_xi=180, dz_fields=0.5e-3, ppc=5)
 
 
 # Do tracking.
-opmd_diag = False  # Set to True to active openPMD output.
+opmd_diag = True  # Set to True to active openPMD output.
 bunch_list = plasma.track(bunch, out_initial=True, opmd_diag=opmd_diag)
 
 
