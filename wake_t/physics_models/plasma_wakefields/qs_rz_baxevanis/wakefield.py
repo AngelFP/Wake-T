@@ -13,7 +13,7 @@ class Quasistatic2DWakefield(Wakefield):
     def __init__(self, density_function, laser=None, laser_evolution=False,
                  r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, ppc=2, dz_fields=0, r_max_plasma=None,
-                 parabolic_coefficient=0., p_shape='cubic'):
+                 parabolic_coefficient=0., p_shape='cubic', max_gamma=10):
         super().__init__()
         self.openpmd_diag_supported = True
         self.density_function = density_function
@@ -29,6 +29,7 @@ class Quasistatic2DWakefield(Wakefield):
         self.r_max_plasma = r_max_plasma
         self.parabolic_coefficient = parabolic_coefficient
         self.p_shape = p_shape
+        self.max_gamma = max_gamma
         # Last time at which the fields where requested.
         self.current_t = None
         # Last step at which the fields where calculated.
@@ -88,7 +89,7 @@ class Quasistatic2DWakefield(Wakefield):
             a_env, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, n_p, r_max_plasma=self.r_max_plasma,
             parabolic_coefficient=self.parabolic_coefficient,
-            p_shape=self.p_shape)
+            p_shape=self.p_shape, max_gamma=self.max_gamma)
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
         s_d = ge.plasma_skin_depth(n_p*1e-6)
