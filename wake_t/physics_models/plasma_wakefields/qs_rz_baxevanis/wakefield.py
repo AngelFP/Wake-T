@@ -13,7 +13,7 @@ class Quasistatic2DWakefield(Wakefield):
     def __init__(self, density_function, laser=None, laser_evolution=False,
                  r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, ppc=2, dz_fields=0, r_max_plasma=None,
-                 parabolic_coefficient=0., p_shape='linear'):
+                 parabolic_coefficient=0., p_shape='cubic'):
         super().__init__()
         self.openpmd_diag_supported = True
         self.density_function = density_function
