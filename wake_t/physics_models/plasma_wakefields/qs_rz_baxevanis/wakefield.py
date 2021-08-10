@@ -128,8 +128,8 @@ class Quasistatic2DWakefield(Wakefield):
         grid_spacing = [dr, dz]
         grid_labels = ['r', 'z']
         grid_global_offset = [0., self.current_t*ct.c+self.xi_min]
-        # Cell-centered in 'r' anf 'z'. TODO: check correctness.
-        fld_position = [0.5, 0.5]
+        # Cell-centered in 'r' and node centered in 'z'.
+        fld_position = [0.5, 0.]
         fld_names = ['E', 'W', 'rho']
         fld_comps = [['z'], ['r'], None]
         fld_arrays = [
