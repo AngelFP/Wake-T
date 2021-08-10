@@ -128,7 +128,8 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
 
     # Main loop.
     for step in np.arange(n_xi):
-        xi = xi_max - dxi * step
+        i = -1 - step
+        xi = xi_fld[i]
 
         # Calculate source terms at position of plasma particles.
         a2, nabla_a2, b_theta_0 = gather_sources_qs_baxevanis(
@@ -152,7 +153,6 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
         pr[idx_keep] = 0.
 
         # Calculate fields at specified radii for current plasma column.
-        i = -1 - step
         psi[i-2, 2:-2] = calculate_psi(
             r_fld, r, q, r_max_plasma, parabolic_coefficient)
         b_theta_bar[i-2, 2:-2] = calculate_b_theta(
