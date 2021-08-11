@@ -11,8 +11,7 @@ for the full details about this 2d quasistatic model.
 import matplotlib.pyplot as plt
 from aptools.plotting.quick_diagnostics import slice_analysis
 
-from wake_t.beamline_elements import PlasmaStage
-from wake_t import GaussianPulse
+from wake_t import PlasmaStage, GaussianPulse
 from wake_t.utilities.bunch_generation import get_matched_bunch
 from wake_t.diagnostics import analyze_bunch_list
 
@@ -42,7 +41,7 @@ plasma = PlasmaStage(
 
 
 # Do tracking.
-opmd_diag = True  # Set to True to active openPMD output.
+opmd_diag = False  # Set to True to activate openPMD output.
 bunch_list = plasma.track(bunch, out_initial=True, opmd_diag=opmd_diag)
 
 

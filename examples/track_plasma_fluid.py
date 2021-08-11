@@ -8,8 +8,7 @@ regimes).
 import matplotlib.pyplot as plt
 from aptools.plotting.quick_diagnostics import slice_analysis
 
-from wake_t.beamline_elements import PlasmaStage
-from wake_t import GaussianPulse
+from wake_t import PlasmaStage, GaussianPulse
 from wake_t.utilities.bunch_generation import get_matched_bunch
 from wake_t.diagnostics import analyze_bunch_list
 
@@ -34,12 +33,12 @@ bunch = get_matched_bunch(en, en, ene, ene_sp, s_t, xi_c, q_tot, n_part,
 # Create plasma stage.
 plasma = PlasmaStage(
     1e-2, 1e23, laser=laser, wakefield_model='cold_fluid_1d', n_out=50,
-    laser_evolution=True, beam_wakefields=True,
-    r_max=70e-6,  xi_min=40e-6, xi_max=120e-6, n_r=70, n_xi=200)
+    laser_evolution=True, beam_wakefields=True, dz_fields=0.5e-3,
+    r_max=200e-6,  xi_min=40e-6, xi_max=120e-6, n_r=200, n_xi=200)
 
 
 # Do tracking.
-opmd_diag = False  # Set to True to active openPMD output.
+opmd_diag = False  # Set to True to activate openPMD output.
 bunch_list = plasma.track(bunch, out_initial=True, opmd_diag=opmd_diag)
 
 
