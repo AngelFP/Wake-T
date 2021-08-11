@@ -94,15 +94,9 @@ class PlasmaStage():
             Laser driver of the plasma stage.
 
         laser_evolution : bool
-            If True, the laser pulse transverse profile evolves as a Gaussian
-            in vacuum. If False, the pulse envelope stays fixed throughout
-            the computation.
-
-        laser_z_foc : float
-            Focal position of the laser along z in meters. It is measured as
-            the distance from the beginning of the PlasmaStage. A negative
-            value implies that the focal point is located before the
-            PlasmaStage. Required only if laser_evolution=True.
+            If True, the laser pulse transverse profile evolves using a
+            laser envelope model. If False, the pulse envelope stays unchanged
+            throughout the computation.
 
         beam_wakefields : bool
             Whether to take into account beam-driven wakefields (False by
@@ -128,6 +122,17 @@ class PlasmaStage():
         n_xi : int
             Number of grid elements along xi to calculate the wakefields.
 
+        dz_fields : float (optional)
+            Determines how often the plasma wakefields should be updated. If
+            dz_fields=0 (default value), the wakefields are calculated at every
+            step of the Runge-Kutta solver for the beam particle evolution
+            (most expensive option). If specified, the wakefields are only
+            updated in steps determined by dz_fields. For example, if
+            dz_fields=10e-6, the plasma wakefields are only updated every time
+            the simulation window advances by 10 micron. If dz_fields=None, the
+            wakefields are only computed once (at the start of the plasma) and
+            never updated throughout the simulation.
+
         p_shape : str
             Particle shape to be used for the beam charge deposition. Possible
             values are 'linear' or 'cubic'.
@@ -138,9 +143,9 @@ class PlasmaStage():
             Laser driver of the plasma stage.
 
         laser_evolution : bool
-            If True, the laser pulse transverse profile evolves as a Gaussian
-            in vacuum. If False, the pulse envelope stays fixed throughout
-            the computation.
+            If True, the laser pulse transverse profile evolves using a
+            laser envelope model. If False, the pulse envelope stays unchanged
+            throughout the computation.
 
         laser_z_foc : float
             Focal position of the laser along z in meters. It is measured as
