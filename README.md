@@ -12,8 +12,6 @@
   <img alt="Wake-T logo" src="other/plasma_tracking.png" width="600px" />
 </p>
 
-The main drawback of this approach is a reduced accuracy of the results, compared to a PIC code, particularly if the assumptions of the reduced wakefield models are not satisfied. Although more models are planned to be included in the future, some of the main current limitations of the code are the lack of realistic laser evolution and electron self-injection.
-
 In addition to plasma-acceleration stages, `Wake-T` can also simulate active plasma lenses, drifts, dipoles, quadrupoles and sextupoles, allowing for the simulation of complex beamlines. The tracking along the drifts and magnets is performed using second-order transfer matrices, and CSR effects can be included by using a 1D model. This matrix approach and the CSR model are based on a streamlined version of the [`Ocelot`](https://github.com/ocelot-collab/ocelot) implementation.
 
 ## Installation
@@ -37,7 +35,7 @@ or simply download the code from [here](https://github.com/AngelFP/Wake-T/archiv
 
 2) If you haven't already, open a terminal in the newly created folder and perform the installation with
 ```bash
-python setup.py install
+pip install .
 ```
 
 ## References
