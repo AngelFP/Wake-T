@@ -201,8 +201,8 @@ class PlasmaStage():
             values are 'linear' or 'cubic'.
 
         max_gamma : float
-            Plasma particles whose `gamma` exceeds `max_gamma` are considered to
-            violate the quasistatic condition and are put at rest (i.e.,
+            Plasma particles whose `gamma` exceeds `max_gamma` are considered
+            to violate the quasistatic condition and are put at rest (i.e.,
             `gamma=1.`, `pr=pz=0.`). By default `max_gamma=10`.
 
         """

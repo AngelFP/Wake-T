@@ -57,7 +57,7 @@ def generate_field_diag_dictionary(
 def radial_gradient(fld, dr):
     """
     Calculate the radial gradient of a 2D r-z field.
-    
+
     To obtain an accurate derivative on axis, a wider array which contains
     the initial field and its mirrored view along the axis is created. The
     gradient of this array is computed and only its upper half is returned.
@@ -68,9 +68,8 @@ def radial_gradient(fld, dr):
         A 2D array containing the original r-z field.
     dr : float
         Radial separation between grid points.
-    
+
     """
     n_r = fld.shape[1]
-    fld_with_mirror = np.concatenate((fld[:,::-1], fld), axis=1)
+    fld_with_mirror = np.concatenate((fld[:, ::-1], fld), axis=1)
     return np.gradient(fld_with_mirror, dr, axis=1)[:, n_r:]
- 
