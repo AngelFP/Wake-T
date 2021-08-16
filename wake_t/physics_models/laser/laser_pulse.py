@@ -31,6 +31,8 @@ class LaserPulse():
         self.a_env_old = None
         self.a_env = None
         self.solver_params = None
+        self.init_outside_plasma = False
+        self.n_steps = 0
 
     def __add__(self, pulse_2):
         """Overload the add operator to allow summing of laser pulses."""
@@ -96,6 +98,7 @@ class LaserPulse():
             ZZ, RR = np.meshgrid(z, r, indexing='ij')
             self.a_env = self.envelope_function(ZZ, RR, 0.)
             self.a_env_old = self.envelope_function(ZZ, RR, -dt*ct.c)
+            self.init_outside_plasma = True
 
     def get_envelope(self):
         """Get the current laser envelope array."""
@@ -114,10 +117,19 @@ class LaserPulse():
         """
         k_0 = 2*np.pi / self.l_0
         k_p = np.sqrt(ct.e**2 * n_p / (ct.m_e*ct.epsilon_0)) / ct.c
+
+        # Determine if laser starts evolution outside plasma.
+        start_outside_plasma = (self.n_steps == 0 and self.init_outside_plasma)
+
+        # Compute evolution.
         a_env_old, a_env = evolve_envelope(
-            self.a_env, self.a_env_old, chi, k_0, k_p, **self.solver_params)
+            self.a_env, self.a_env_old, chi, k_0, k_p, **self.solver_params,
+            start_outside_plasma=start_outside_plasma)
+
+        # Update arrays and step count.
         self.a_env_old[:] = a_env_old[0: -2]
         self.a_env = a_env[0: -2]
+        self.n_steps += 1
 
     def get_group_velocity(self, n_p):
         """

@@ -195,7 +195,8 @@ def TDMA(a, b, c, d):
 
 
 @njit()
-def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt):
+def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
+                    start_outside_plasma=False):
     """
     Solve the 2D envelope equation
     (\nabla_tr^2+2i*k0/kp*d/dt+2*d^2/(dzdt)-d^2/dt^2)â = chi*â
@@ -226,6 +227,10 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt):
         Tau step size.
     nt : int
         Number of tau steps.
+    start_outside_plasma : bool
+        If `True`, it indicates that the laser is outside of the plasma at
+        `t=-dt`. This will then force the plasma susceptibility to be zero
+        at that time.
 
     """
     # Add 2 rows of ghost points in the zeta direction.
@@ -254,6 +259,14 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt):
     for n in range(0, nt):
         # Getting the phases of the envelope at the radius.
         phases = np.angle(a[:, 0])
+
+        # If laser starts outside plasma, make chi^{n-1} = 0.
+        if start_outside_plasma and n == 0:
+            chi_nm1 = 0. * chi
+        else:
+            chi_nm1 = chi
+
+        # Loop over z.
         for j in range(nz - 1, -1, -1):
             th = phases[j]
             th1 = phases[j + 1]
@@ -261,8 +274,8 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt):
 
             # Fill the vectors according to the numerical scheme.
             for k in range(0, nr):
-                sol[k] = rhs(a_old, a, a_new, chi, j, dz, k, dr, nr, dt, k0p,
-                             th, th1, th2)
+                sol[k] = rhs(a_old, a, a_new, chi_nm1, j, dz, k, dr, nr, dt,
+                             k0p, th, th1, th2)
                 d_main[k] = (C(1, k, k0p, dt, dz, dr)
                              - chi[j, k] / 2
                              + 1j / dt * D(th, th1, th2, dz))
