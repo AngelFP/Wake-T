@@ -1209,5 +1209,6 @@ def calculate_beam_source_from_particles(
     r_grid_g = (0.5 + np.arange(n_r)) * dr
     # Compute integral.
     r_int = np.zeros((n_xi+4, n_r+4))
-    r_int[2:-2, 2:-2] = np.cumsum(tz_area, axis=1) / np.abs(r_grid_g)
+    # r_int[2:-2, 2:-2] = np.cumsum(tz_area, axis=1) / np.abs(r_grid_g)
+    r_int[2:-2, 2:-2] = np.cumsum(q_dist, axis=1) / np.abs(r_grid_g) * dr
     return r_int
