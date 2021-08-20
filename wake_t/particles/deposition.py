@@ -136,6 +136,7 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
                 rc = ruyten_coef[ir]
                 # Apply correction.
                 rsl_0 += rc * (1. - u_r) * u_r
+                rsl_1 -= rc * (1. - u_r) * u_r
 
             # Add contribution of particle to charge distribution.
             deposition_array[iz_cell + 0, ir_cell + 0] += zsl_0 * rsl_0 * w_i
