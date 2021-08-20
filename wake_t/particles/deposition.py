@@ -104,24 +104,38 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             ir_cell = min(int(math.ceil(r_cell)) + 1, nr + 2)
             iz_cell = int(math.ceil(z_cell)) + 1
 
-            # Particle position wrt left neighbor gridpoint in r.
-            if r_cell <= 0:
-                # Force all charge to be deposited above axis
-                u = 1.
+            # u_r: particle position wrt left neighbor gridpoint in r.
+            if r_cell < 0:
+                # Force all charge to be deposited above axis.
+                u_r = 1.
+            elif r_cell > nr - 1:
+                # Force all charge to be deposited below r_max.
+                u_r = 0.
             else:
-                u = r_cell - int(math.ceil(r_cell)) + 1
+                u_r = r_cell - int(math.ceil(r_cell)) + 1
+
+            # u_z: particle position wrt left neighbor gridpoint in z.
+            if z_cell < 0:
+                # Force all charge to be deposited above z_min.
+                u_z = 1.
+            elif r_cell > nz - 1:
+                # Force all charge to be deposited below z_max.
+                u_z = 0.
+            else:
+                u_z = z_cell - int(math.ceil(z_cell)) + 1
 
             # Precalculate quantities.
-            zsl_0 = math.ceil(z_cell) - z_cell
-            zsl_1 = 1 - zsl_0
-            rsl_0 = 1. - u
-            rsl_1 = 1 - rsl_0
+            zsl_0 = 1. - u_z
+            zsl_1 = u_z
+            rsl_0 = 1. - u_r
+            rsl_1 = u_r
 
             if use_ruyten:
                 # Get corresponding coefficient for corrected shape factor.
                 ir = min(int(math.ceil(r_cell)), nr)
                 rc = ruyten_coef[ir]
-                rsl_0 += rc * (1. - u) * u
+                # Apply correction.
+                rsl_0 += rc * (1. - u_r) * u_r
 
             # Add contribution of particle to charge distribution.
             deposition_array[iz_cell + 0, ir_cell + 0] += zsl_0 * rsl_0 * w_i
@@ -184,7 +198,6 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             v_z = 1. - u_z
             v_r = 1. - u_r
 
-
             # Cubic particle shape coefficients in z and r.
             zsc_0 = inv_6 * v_z ** 3
             zsc_1 = inv_6 * (3. * u_z**3 - 6. * u_z**2 + 4.)
@@ -199,10 +212,12 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
                 # Get corresponding coefficient for corrected shape factor.
                 ir = min(int(math.ceil(r_cell)), nr)
                 rc = ruyten_coef[ir]
+                # Add correction.
                 rsc_1 += rc*v_r*u_r
                 rsc_2 -= rc*v_r*u_r
 
-            # Force all charge to be deposited above axis.
+            # Force all charge to be deposited within boundaries.
+            # Below axis:
             if r_cell <= 0.:
                 rsc_3 += rsc_0
                 rsc_2 += rsc_1
@@ -211,6 +226,33 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             elif r_cell <= 1.:
                 rsc_1 += rsc_0
                 rsc_0 = 0.
+            # Above r_max:
+            elif r_cell > nr - 1:
+                rsc_0 += rsc_3
+                rsc_1 += rsc_2
+                rsc_2 = 0.
+                rsc_3 = 0.
+            elif r_cell > nr - 2:
+                rsc_2 += rsc_3
+                rsc_3 = 0.
+            # Below z_min:
+            if z_cell <= 0.:
+                zsc_3 += zsc_0
+                zsc_2 += zsc_1
+                zsc_0 = 0.
+                zsc_1 = 0.
+            elif z_cell <= 1.:
+                zsc_1 += zsc_0
+                zsc_0 = 0.
+            # Above z_max:
+            elif z_cell > nz - 1:
+                zsc_0 += zsc_3
+                zsc_1 += zsc_2
+                zsc_2 = 0.
+                zsc_3 = 0.
+            elif z_cell > nz - 2:
+                zsc_2 += zsc_3
+                zsc_3 = 0.
 
             # Add contribution of particle to charge distribution.
             deposition_array[iz_cell + 0, ir_cell + 0] += zsc_0 * rsc_0 * w_i
