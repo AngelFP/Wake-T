@@ -80,7 +80,7 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
                 np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 1. / 24)
         ruyten_coef = np.concatenate( (np.array([0.]), ruyten_coef) )
 
-    z_max = z_min + nz * dz
+    z_max = z_min + (nz - 1) * dz
     r_max = nr * dr
 
     # Loop over particles.
@@ -166,7 +166,7 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         ruyten_coef[0] = 6.*( cell_volume_norm[0] - 0.5 - 239./(15*2**7) )
         ruyten_coef = np.concatenate( (np.array([0.]), ruyten_coef) )
 
-    z_max = z_min + nz * dz
+    z_max = z_min + (nz - 1) * dz
     r_max = nr * dr
 
     # Loop over particles.
