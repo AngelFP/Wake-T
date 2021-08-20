@@ -9,10 +9,11 @@ implemented in FBPIC (https://github.com/fbpic/fbpic).
 
 import math
 from numba import njit
+import numpy as np
 
 
 def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
-                            deposition_array, p_shape='cubic'):
+                            deposition_array, p_shape='cubic', use_ruyten=False):
     """
     Deposit the the weight of each particle of a 3D distribution into a 2D
     grid (cylindrical symmetry).
@@ -51,10 +52,10 @@ def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
     """
     if p_shape == 'linear':
         return deposit_3d_distribution_linear(
-            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
+            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array, use_ruyten)
     elif p_shape == 'cubic':
         return deposit_3d_distribution_cubic(
-            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
+            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array, use_ruyten)
     else:
         err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
                       "Possible values are 'linear' or 'cubic'.")
@@ -63,19 +64,21 @@ def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
 
 @njit
 def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                                   deposition_array):
+                                   deposition_array, use_ruyten=False):
     """ Calculate charge distribution assuming linear particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
     # conservation during deposition (see work by W.M. Ruyten
     # https://doi.org/10.1006/jcph.1993.1070).
-    # r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
-    # cell_volume = np.pi * dz * (
-    #         (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
-    # cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
-    # cell_number = np.arange(nr) + 1
-    # ruyten_coef = 6. / cell_number * (
-    #         np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 1. / 24)
+    if use_ruyten:
+        r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
+        cell_volume = np.pi * dz * (
+                (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
+        cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
+        cell_number = np.arange(nr) + 1
+        ruyten_coef = 6. / cell_number * (
+                np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 1. / 24)
+        ruyten_coef = np.concatenate( (np.array([0.]), ruyten_coef) )
 
     z_max = z_min + nz * dz
     r_max = nr * dr
@@ -101,10 +104,6 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             ir_cell = min(int(math.ceil(r_cell)) + 1, nr + 2)
             iz_cell = int(math.ceil(z_cell)) + 1
 
-            # Get corresponding coefficient for corrected shape factor.
-            # ir = min(int(math.ceil(r_cell)), nr-1)
-            # rc = ruyten_coef[ir]
-
             # Particle position wrt left neighbor gridpoint in r.
             if r_cell <= 0:
                 # Force all charge to be deposited above axis
@@ -115,8 +114,14 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             # Precalculate quantities.
             zsl_0 = math.ceil(z_cell) - z_cell
             zsl_1 = 1 - zsl_0
-            rsl_0 = (1. - u)  # + rc * (1. - u) * u
+            rsl_0 = 1. - u
             rsl_1 = 1 - rsl_0
+
+            if use_ruyten:
+                # Get corresponding coefficient for corrected shape factor.
+                ir = min(int(math.ceil(r_cell)), nr)
+                rc = ruyten_coef[ir]
+                rsl_0 += rc * (1. - u) * u
 
             # Add contribution of particle to charge distribution.
             deposition_array[iz_cell + 0, ir_cell + 0] += zsl_0 * rsl_0 * w_i
@@ -129,19 +134,22 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
 
 @njit
 def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                                  deposition_array):
+                                  deposition_array, use_ruyten=False):
     """ Calculate charge distribution assuming cubic particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
     # conservation during deposition (see work by W.M. Ruyten
     # # https://doi.org/10.1006/jcph.1993.1070).
-    # r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
-    # cell_volume = np.pi * dz * (
-    #         (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
-    # cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
-    # cell_number = np.arange(nr) + 1
-    # ruyten_coef = 6. / cell_number * (
-    #         np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 0.125)
+    if use_ruyten:
+        r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
+        cell_volume = np.pi * dz * (
+                (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
+        cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
+        cell_number = np.arange(nr) + 1
+        ruyten_coef = 6. / cell_number * (
+                np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 0.125)
+        ruyten_coef[0] = 6.*( cell_volume_norm[0] - 0.5 - 239./(15*2**7) )
+        ruyten_coef = np.concatenate( (np.array([0.]), ruyten_coef) )
 
     z_max = z_min + nz * dz
     r_max = nr * dr
@@ -176,9 +184,6 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             v_z = 1. - u_z
             v_r = 1. - u_r
 
-            # Get corresponding coefficient for corrected shape factor.
-            # ir = min(int(math.ceil(r_cell)), nr)
-            # rc = ruyten_coef[ir]
 
             # Cubic particle shape coefficients in z and r.
             zsc_0 = inv_6 * v_z ** 3
@@ -186,9 +191,16 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             zsc_2 = inv_6 * (3. * v_z**3 - 6. * v_z**2 + 4.)
             zsc_3 = inv_6 * u_z ** 3
             rsc_0 = inv_6 * v_r ** 3
-            rsc_1 = inv_6 * (3. * u_r**3 - 6. * u_r**2 + 4.)  # + rc*v_r*u_r
-            rsc_2 = inv_6 * (3. * v_r**3 - 6. * v_r**2 + 4.)  # - rc*v_r*u_r
+            rsc_1 = inv_6 * (3. * u_r**3 - 6. * u_r**2 + 4.)
+            rsc_2 = inv_6 * (3. * v_r**3 - 6. * v_r**2 + 4.)
             rsc_3 = inv_6 * u_r ** 3
+
+            if use_ruyten:
+                # Get corresponding coefficient for corrected shape factor.
+                ir = min(int(math.ceil(r_cell)), nr)
+                rc = ruyten_coef[ir]
+                rsc_1 += rc*v_r*u_r
+                rsc_2 -= rc*v_r*u_r
 
             # Force all charge to be deposited above axis.
             if r_cell <= 0.:
