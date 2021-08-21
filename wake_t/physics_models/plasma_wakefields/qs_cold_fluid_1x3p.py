@@ -87,7 +87,8 @@ class NonLinearColdFluidWakefield(Wakefield):
         beam_hist = np.zeros((self.n_xi+4, self.n_r+4))
         deposit_3d_distribution(
             xi/s_d, x/s_d, y/s_d, q/ct.e, self.xi_min/s_d, r[0],
-            self.n_xi, self.n_r, dz, dr, beam_hist, p_shape=self.p_shape)
+            self.n_xi, self.n_r, dz, dr, beam_hist, p_shape=self.p_shape,
+            use_ruyten=True)
         beam_hist = beam_hist[2:-2, 2:-2]
 
         n = np.arange(self.n_r)
