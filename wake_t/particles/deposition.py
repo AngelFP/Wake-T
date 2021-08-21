@@ -68,17 +68,19 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     """ Calculate charge distribution assuming linear particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
-    # conservation during deposition (see work by W.M. Ruyten
+    # density conservation during deposition (see work by W.M. Ruyten
     # https://doi.org/10.1006/jcph.1993.1070).
     if use_ruyten:
+        # Calculate the nr + 1 coefficients, where the first one is applied
+        # to the particles located below the first grid point along r.
+        ruyten_coef = np.zeros(nr + 1)
         r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
         cell_volume = np.pi * dz * (
                 (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
         cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
         cell_number = np.arange(nr) + 1
-        ruyten_coef = 6. / cell_number * (
+        ruyten_coef[1:] = 6. / cell_number * (
                 np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 1. / 24)
-        ruyten_coef = np.concatenate( (np.array([0.]), ruyten_coef) )
 
     z_max = z_min + (nz - 1) * dz
     r_max = nr * dr
@@ -153,18 +155,20 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     """ Calculate charge distribution assuming cubic particle shape. """
 
     # Precalculate particle shape coefficients needed to satisfy charge
-    # conservation during deposition (see work by W.M. Ruyten
-    # # https://doi.org/10.1006/jcph.1993.1070).
+    # density conservation during deposition (see work by W.M. Ruyten
+    # https://doi.org/10.1006/jcph.1993.1070).
     if use_ruyten:
+        # Calculate the nr + 1 coefficients, where the first one is applied
+        # to the particles located below the first grid point along r.
+        ruyten_coef = np.zeros(nr + 1)
         r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
         cell_volume = np.pi * dz * (
                 (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
         cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
         cell_number = np.arange(nr) + 1
-        ruyten_coef = 6. / cell_number * (
+        ruyten_coef[1:] = 6. / cell_number * (
                 np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 0.125)
-        ruyten_coef[0] = 6.*( cell_volume_norm[0] - 0.5 - 239./(15*2**7) )
-        ruyten_coef = np.concatenate( (np.array([0.]), ruyten_coef) )
+        ruyten_coef[1] = 6.*( cell_volume_norm[0] - 0.5 - 239./(15*2**7) )
 
     z_max = z_min + (nz - 1) * dz
     r_max = nr * dr
