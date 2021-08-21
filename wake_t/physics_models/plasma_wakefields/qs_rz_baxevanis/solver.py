@@ -1171,7 +1171,7 @@ def calculate_beam_source_from_particles(
 
     # At the first grid point along r, subtstact an additonal 1/4 of the
     # charge. This comes from assuming that the density has to be zero on axis.
-    subs[:,0] += q_dist[:,0]/4
+    subs[:, 0] += q_dist[:, 0]/4
 
     # Calculate field by integration.
     b_theta[2:-2, 2:-2] = (

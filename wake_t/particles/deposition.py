@@ -13,7 +13,8 @@ import numpy as np
 
 
 def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
-                            deposition_array, p_shape='cubic', use_ruyten=False):
+                            deposition_array, p_shape='cubic',
+                            use_ruyten=False):
     """
     Deposit the the weight of each particle of a 3D distribution into a 2D
     grid (cylindrical symmetry).
@@ -52,10 +53,12 @@ def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
     """
     if p_shape == 'linear':
         return deposit_3d_distribution_linear(
-            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array, use_ruyten)
+            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array,
+            use_ruyten)
     elif p_shape == 'cubic':
         return deposit_3d_distribution_cubic(
-            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array, use_ruyten)
+            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array,
+            use_ruyten)
     else:
         err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
                       "Possible values are 'linear' or 'cubic'.")
@@ -168,7 +171,7 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
         cell_number = np.arange(nr) + 1
         ruyten_coef[1:] = 6. / cell_number * (
                 np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 0.125)
-        ruyten_coef[1] = 6.*( cell_volume_norm[0] - 0.5 - 239./(15*2**7) )
+        ruyten_coef[1] = 6.*(cell_volume_norm[0] - 0.5 - 239./(15*2**7))
 
     z_max = z_min + (nz - 1) * dz
     r_max = nr * dr
