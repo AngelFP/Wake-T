@@ -1194,21 +1194,28 @@ def calculate_beam_source_from_particles(
     # Obtain charge distribution (using cubic particle shape by default).
     q_dist = np.zeros((n_xi + 4, n_r + 4))
     deposit_3d_distribution(xi_n, x_n, y_n, w, xi_min, r_min, n_xi, n_r, dxi,
-                            dr, q_dist, p_shape=p_shape)
+                            dr, q_dist, p_shape=p_shape, use_ruyten=True)
 
-    # Remove guard cells
+    # Remove guard cells.
     q_dist = q_dist[2:-2, 2:-2]
 
-    # Calculate radial integral (Eq. (18)) using trapezoidal rule.
-    # First calculate area of trapezoids.
-    tz_area = np.zeros((n_xi, n_r))
-    tz_area[:, 1:] = (q_dist[:, :-1] + q_dist[:, 1:])/2 * dr
-    # Assume q_dist = 0 at exactly r = 0.
-    tz_area[:, 0] = q_dist[:, 0] / 2 * dr / 2
-    # Radial position of the grid points.
+    # Allovate magnetic field array.
+    b_theta = np.zeros((n_xi+4, n_r+4))
+
+    # Radial position of grid points.
     r_grid_g = (0.5 + np.arange(n_r)) * dr
-    # Compute integral.
-    r_int = np.zeros((n_xi+4, n_r+4))
-    # r_int[2:-2, 2:-2] = np.cumsum(tz_area, axis=1) / np.abs(r_grid_g)
-    r_int[2:-2, 2:-2] = np.cumsum(q_dist, axis=1) / np.abs(r_grid_g) * dr
-    return r_int
+
+    # At each grid cell, calculate integral only until cell center by
+    # assuming that half the charge is evenly distributed within the cell
+    # (i.e., substract half the charge)
+    subs = q_dist / 2
+
+    # At the first grid point along r, subtstact an additonal 1/4 of the
+    # charge. This comes from assuming that the density has to be zero on axis.
+    subs[:,0] += q_dist[:,0]/4
+
+    # Calculate field by integration.
+    b_theta[2:-2, 2:-2] = (
+        (np.cumsum(q_dist, axis=1) - subs) * dr / np.abs(r_grid_g))
+
+    return b_theta
