@@ -9,9 +9,17 @@ from wake_t.physics_models.beam_optics.transfer_matrices import (
 )
 
 
-def ballistic(beam_matrix, dt, iterations):
+def ballistic(beam_matrix, WF, t0, dt, iterations):
     for i in np.arange(iterations):
         x, px, y, py, xi, pz, q = beam_matrix
+        t = t0 + i * dt
+        K = -ct.e / (ct.m_e * ct.c)
+        # For consistency, the wakefields need to be invoked
+        # but they are not used in ballistic propagation
+        wx = K * WF.Wx(x, y, xi, px, py, pz, q, t)
+        # wy = K * WF.Wy(x, y, xi, px, py, pz, q, t)
+        # wz = K * WF.Wz(x, y, xi, px, py, pz, q, t)
+        # ballistic transformation
         inv_gamma = 1 / np.sqrt(1 + px * px + py * py + pz * pz)
         beam_matrix[0] = x + dt * px * ct.c * inv_gamma
         beam_matrix[2] = y + dt * py * ct.c * inv_gamma

@@ -310,7 +310,7 @@ class PlasmaStage():
                     mat, WF=self.wakefield, t0=s*t_step,  dt=dt_adjusted,
                     iterations=it_per_step)
             else:
-                bunch_matrix = ballistic(mat, dt=dt_adjusted,
+                bunch_matrix = ballistic(mat, WF=self.wakefield, t0=s*t_step, dt=dt_adjusted,
                     iterations=it_per_step)
             x, px, y, py, xi, pz, q = copy(bunch_matrix)
             new_prop_dist = bunch.prop_distance + (s+1)*t_step*ct.c
