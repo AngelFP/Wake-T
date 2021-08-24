@@ -9,6 +9,16 @@ from wake_t.physics_models.beam_optics.transfer_matrices import (
 )
 
 
+def ballistic(beam_matrix, dt, iterations):
+    for i in np.arange(iterations):
+        x, px, y, py, xi, pz, q = beam_matrix
+        inv_gamma = 1 / np.sqrt(1 + px * px + py * py + pz * pz)
+        beam_matrix[0] = x + dt * px * ct.c * inv_gamma
+        beam_matrix[2] = y + dt * py * ct.c * inv_gamma
+        beam_matrix[4] = xi + dt * (pz * inv_gamma - 1) * ct.c
+    return beam_matrix
+
+
 def runge_kutta_4(beam_matrix, WF, t0, dt, iterations):
     for i in np.arange(iterations):
         t = t0 + i*dt
