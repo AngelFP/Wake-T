@@ -15,7 +15,7 @@ class ParticleBunch():
     def __init__(self, q, x=None, y=None, xi=None, px=None, py=None, pz=None,
                  bunch_matrix=None, matrix_type='standard', gamma_ref=None,
                  tags=None, prop_distance=0, t_flight=0,
-                 t_injection=0, name=None):
+                 z_injection=None, name=None):
         """
         Initialize particle bunch.
 
@@ -70,8 +70,8 @@ class ParticleBunch():
         t_flight : float
             Time of flight of the bunch along the beamline.
 
-        t_injection: float (in seconds)
-            Particles have a ballistic motion for t<t_injection.
+        z_injection: float (in meters)
+            Particles have a ballistic motion for z<z_injection.
 
         name : str
             Name of the particle bunch. Used for species identification
@@ -96,7 +96,7 @@ class ParticleBunch():
         self.tags = tags
         self.prop_distance = prop_distance
         self.t_flight = t_flight
-        self.t_injection = t_injection
+        self.z_injection = z_injection
         self.x_ref = 0
         self.theta_ref = 0
         self.set_name(name)
