@@ -279,7 +279,7 @@ class PlasmaStage():
         """ Track beam using Runge-Kutta method """
         # Get 6D matrix
         mat = bunch.get_6D_matrix_with_charge()
-        # injection time
+        # injection position
         z_injection = bunch.z_injection
         # Plasma length in time
         t_final = self.length/ct.c
