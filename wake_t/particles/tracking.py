@@ -29,7 +29,8 @@ def equations_of_motion(beam_matrix, t, WF, dt, z_injection=None):
     x, px, y, py, xi, pz, q = beam_matrix
     if z_injection is not None:
         z = xi + ct.c * t
-        K = np.where(z < z_injection, 0, K)
+        if max(z) <= z_injection:
+            K = 0.
     wx = K * WF.Wx(x, y, xi, px, py, pz, q, t)
     wy = K * WF.Wy(x, y, xi, px, py, pz, q, t)
     wz = K * WF.Wz(x, y, xi, px, py, pz, q, t)
