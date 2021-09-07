@@ -190,11 +190,14 @@ class PlasmaStage():
             Maximum radial extension of the plasma column. If `None`, the
             plasma extends up to the `r_max` boundary of the simulation box.
 
-        parabolic_coefficient : float
+        parabolic_coefficient : float or callable
             The coefficient for the transverse parabolic density profile. The
             radial density distribution is calculated as
             `n_r = n_p * (1 + parabolic_coefficient * r**2)`, where n_p is the
-            local on-axis plasma density.
+            local on-axis plasma density. If a `float` is provided, the same
+            value will be used throwout the stage. Alternatively, a function 
+            which returns the value of the coefficient at the given position
+            `z` (e.g. `def func(z)`) might also be provided.
 
         p_shape : str
             Particle shape to be used for the beam charge deposition. Possible
