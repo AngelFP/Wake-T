@@ -27,7 +27,8 @@ class Quasistatic2DWakefield(Wakefield):
         self.ppc = ppc
         self.dz_fields = np.inf if dz_fields is None else dz_fields
         self.r_max_plasma = r_max_plasma
-        self.parabolic_coefficient = self._get_parabolic_coefficient_fn(parabolic_coefficient)
+        self.parabolic_coefficient = self._get_parabolic_coefficient_fn(
+            parabolic_coefficient)
         self.p_shape = p_shape
         self.max_gamma = max_gamma
         # Last time at which the fields where requested.
@@ -157,13 +158,14 @@ class Quasistatic2DWakefield(Wakefield):
         return diag_data
 
     def _get_parabolic_coefficient_fn(self, parabolic_coefficient):
-            """ Get parabolic_coefficient profile function """
-            if isinstance(parabolic_coefficient, float):
-                def uniform_parabolic_coefficient(z):
-                    return np.ones_like(z) * parabolic_coefficient
-                return uniform_parabolic_coefficient
-            elif callable(parabolic_coefficient):
-                return parabolic_coefficient
-            else:
-                raise ValueError(
-                    'Type {} not supported for parabolic_coefficient.'.format(type(parabolic_coefficient)))
+        """ Get parabolic_coefficient profile function """
+        if isinstance(parabolic_coefficient, float):
+            def uniform_parabolic_coefficient(z):
+                return np.ones_like(z) * parabolic_coefficient
+            return uniform_parabolic_coefficient
+        elif callable(parabolic_coefficient):
+            return parabolic_coefficient
+        else:
+            raise ValueError(
+                'Type {} not supported for parabolic_coefficient.'.format(
+                    type(parabolic_coefficient)))
