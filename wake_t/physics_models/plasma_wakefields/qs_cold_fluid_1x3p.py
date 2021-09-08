@@ -201,7 +201,7 @@ class NonLinearColdFluidWakefield(Wakefield):
             [np.ascontiguousarray(self.n_fl.T) * self.current_n_p * (-ct.e)]
             ]
         if self.laser is not None:
-            fld_names += ['a', 'aphi']
+            fld_names += ['a_mod', 'a_phase']
             fld_comps += [None, None]
             fld_arrays += [
                 [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))],
