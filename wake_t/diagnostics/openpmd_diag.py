@@ -131,13 +131,13 @@ class OpenPMDDiagnostics():
         # are actually used?
 
         # Get arrays.
-        x = species_data['x']
-        y = species_data['y']
-        z = species_data['z']
-        px = species_data['px']
-        py = species_data['py']
-        pz = species_data['pz']
-        w = species_data['w']
+        x = np.ascontiguousarray(species_data['x'])
+        y = np.ascontiguousarray(species_data['y'])
+        z = np.ascontiguousarray(species_data['z'])
+        px = np.ascontiguousarray(species_data['px'])
+        py = np.ascontiguousarray(species_data['py'])
+        pz = np.ascontiguousarray(species_data['pz'])
+        w = np.ascontiguousarray(species_data['w'])
         q = species_data['q']
         m = species_data['m']
         z_off = species_data['z_off']
