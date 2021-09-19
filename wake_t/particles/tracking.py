@@ -1,6 +1,7 @@
 """ This module contains the numerical trackers and equations of motion """
 
-from numba import njit, prange
+from wake_t.utilities.numba_caching import njit_func
+from numba import prange
 import numpy as np
 import scipy.constants as ct
 
@@ -29,7 +30,7 @@ def equations_of_motion(beam_matrix, t, WF, dt):
     return calculate_derivatives(px, py, pz, wx, wy, wz, dt)
 
 
-@njit()
+@njit_func
 def update_beam_matrix(bm, A, B, C, D):
     inv_6 = 1 / 6.
     for i in prange(bm.shape[0]):
@@ -37,7 +38,7 @@ def update_beam_matrix(bm, A, B, C, D):
             bm[i, j] += (A[i, j] + 2.*(B[i, j] + C[i, j]) + D[i, j]) * inv_6
 
 
-@njit()
+@njit_func
 def calculate_derivatives(px, py, pz, wx, wy, wz, dt):
     n_part = px.shape[0]
     der = np.empty((7, n_part))

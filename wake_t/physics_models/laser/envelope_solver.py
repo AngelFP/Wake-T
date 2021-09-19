@@ -7,11 +7,11 @@ Authors: Wilbert den Hertog, Ángel Ferran Pousa, Carlo Benedetti
 """
 
 import numpy as np
-from numba import njit
+from wake_t.utilities.numba_caching import njit_func
 import scipy.constants as ct
 
 
-@njit()
+@njit_func
 def L(sign, k, dr):
     """
     Calculation of L_k^{+-}. Change wrt Benedetti - 2018: in Wake-T we use cell
@@ -43,7 +43,7 @@ def L(sign, k, dr):
             return 0
 
 
-@njit()
+@njit_func
 def C(sign, k, k0p, dt, dz, dr):
     """
     Calculate Equation (8) from Benedetti - 2018.
@@ -68,7 +68,7 @@ def C(sign, k, k0p, dt, dz, dr):
             - sign * 3 / 2 * 1 / (dt * dz) - 1 / dt ** 2)
 
 
-@njit()
+@njit_func
 def D(th, th1, th2, dz):
     """
     Calculate D in Equation (6) from Benedetti - 2018
@@ -104,7 +104,7 @@ def D(th, th1, th2, dz):
     return 1.5 * d_theta1 / dz - 0.5 * d_theta2 / dz
 
 
-@njit()
+@njit_func
 def rhs(a_old, a, a_new, chi, j, dz, k, dr, nr, dt, k0p, th, th1, th2):
     """
     The right-hand side of equation 7 in Benedetti, 2018.
@@ -157,7 +157,7 @@ def rhs(a_old, a, a_new, chi, j, dz, k, dr, nr, dt, k0p, th, th1, th2):
     return sol
 
 
-@njit()
+@njit_func
 def TDMA(a, b, c, d):
     """TriDiagonal Matrix Algorithm: solve a linear system Ax=b,
     where A is a tridiagonal matrix. Source:
@@ -194,7 +194,7 @@ def TDMA(a, b, c, d):
     return p
 
 
-@njit()
+@njit_func
 def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
                     start_outside_plasma=False):
     """

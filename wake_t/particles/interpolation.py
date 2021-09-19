@@ -11,10 +11,11 @@ shapes.
 
 import math
 import numpy as np
-from numba import njit, prange
+from wake_t.utilities.numba_caching import njit_func
+from numba import prange
 
 
-@njit()
+@njit_func
 def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
     """
     Interpolate a 2D field defined on an r-z grid to the particle positions
@@ -92,7 +93,7 @@ def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
     return fld_part
 
 
-@njit()
+@njit_func
 def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
                                   x, y, z):
     """
@@ -192,7 +193,7 @@ def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
     return wx_part, wy_part, ez_part
 
 
-@njit()
+@njit_func
 def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
                                 r_max, dz, dr, r, z):
     """

@@ -8,7 +8,7 @@ for the full details about this model.
 
 import numpy as np
 import scipy.constants as ct
-from numba import njit
+from wake_t.utilities.numba_caching import njit_func
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particles.deposition import deposit_3d_distribution
@@ -290,7 +290,7 @@ def motion_derivatives(dxi, dr_p, xi, r, pr, q, a2_rz, nabla_a2_rz,
     return dr, dpr
 
 
-@njit()
+@njit_func
 def calculate_derivatives(dxi, dr_p, r_max, r, pr, q, b_theta_0, nabla_a2, a2,
                           pc):
     """
@@ -360,7 +360,7 @@ def calculate_derivatives(dxi, dr_p, r_max, r, pr, q, b_theta_0, nabla_a2, a2,
     return dr, dpr
 
 
-@njit()
+@njit_func
 def update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr):
     """
     Jittable method to which updating the particle coordinates in the RK4
@@ -382,7 +382,7 @@ def update_particles_rk4(r, pr, Ar, Br, Cr, Dr, Apr, Bpr, Cpr, Dpr):
     return
 
 
-@njit
+@njit_func
 def update_gamma_and_pz(gamma, pz, pr, a2, psi):
     """
     Update the gamma factor and longitudinal momentum of the plasma particles.
@@ -403,7 +403,7 @@ def update_gamma_and_pz(gamma, pz, pr, a2, psi):
         pz[i] = (1 + pr[i]**2 + a2[i] - (1+psi[i])**2) / (2 * (1+psi[i]))
 
 
-@njit()
+@njit_func
 def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p, pc):
     """
     Calculate the wakefield potential and its derivatives at the position
@@ -562,7 +562,7 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p, pc):
     return psi, dr_psi, dxi_psi
 
 
-@njit()
+@njit_func
 def calculate_psi(r_fld, r, q, r_max, pc):
     """
     Calculate the wakefield potential at the radial
@@ -637,7 +637,7 @@ def calculate_psi(r_fld, r, q, r_max, pc):
     return psi
 
 
-@njit()
+@njit_func
 def delta_psi_eq(r, sum_1, sum_2, r_max, pc):
     """ Adapted equation (29) from original paper. """
     delta_psi_elec = sum_1*np.log(r) - sum_2
@@ -651,7 +651,7 @@ def delta_psi_eq(r, sum_1, sum_2, r_max, pc):
     return delta_psi_elec - delta_psi_ion
 
 
-@njit()
+@njit_func
 def dr_psi_eq(r, sum_1, r_max, pc):
     """ Adapted equation (31) from original paper. """
     dr_psi_elec = sum_1 / r
@@ -662,7 +662,7 @@ def dr_psi_eq(r, sum_1, r_max, pc):
     return dr_psi_elec - dr_psi_ion
 
 
-@njit()
+@njit_func
 def calculate_psi_and_derivatives(r_fld, r, pr, q):
     """
     Calculate the wakefield potential and its derivatives at the radial
@@ -750,7 +750,7 @@ def calculate_psi_and_derivatives(r_fld, r, pr, q):
     return psi, dr_psi, dxi_psi
 
 
-@njit()
+@njit_func
 def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
                                    b_theta_0, nabla_a2, dr_p):
     """
@@ -831,7 +831,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
     return b_theta_bar
 
 
-@njit()
+@njit_func
 def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                       nabla_a2):
     """
@@ -887,7 +887,7 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     return b_theta_mesh
 
 
-@njit()
+@njit_func
 def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                               nabla_a2):
     """
@@ -1001,7 +1001,7 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     return a_i, b_i, a_0, idx
 
 
-@njit()
+@njit_func
 def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                               nabla_a2):
     """
