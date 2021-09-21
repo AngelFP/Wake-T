@@ -228,7 +228,7 @@ class GaussianPulse(LaserPulse):
         """
         Complex envelope of a Gaussian beam in the paraxial approximation.
         """
-        z = xi + z_pos
+        z = xi - self.xi_c + z_pos
         diff_factor = 1. + 1j * (z - self.z_foc) / self.z_r
         s_z = self.tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
         # Phases
@@ -305,7 +305,7 @@ class LaguerreGaussPulse(LaserPulse):
 
     def envelope_function(self, xi, r, z_pos):
         """Complex envelope of a Laguerre-Gauss beam."""
-        z = xi + z_pos
+        z = xi - self.xi_c + z_pos
         # Diffraction factor, waist and Gouy phase
         diffract_factor = 1. + 1j * (z - self.z_foc) / self.z_r
         s_z = self.tau * ct.c / (2*np.sqrt(2*np.log(2))) * np.sqrt(2)
