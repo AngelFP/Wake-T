@@ -71,7 +71,7 @@ class Quasistatic2DWakefield(Wakefield):
         else:
             return
         n_p = self.density_function(t*ct.c)
-        parabolic_coefficient_Arr = self.parabolic_coefficient(t*ct.c)
+        parabolic_coefficient = self.parabolic_coefficient(t*ct.c)
 
         if self.laser is not None:
             # Evolve laser envelope
@@ -90,7 +90,7 @@ class Quasistatic2DWakefield(Wakefield):
         rho, chi, W_r, E_z, xi_arr, r_arr = calculate_wakefields(
             a_env, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, n_p, r_max_plasma=self.r_max_plasma,
-            parabolic_coefficient=parabolic_coefficient_Arr,
+            parabolic_coefficient=parabolic_coefficient,
             p_shape=self.p_shape, max_gamma=self.max_gamma)
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
