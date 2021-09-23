@@ -27,7 +27,8 @@ class Quasistatic2DWakefield(Wakefield):
         self.ppc = ppc
         self.dz_fields = np.inf if dz_fields is None else dz_fields
         self.r_max_plasma = r_max_plasma
-        self.parabolic_coefficient = parabolic_coefficient
+        self.parabolic_coefficient = self._get_parabolic_coefficient_fn(
+            parabolic_coefficient)
         self.p_shape = p_shape
         self.max_gamma = max_gamma
         # Last time at which the fields where requested.
@@ -70,6 +71,7 @@ class Quasistatic2DWakefield(Wakefield):
         else:
             return
         n_p = self.density_function(t*ct.c)
+        parabolic_coefficient = self.parabolic_coefficient(t*ct.c)
 
         if self.laser is not None:
             # Evolve laser envelope
@@ -88,7 +90,7 @@ class Quasistatic2DWakefield(Wakefield):
         rho, chi, W_r, E_z, xi_arr, r_arr = calculate_wakefields(
             a_env, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, n_p, r_max_plasma=self.r_max_plasma,
-            parabolic_coefficient=self.parabolic_coefficient,
+            parabolic_coefficient=parabolic_coefficient,
             p_shape=self.p_shape, max_gamma=self.max_gamma)
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
@@ -154,3 +156,16 @@ class Quasistatic2DWakefield(Wakefield):
             part_boundary_params, current_smoothing, charge_correction)
 
         return diag_data
+
+    def _get_parabolic_coefficient_fn(self, parabolic_coefficient):
+        """ Get parabolic_coefficient profile function """
+        if isinstance(parabolic_coefficient, float):
+            def uniform_parabolic_coefficient(z):
+                return np.ones_like(z) * parabolic_coefficient
+            return uniform_parabolic_coefficient
+        elif callable(parabolic_coefficient):
+            return parabolic_coefficient
+        else:
+            raise ValueError(
+                'Type {} not supported for parabolic_coefficient.'.format(
+                    type(parabolic_coefficient)))
