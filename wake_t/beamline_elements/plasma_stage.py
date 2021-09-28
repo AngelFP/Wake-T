@@ -94,15 +94,9 @@ class PlasmaStage():
             Laser driver of the plasma stage.
 
         laser_evolution : bool
-            If True, the laser pulse transverse profile evolves as a Gaussian
-            in vacuum. If False, the pulse envelope stays fixed throughout
-            the computation.
-
-        laser_z_foc : float
-            Focal position of the laser along z in meters. It is measured as
-            the distance from the beginning of the PlasmaStage. A negative
-            value implies that the focal point is located before the
-            PlasmaStage. Required only if laser_evolution=True.
+            If True, the laser pulse transverse profile evolves using a
+            laser envelope model. If False, the pulse envelope stays unchanged
+            throughout the computation.
 
         beam_wakefields : bool
             Whether to take into account beam-driven wakefields (False by
@@ -128,6 +122,17 @@ class PlasmaStage():
         n_xi : int
             Number of grid elements along xi to calculate the wakefields.
 
+        dz_fields : float (optional)
+            Determines how often the plasma wakefields should be updated. If
+            dz_fields=0 (default value), the wakefields are calculated at every
+            step of the Runge-Kutta solver for the beam particle evolution
+            (most expensive option). If specified, the wakefields are only
+            updated in steps determined by dz_fields. For example, if
+            dz_fields=10e-6, the plasma wakefields are only updated every time
+            the simulation window advances by 10 micron. If dz_fields=None, the
+            wakefields are only computed once (at the start of the plasma) and
+            never updated throughout the simulation.
+
         p_shape : str
             Particle shape to be used for the beam charge deposition. Possible
             values are 'linear' or 'cubic'.
@@ -138,15 +143,9 @@ class PlasmaStage():
             Laser driver of the plasma stage.
 
         laser_evolution : bool
-            If True, the laser pulse transverse profile evolves as a Gaussian
-            in vacuum. If False, the pulse envelope stays fixed throughout
-            the computation.
-
-        laser_z_foc : float
-            Focal position of the laser along z in meters. It is measured as
-            the distance from the beginning of the PlasmaStage. A negative
-            value implies that the focal point is located before the
-            PlasmaStage.
+            If True, the laser pulse transverse profile evolves using a
+            laser envelope model. If False, the pulse envelope stays unchanged
+            throughout the computation.
 
         r_max : float
             Maximum radial position up to which plasma wakefield will be
@@ -166,9 +165,8 @@ class PlasmaStage():
         n_xi : int
             Number of grid elements along xi to calculate the wakefields.
 
-        n_part : int (optional)
-            Number of plasma particles along the radial direction. By default
-            n_part=1000.
+        ppc : int (optional)
+            Number of plasma particles per radial cell. By default `ppc=2`.
 
         dz_fields : float (optional)
             Determines how often the plasma wakefields should be updated. If
@@ -181,9 +179,27 @@ class PlasmaStage():
             wakefields are only computed once (at the start of the plasma) and
             never updated throughout the simulation.
 
+        r_max_plasma : float
+            Maximum radial extension of the plasma column. If `None`, the
+            plasma extends up to the `r_max` boundary of the simulation box.
+
+        parabolic_coefficient : float or callable
+            The coefficient for the transverse parabolic density profile. The
+            radial density distribution is calculated as
+            `n_r = n_p * (1 + parabolic_coefficient * r**2)`, where n_p is the
+            local on-axis plasma density. If a `float` is provided, the same
+            value will be used throwout the stage. Alternatively, a function
+            which returns the value of the coefficient at the given position
+            `z` (e.g. `def func(z)`) might also be provided.
+
         p_shape : str
             Particle shape to be used for the beam charge deposition. Possible
             values are 'linear' or 'cubic'.
+
+        max_gamma : float
+            Plasma particles whose `gamma` exceeds `max_gamma` are considered
+            to violate the quasistatic condition and are put at rest (i.e.,
+            `gamma=1.`, `pr=pz=0.`). By default `max_gamma=10`.
 
         """
 
@@ -263,9 +279,9 @@ class PlasmaStage():
         t_final = self.length/ct.c
         t_step = t_final/self.n_out
         dt = self._get_optimized_dt(bunch)
-        iterations = int(t_final/dt)
+        iterations = int(np.ceil(t_final/dt))
         # force at least 1 iteration per step
-        it_per_step = max(int(iterations/self.n_out), 1)
+        it_per_step = int(max(np.ceil(iterations/self.n_out), 1))
         iterations = it_per_step*self.n_out
         dt_adjusted = t_final/iterations
         # initialize list to store the distribution at each step
@@ -294,7 +310,7 @@ class PlasmaStage():
             )
             if opmd_diag is not False:
                 opmd_diag.write_diagnostics(
-                    s*t_step, t_step, [bunch_list[-1]], self.wakefield)
+                    (s+1)*t_step, t_step, [bunch_list[-1]], self.wakefield)
         # print computing time
         end = time.time()
         print("Done ({:1.3f} seconds).".format(end-start))

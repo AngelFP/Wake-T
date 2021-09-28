@@ -131,13 +131,13 @@ class OpenPMDDiagnostics():
         # are actually used?
 
         # Get arrays.
-        x = species_data['x']
-        y = species_data['y']
-        z = species_data['z']
-        px = species_data['px']
-        py = species_data['py']
-        pz = species_data['pz']
-        w = species_data['w']
+        x = np.ascontiguousarray(species_data['x'])
+        y = np.ascontiguousarray(species_data['y'])
+        z = np.ascontiguousarray(species_data['z'])
+        px = np.ascontiguousarray(species_data['px'])
+        py = np.ascontiguousarray(species_data['py'])
+        pz = np.ascontiguousarray(species_data['pz'])
+        w = np.ascontiguousarray(species_data['w'])
         q = species_data['q']
         m = species_data['m']
         z_off = species_data['z_off']
@@ -272,11 +272,18 @@ class OpenPMDDiagnostics():
                     Unit_Dimension.T: -3,
                     Unit_Dimension.I: -1
                     }
-            elif field == 'rho':
+            elif field in ['rho', 'chi']:
                 fld.unit_dimension = {
                     Unit_Dimension.L: -3,
                     Unit_Dimension.T: 1,
                     Unit_Dimension.I: 1
+                    }
+            elif field == 'a':
+                fld.unit_dimension = {
+                    Unit_Dimension.L: 1,
+                    Unit_Dimension.M: 1,
+                    Unit_Dimension.T: -2,
+                    Unit_Dimension.I: -1
                     }
 
             # Set geometry to thetaMode until cylindrical geometry is
