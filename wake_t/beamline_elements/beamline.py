@@ -1,5 +1,3 @@
-from copy import copy
-
 from wake_t.diagnostics import OpenPMDDiagnostics
 
 
