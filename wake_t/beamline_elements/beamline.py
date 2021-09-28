@@ -1,5 +1,3 @@
-from copy import copy
-
 from wake_t.diagnostics import OpenPMDDiagnostics
 
 
@@ -43,11 +41,14 @@ class Beamline():
 
         """
         bunch_list = []
-        if out_initial:
-            bunch_list.append(copy(bunch))
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
             opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
-        for element in self.elements:
+        for i, element in enumerate(self.elements):
             bunch_list.extend(
-                element.track(bunch, out_initial=False, opmd_diag=opmd_diag))
+                element.track(
+                    bunch,
+                    out_initial=out_initial and i == 0,
+                    opmd_diag=opmd_diag
+                    )
+                )
         return bunch_list
