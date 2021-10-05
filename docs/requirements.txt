@@ -1,0 +1,5 @@
+numpy
+numba
+scipy
+aptools
+openpmd-api~=0.13.0
