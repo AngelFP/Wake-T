@@ -3,3 +3,5 @@ numba
 scipy
 aptools
 openpmd-api~=0.13.0
+pydata-sphinx-theme
+sphinx-panels
