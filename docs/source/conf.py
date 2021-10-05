@@ -10,19 +10,23 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../..'))
+
+
+# -- Import Wake-T -----------------------------------------------------------
+import wake_t
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'Wake-T'
-copyright = '2021, Angel Ferran Pousa'
-author = 'Angel Ferran Pousa'
+copyright = '2021, Ángel Ferran Pousa'
+author = 'Ángel Ferran Pousa'
 
 # The full version, including alpha/beta/rc tags
-release = '0.5.0'
+release = wake_t.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -31,7 +35,9 @@ release = '0.5.0'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-]
+    'sphinx.ext.autodoc', 'sphinx.ext.coverage', 'sphinx.ext.napoleon',
+    'sphinx_panels'
+    ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -47,9 +53,32 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme ='pydata_sphinx_theme'# "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+# Logo
+html_logo = "_static/logo.png"
+html_favicon = "_static/favicon_128x128.png"
+
+# Theme options
+html_theme_options = {
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/AngelFP/Wake-T",
+            "icon": "fab fa-github-square",
+        },
+        {
+            "name": "Slack",
+            "url": "https://wake-t.slack.com/",
+            "icon": "fab fa-slack",
+        },
+    ],
+}
+
+# Document __init__ class methods
+autoclass_content = 'both'
