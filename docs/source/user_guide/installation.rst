@@ -1,6 +1,6 @@
 Installation
 ============
-Wake-T is tested on Python 3.6 and above, so make sure to have an up-to-date version
+Wake-T is tested on Python 3.7 and above, so make sure to have an up-to-date version
 in order to avoid potential issues. It is recommended to install Wake-T in its
 own virtual environment, either using ``venv`` or ``conda``. The installation should be
 carried out with ``pip``, since Wake-T is available on `PyPI <https://pypi.org/project/Wake-T/>`_
