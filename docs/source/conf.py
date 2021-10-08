@@ -15,18 +15,17 @@ import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
 
-# -- Import Wake-T -----------------------------------------------------------
-import wake_t
+# -- Import Wake-T version ---------------------------------------------------
+from wake_t import __version__  # noqa: E402
 
 
 # -- Project information -----------------------------------------------------
-
 project = 'Wake-T'
 copyright = '2021, Ángel Ferran Pousa'
 author = 'Ángel Ferran Pousa'
 
 # The full version, including alpha/beta/rc tags
-release = wake_t.__version__
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -53,7 +52,7 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme ='pydata_sphinx_theme'# "sphinx_rtd_theme"
+html_theme = 'pydata_sphinx_theme'  # "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
