@@ -21,7 +21,7 @@ from wake_t import __version__  # noqa: E402
 
 # -- Project information -----------------------------------------------------
 project = 'Wake-T'
-copyright = '2021, Ángel Ferran Pousa'
+project_copyright = '2021, Ángel Ferran Pousa'
 author = 'Ángel Ferran Pousa'
 
 # The full version, including alpha/beta/rc tags
