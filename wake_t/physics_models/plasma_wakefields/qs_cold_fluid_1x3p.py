@@ -12,7 +12,7 @@ from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
 class NonLinearColdFluidWakefield(Wakefield):
     def __init__(self, density_function, laser=None, laser_evolution=False,
                  r_max=None, xi_min=None, xi_max=None, n_r=100,
-                 n_xi=100, dz_fields=0, beam_wakefields=False,
+                 n_xi=100, dz_fields=None, beam_wakefields=False,
                  p_shape='linear'):
         super().__init__()
         self.openpmd_diag_supported = True
@@ -24,7 +24,7 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.xi_max = xi_max
         self.n_r = n_r
         self.n_xi = n_xi
-        self.dz_fields = np.inf if dz_fields is None else dz_fields
+        self.dz_fields = xi_max - xi_min if dz_fields is None else dz_fields
         self.beam_wakefields = beam_wakefields
         self.p_shape = p_shape
         # Last time at which the fields where requested.
