@@ -91,9 +91,9 @@ class PlasmaStage():
             Laser driver of the plasma stage.
 
         laser_evolution : bool
-            If True, the laser pulse transverse profile evolves using a
-            laser envelope model. If False, the pulse envelope stays unchanged
-            throughout the computation.
+            If True (default), the laser pulse is evolved
+            using a laser envelope model. If False, the pulse envelope stays
+            unchanged throughout the computation.
 
         beam_wakefields : bool
             Whether to take into account beam-driven wakefields (False by
@@ -140,9 +140,9 @@ class PlasmaStage():
             Laser driver of the plasma stage.
 
         laser_evolution : bool
-            If True, the laser pulse transverse profile evolves using a
-            laser envelope model. If False, the pulse envelope stays unchanged
-            throughout the computation.
+            If True (default), the laser pulse is evolved
+            using a laser envelope model. If False, the pulse envelope stays
+            unchanged throughout the computation.
 
         r_max : float
             Maximum radial position up to which plasma wakefield will be
