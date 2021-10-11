@@ -27,7 +27,7 @@ class PlasmaStage():
     """ Generic class for defining a plasma acceleration stage. """
 
     def __init__(self, length, density, wakefield_model='simple_blowout',
-                 n_out=None, **model_params):
+                 n_out=1, **model_params):
         """
         Initialize plasma stage.
 
@@ -293,7 +293,7 @@ class PlasmaStage():
 
         st_0 = "Tracking in {} step(s)... ".format(self.n_out)
         for s in np.arange(self.n_out):
-            print_progress_bar(st_0, s, self.n_out-1)
+            print_progress_bar(st_0, s+1, self.n_out)
             # if auto_update_fields:
             #    self.wakefield.check_if_update_fields(s*t_step)
             bunch_matrix = runge_kutta_4(
