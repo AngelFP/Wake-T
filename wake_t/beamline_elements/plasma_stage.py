@@ -91,7 +91,7 @@ class PlasmaStage():
             Laser driver of the plasma stage.
 
         laser_evolution : bool
-            If True (default), the laser pulse transverse profile evolves
+            If True (default), the laser pulse is evolved
             using a laser envelope model. If False, the pulse envelope stays
             unchanged throughout the computation.
 
@@ -140,7 +140,7 @@ class PlasmaStage():
             Laser driver of the plasma stage.
 
         laser_evolution : bool
-            If True (default), the laser pulse transverse profile evolves
+            If True (default), the laser pulse is evolved
             using a laser envelope model. If False, the pulse envelope stays
             unchanged throughout the computation.
 
