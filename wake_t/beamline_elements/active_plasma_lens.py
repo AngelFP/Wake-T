@@ -13,7 +13,7 @@ class ActivePlasmaLens(PlasmaStage):
     """ Convenience class to define an active plasma lens. """
 
     def __init__(self, length, foc_strength, wakefields=False, density=None,
-                 wakefield_model='quasistatic_2d', n_out=None, **model_params):
+                 wakefield_model='quasistatic_2d', n_out=1, **model_params):
         """
         Initialize plasma lens.
 

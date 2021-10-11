@@ -46,7 +46,7 @@ class PlasmaRamp(PlasmaStage):
     def __init__(self, length, profile='inverse_square', ramp_type='upramp',
                  wakefield_model='focusing_blowout', decay_length=None,
                  plasma_dens_top=None, plasma_dens_down=None,
-                 position_down=None, n_out=None, **model_params):
+                 position_down=None, n_out=1, **model_params):
         """
         Initialize plasma ramp.
 
