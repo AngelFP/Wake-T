@@ -4,6 +4,7 @@ This module contains the class defining a particle bunch.
 # TODO: clean methods to set and get bunch matrix
 import numpy as np
 import scipy.constants as ct
+from aptools.plotting.quick_diagnostics import full_phase_space
 
 
 class ParticleBunch():
@@ -227,3 +228,12 @@ class ParticleBunch():
             'z_off': self.prop_distance
         }
         return diag_dict
+
+    def show(self, **kwargs):
+        """
+        Show the phase space of the bunch in all dimensions.
+        
+        """
+        full_phase_space(
+            self.x, self.y, self.xi, self.px, self.py, self.pz, self.q,
+            show=True, **kwargs)
