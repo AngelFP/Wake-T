@@ -10,7 +10,7 @@ from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
 
 
 class NonLinearColdFluidWakefield(Wakefield):
-    def __init__(self, density_function, laser=None, laser_evolution=False,
+    def __init__(self, density_function, laser=None, laser_evolution=True,
                  r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, dz_fields=None, beam_wakefields=False,
                  p_shape='linear'):
