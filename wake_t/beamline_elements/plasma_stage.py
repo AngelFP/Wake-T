@@ -31,16 +31,13 @@ class PlasmaStage():
         """
         Initialize plasma stage.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         length : float
             Length of the plasma stage in m.
 
-        n_p : float
+        density : float
             Plasma density in units of m^{-3}.
-
-        laser : LaserPulse
-            Laser driver of the plasma stage.
 
         wakefield_model : str
             Wakefield model to be used. Possible values are 'blowout',
@@ -58,7 +55,7 @@ class PlasmaStage():
             below:
 
         Model 'focusing_blowout'
-        ----------------------
+        ------------------------
         No additional parameters required.
 
         Model 'simple_blowout'
@@ -129,9 +126,9 @@ class PlasmaStage():
             (most expensive option). If specified, the wakefields are only
             updated in steps determined by dz_fields. For example, if
             dz_fields=10e-6, the plasma wakefields are only updated every time
-            the simulation window advances by 10 micron. If dz_fields=None, the
-            wakefields are only computed once (at the start of the plasma) and
-            never updated throughout the simulation.
+            the simulation window advances by 10 micron. By default, if not
+            specified, the value of `dz_fields` will be `xi_max-xi_min`, i.e.,
+            the length the simulation box.
 
         p_shape : str
             Particle shape to be used for the beam charge deposition. Possible
@@ -175,9 +172,9 @@ class PlasmaStage():
             (most expensive option). If specified, the wakefields are only
             updated in steps determined by dz_fields. For example, if
             dz_fields=10e-6, the plasma wakefields are only updated every time
-            the simulation window advances by 10 micron. If dz_fields=None, the
-            wakefields are only computed once (at the start of the plasma) and
-            never updated throughout the simulation.
+            the simulation window advances by 10 micron. By default, if not
+            specified, the value of `dz_fields` will be `xi_max-xi_min`, i.e.,
+            the length the simulation box.
 
         r_max_plasma : float
             Maximum radial extension of the plasma column. If `None`, the
@@ -194,7 +191,7 @@ class PlasmaStage():
 
         p_shape : str
             Particle shape to be used for the beam charge deposition. Possible
-            values are 'linear' or 'cubic'.
+            values are 'linear' or 'cubic' (default).
 
         max_gamma : float
             Plasma particles whose `gamma` exceeds `max_gamma` are considered
