@@ -230,10 +230,7 @@ class ParticleBunch():
         return diag_dict
 
     def show(self, **kwargs):
-        """
-        Show the phase space of the bunch in all dimensions.
-        
-        """
+        """ Show the phase space of the bunch in all dimensions. """
         full_phase_space(
             self.x, self.y, self.xi, self.px, self.py, self.pz, self.q,
             show=True, **kwargs)
