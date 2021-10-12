@@ -1,7 +1,9 @@
 numpy
 numba
 scipy
-aptools
-openpmd-api~=0.13.0
+matplotlib
+aptools>=0.1.23
+openpmd-api~=0.14.0
 pydata-sphinx-theme
 sphinx-panels
+sphinx-gallery
