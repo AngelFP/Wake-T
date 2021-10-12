@@ -41,6 +41,20 @@ Wake-T |release| documentation
 
     ---
 
+    **Tutorials**
+    ^^^^^^^^^^^^
+
+    Step-by-step tutorials covering the functionality of Wake-T.
+
+    +++
+
+    .. link-button:: tutorials/index
+            :type: ref
+            :text: To the tutorials
+            :classes: btn-outline-primary btn-block stretched-link
+
+    ---
+
     **Examples**
     ^^^^^^^^^^^^
 
@@ -87,6 +101,7 @@ Wake-T |release| documentation
    :maxdepth: 4
 
    user_guide/index
+   tutorials/index
    examples/index
    api/index
    development
