@@ -35,7 +35,7 @@ release = __version__
 # ones.
 extensions = [
     'sphinx.ext.autodoc', 'sphinx.ext.coverage', 'sphinx.ext.napoleon',
-    'sphinx_panels'
+    'sphinx_panels', 'sphinx_gallery.gen_gallery'
     ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -79,5 +79,18 @@ html_theme_options = {
     ],
 }
 
+# Prevent panels extension from modifying page style.
+panels_add_bootstrap_css = False
+
 # Document __init__ class methods
 autoclass_content = 'both'
+
+# Configuration for generating tutorials.
+from sphinx_gallery.sorting import FileNameSortKey  # noqa: E402
+
+sphinx_gallery_conf = {
+     'examples_dirs': '../../tutorials',
+     'gallery_dirs': 'tutorials',
+     'filename_pattern': '.',
+     'within_subsection_order': FileNameSortKey,
+}
