@@ -3,10 +3,10 @@
 import aptools.data_handling.saving as ds
 
 
-def save_bunch_to_file(bunch, data_format, folder_path, file_name,
-                       species_name=None, reposition=False,
-                       avg_pos=[None, None, None], avg_mom=[None, None, None],
-                       n_part=None):
+def save_bunch_to_file(
+        bunch, data_format, folder_path, file_name, species_name=None,
+        reposition=False, avg_pos=[None, None, None],
+        avg_mom=[None, None, None], n_part=None):
     """Save a particle bunch to file.
 
     Parameters
