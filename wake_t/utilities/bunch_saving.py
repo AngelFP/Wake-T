@@ -25,7 +25,7 @@ def save_bunch_to_file(
         under which the bunch data will be stored. If None, the name of the
         bunch will be used.
     reposition : bool, optional
-        Whether to reposition de particle distribution in space
+        Whether to reposition the particle distribution in space
         and/or momentum centered in the coordinates specified in `avg_pos` and
         `avg_mom`. By default False.
     avg_pos : list, optional
@@ -50,9 +50,19 @@ def save_bunch_to_file(
         randomly. The charge of the saved particles will be modified to
         preserve the total charge.
     """
+    # Get bunch data.
     bunch_data = bunch.get_bunch_matrix()
-    if species_name is None:
-        species_name = bunch.name
-    ds.save_beam(data_format, bunch_data, folder_path, file_name,
-                 reposition=reposition, avg_pos=avg_pos, avg_mom=avg_mom,
-                 n_part=n_part, species_name=species_name)
+
+    # For openpmd output, save with species name.
+    if data_format == 'openpmd':
+        if species_name is None:
+            species_name = bunch.name
+        ds.save_beam(
+            data_format, bunch_data, folder_path, file_name,
+            reposition=reposition, avg_pos=avg_pos, avg_mom=avg_mom,
+            n_part=n_part, species_name=species_name)
+    else:
+        ds.save_beam(
+            data_format, bunch_data, folder_path, file_name,
+            reposition=reposition, avg_pos=avg_pos, avg_mom=avg_mom,
+            n_part=n_part)
