@@ -136,9 +136,12 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
             a2_rz, nabla_a2_rz, b_theta_0_mesh, xi_fld[0], xi_fld[-1],
             r_fld[0], r_fld[-1], dxi, dr, r, xi)
 
+        # Get sorted particle indices
+        idx = np.argsort(r)
+
         # Calculate wakefield potential and derivatives at plasma particles.
         out = calculate_psi_and_derivatives_at_particles(
-            r, pr, q, r_max_plasma, dr_p, parabolic_coefficient)
+            r, pr, q, idx, r_max_plasma, dr_p, parabolic_coefficient)
         psi_p, dr_psi_p, dxi_psi_p = out
 
         # Update gamma and pz of plasma particles
@@ -154,10 +157,10 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
 
         # Calculate fields at specified radii for current plasma column.
         psi[i-2, 2:-2] = calculate_psi(
-            r_fld, r, q, r_max_plasma, parabolic_coefficient)
+            r_fld, r, q, idx, r_max_plasma, parabolic_coefficient)
         b_theta_bar[i-2, 2:-2] = calculate_b_theta(
             r_fld, r, pr, q, gamma, psi_p, dr_psi_p, dxi_psi_p, b_theta_0,
-            nabla_a2)
+            nabla_a2, idx)
 
         # Deposit rho and chi of plasma column
         w_rho = q / (dr * r * (1 - pz/gamma))
@@ -278,9 +281,12 @@ def motion_derivatives(dxi, dr_p, xi, r, pr, q, a2_rz, nabla_a2_rz,
         a2_rz, nabla_a2_rz, b_theta_0_mesh, xi_min, xi_max, r_min, r_max,
         dxi, dr, r, xi)
 
+    # Get sorted particle indices
+    idx = np.argsort(r)
+
     # Calculate motion derivatives in jittable method.
     dr, dpr = calculate_derivatives(dxi, dr_p, r_max_plasma, r, pr, q,
-                                    b_theta_0, nabla_a2, a2, pc)
+                                    b_theta_0, nabla_a2, a2, idx, pc)
 
     # For particles which crossed the axis and where inverted, invert now
     # back the sign of the derivatives.
@@ -292,7 +298,7 @@ def motion_derivatives(dxi, dr_p, xi, r, pr, q, a2_rz, nabla_a2_rz,
 
 @njit()
 def calculate_derivatives(dxi, dr_p, r_max, r, pr, q, b_theta_0, nabla_a2, a2,
-                          pc):
+                          idx, pc):
     """
     Jittable method to which the calculation of the motion derivatives is
     outsourced.
@@ -325,6 +331,9 @@ def calculate_derivatives(dxi, dr_p, r_max, r, pr, q, b_theta_0, nabla_a2, a2,
         Array containing the value of the square of the laser normalized
         vector potential at the position of each particle.
 
+    idx : ndarray
+        Array containing the (radially) sorted indices of the plasma particles.
+
     pc : float
         The parabolic density profile coefficient.
 
@@ -337,7 +346,7 @@ def calculate_derivatives(dxi, dr_p, r_max, r, pr, q, b_theta_0, nabla_a2, a2,
 
     # Calculate wakefield potential and its derivaties at particle positions.
     psi, dr_psi, dxi_psi = calculate_psi_and_derivatives_at_particles(
-        r, pr, q, r_max, dr_p, pc)
+        r, pr, q, idx, r_max, dr_p, pc)
 
     # Calculate gamma (Lorentz factor) of particles.
     for i in range(n_part):
@@ -347,7 +356,7 @@ def calculate_derivatives(dxi, dr_p, r_max, r, pr, q, b_theta_0, nabla_a2, a2,
 
     # Calculate azimuthal magnetic field from plasma at particle positions.
     b_theta_bar = calculate_b_theta_at_particles(
-        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2, dr_p)
+        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2, idx, dr_p)
 
     # Calculate derivatives of r and pr.
     for i in range(n_part):
@@ -404,7 +413,7 @@ def update_gamma_and_pz(gamma, pz, pr, a2, psi):
 
 
 @njit()
-def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p, pc):
+def calculate_psi_and_derivatives_at_particles(r, pr, q, idx, r_max, dr_p, pc):
     """
     Calculate the wakefield potential and its derivatives at the position
     of the plasma particles. This is done by using Eqs. (29) - (32) in
@@ -419,6 +428,9 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p, pc):
     r, pr, q : array
         Arrays containing the radial position, momentum and charge of the
         plasma particles.
+
+    idx : ndarray
+        Array containing the (radially) sorted indices of the plasma particles.
 
     r_max : float
         Maximum radial extent of the plasma column.
@@ -444,7 +456,6 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p, pc):
     # by doing a linear interpolation between two values at the left and
     # right of the particle. The left point is the middle position between the
     # particle and its closest left neighbor, and the same for the right.
-    idx = np.argsort(r)
     for i_sort in range(n_part):
         i = idx[i_sort]
         r_i = r[i]
@@ -563,7 +574,7 @@ def calculate_psi_and_derivatives_at_particles(r, pr, q, r_max, dr_p, pc):
 
 
 @njit()
-def calculate_psi(r_fld, r, q, r_max, pc):
+def calculate_psi(r_fld, r, q, idx, r_max, pc):
     """
     Calculate the wakefield potential at the radial
     positions specified in r_fld. This is done by using Eq. (29) in
@@ -577,6 +588,9 @@ def calculate_psi(r_fld, r, q, r_max, pc):
     r, q : array
         Arrays containing the radial position, and charge of the
         plasma particles.
+
+    idx : ndarray
+        Array containing the (radially) sorted indices of the plasma particles.
 
     r_max : float
         Maximum radial extent of the plasma column.
@@ -593,7 +607,6 @@ def calculate_psi(r_fld, r, q, r_max, pc):
     sum_2 = 0.
 
     # Calculate sum_1, sum_2 and psi_part.
-    idx = np.argsort(r)
     for i_sort in range(n_part):
         i = idx[i_sort]
         r_i = r[i]
@@ -754,7 +767,7 @@ def calculate_psi_and_derivatives(r_fld, r, pr, q):
 
 @njit()
 def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
-                                   b_theta_0, nabla_a2, dr_p):
+                                   b_theta_0, nabla_a2, idx, dr_p):
     """
     Calculate the azimuthal magnetic field from the plasma at the location
     of the plasma particles using Eqs. (24), (26) and (27) from the paper
@@ -779,14 +792,17 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
         azimuthal magnetic field due to the beam distribution, and the second
         the gradient of the normalized vector potential of the laser.
 
+    idx : ndarray
+        Array containing the (radially) sorted indices of the plasma particles.
+
     dr_p : float
         Initial spacing between plasma macroparticles. Corresponds also the
         width of the plasma sheet represented by the macroparticle.
 
     """
     # Calculate a_i and b_i, as well as a_0 and the sorted particle indices.
-    a_i, b_i, a_0, idx = calculate_ai_bi_from_edge(
-        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2)
+    a_i, b_i, a_0 = calculate_ai_bi_from_edge(
+        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2, idx)
 
     # Calculate field at particles as average between neighboring values.
     n_part = r.shape[0]
@@ -835,7 +851,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
 
 @njit()
 def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
-                      nabla_a2):
+                      nabla_a2, idx):
     """
     Calculate the azimuthal magnetic field from the plasma at the radial
     locations in r_fld using Eqs. (24), (26) and (27) from the paper
@@ -859,10 +875,13 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
         azimuthal magnetic field due to the beam distribution, and the second
         the gradient of the normalized vector potential of the laser.
 
+    idx : ndarray
+        Array containing the (radially) sorted indices of the plasma particles.
+
     """
     # Calculate a_i and b_i, as well as a_0 and the sorted particle indices.
-    a_i, b_i, a_0, idx = calculate_ai_bi_from_edge(
-        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2)
+    a_i, b_i, a_0 = calculate_ai_bi_from_edge(
+        r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2, idx)
 
     # Calculate fields at r_fld
     n_part = r.shape[0]
@@ -893,7 +912,7 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
 @njit()
 def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
-                              nabla_a2):
+                              nabla_a2, idx):
     """
     Calculate the values of a_i and b_i which are needed to determine
     b_theta at any r position.
@@ -946,7 +965,6 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     P_im1 = 0.
 
     # Iterate over particles
-    idx = np.argsort(r)
     for i_sort in range(n_part):
         i = idx[i_sort]
         r_i = r[i]
@@ -1002,12 +1020,12 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     # Calculate a_i and b_i as functions of a_0.
     a_i = K * a_0 + T
     b_i = U * a_0 + P
-    return a_i, b_i, a_0, idx
+    return a_i, b_i, a_0
 
 
 @njit()
 def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
-                              nabla_a2):
+                              nabla_a2, idx):
     """
     Calculate the values of a_i and b_i which are needed to determine
     b_theta at any r position.
@@ -1068,7 +1086,6 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     P[-1] = P_ip1
 
     # Sort particles
-    idx = np.argsort(r)
 
     # Iterate over particles
     for i_sort in range(n_part):
@@ -1133,7 +1150,7 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     a_i = np.delete(a_i, idx[0])
     b_i = np.delete(b_i, idx[0])
 
-    return a_i, b_i, a_0, idx
+    return a_i, b_i, a_0
 
 
 def calculate_beam_source_from_particles(
