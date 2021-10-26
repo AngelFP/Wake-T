@@ -613,8 +613,9 @@ def calculate_psi(r_fld, r, q, r_max, pc):
     i_last = 0
     for j in range(n_points):
         r_j = r_fld[j]
-        # Get index of last plasma particle with r_i < r_j.
-        for i_sort in range(n_part):
+        # Get index of last plasma particle with r_i < r_j, continuing from
+        # last particle found in previous iteration.
+        for i_sort in range(i_last, n_part):
             i = idx[i_sort]
             r_i = r[i]
             i_last = i_sort
@@ -625,6 +626,7 @@ def calculate_psi(r_fld, r, q, r_max, pc):
         if i_last == -1:
             sum_1_j = 0.
             sum_2_j = 0.
+            i_last = 0
         else:
             i = idx[i_last]
             sum_1_j = sum_1_arr[i]
@@ -869,8 +871,9 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     i_last = 0
     for j in range(n_points):
         r_j = r_fld[j]
-        # Get index of last plasma particle with r_i < r_j.
-        for i_sort in range(n_part):
+        # Get index of last plasma particle with r_i < r_j, continuing from
+        # last particle found in previous iteration.
+        for i_sort in range(i_last, n_part):
             i_p = idx[i_sort]
             r_i = r[i_p]
             i_last = i_sort
@@ -880,6 +883,7 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
         # Calculate fields.
         if i_last == -1:
             b_theta_mesh[j] = a_0 * r_j
+            i_last = 0
         else:
             i_p = idx[i_last]
             b_theta_mesh[j] = a_i[i_p] * r_j + b_i[i_p] / r_j
