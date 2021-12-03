@@ -45,6 +45,7 @@ def analyze_bunch_list(bunch_list, n_slices=50, len_slice=None):
     theta_x = np.zeros(list_len)
     theta_y = np.zeros(list_len)
     s_z = np.zeros(list_len)
+    q_tot = np.zeros(list_len)
 
     # perform analysis
     for i, bunch in enumerate(bunch_list):
@@ -55,13 +56,13 @@ def analyze_bunch_list(bunch_list, n_slices=50, len_slice=None):
         (theta_x[i], theta_y[i], x_avg[i], y_avg[i], s_x[i], s_y[i], a_x[i],
          a_y[i], b_x[i], b_y[i], g_x[i], g_y[i], em_x[i], em_y[i],
          em_x_sl_avg[i], em_y_sl_avg[i], ene[i], ene_sp[i], ene_sp_sl_avg[i],
-         i_peak[i], s_z[i]) = params_analysis
+         i_peak[i], s_z[i], q_tot[i]) = params_analysis
 
     # store into dictionary
     bunch_list_params = _store_bunch_parameters_into_dict(
         dist, theta_x, theta_y, x_avg, y_avg, s_x, s_y, a_x, a_y, b_x, b_y,
         g_x, g_y, em_x, em_y, em_x_sl_avg, em_y_sl_avg, ene, ene_sp,
-        ene_sp_sl_avg, i_peak, s_z)
+        ene_sp_sl_avg, i_peak, s_z, q_tot)
     return bunch_list_params
 
 
@@ -123,15 +124,16 @@ def _get_distribution_parameters(x, y, z, px, py, pz, q, n_slices, len_slice):
     theta_x = px_avg/ene
     theta_y = py_avg/ene
     i_peak = bd.peak_current(z, q, n_slices=n_slices, len_slice=len_slice)
+    q_tot = np.sum(q)
     return (theta_x, theta_y, x_avg, y_avg, s_x, s_y, a_x, a_y, b_x, b_y, g_x,
             g_y, em_x, em_y, em_x_sl_avg, em_y_sl_avg, ene, ene_sp,
-            ene_sp_sl_avg, i_peak, s_z)
+            ene_sp_sl_avg, i_peak, s_z, q_tot)
 
 
 def _store_bunch_parameters_into_dict(
         dist, theta_x, theta_y, x_avg, y_avg, s_x, s_y, a_x, a_y, b_x, b_y,
         g_x, g_y, em_x, em_y, em_x_sl_avg, em_y_sl_avg, ene, ene_sp,
-        ene_sp_sl_avg, i_peak, s_z):
+        ene_sp_sl_avg, i_peak, s_z, q_tot):
     params_dict = {
         'prop_dist': dist,
         'theta_x': theta_x,
@@ -154,6 +156,7 @@ def _store_bunch_parameters_into_dict(
         'avg_ene': ene,
         'rel_ene_spread': ene_sp,
         'avg_slice_rel_ene_spread': ene_sp_sl_avg,
-        'i_peak': i_peak
+        'i_peak': i_peak,
+        'q_tot': q_tot
     }
     return params_dict
