@@ -9,7 +9,7 @@ def test_gaussian_beam(show=False):
     """
     This test checks the accuracy of the charge deposition of a Gaussian beam
     into a cylindrical grid.
-    
+
     It tests:
         (a) that the desposited charge equals the original charge.
         (b) that the charge density in the grid agrees with
@@ -71,7 +71,7 @@ def test_gaussian_beam(show=False):
 
             # Calculate charge density.
             q_cell = np.arange(n_r)
-            v_cell = np.pi * ((q_cell+1)**2 -q_cell**2) * dr**2 * dz
+            v_cell = np.pi * ((q_cell + 1) ** 2 - q_cell**2) * dr ** 2 * dz
             rho_fld /= v_cell
 
             # Analytical expectation at beam center.
@@ -108,7 +108,7 @@ def test_gaussian_beam(show=False):
                 plt.subplot(121)
                 plt.plot(r_fld, rho_ana_0)
                 plt.plot(r_fld, rho_grid_0)
-                
+
                 plt.subplot(122)
                 plt.plot(r_fld, b_theta_ana_0)
                 plt.plot(r_fld, b_theta_grid_0)
@@ -126,9 +126,11 @@ def rho_gaussian_beam(r, z, q_tot, s_r, s_z):
 def b_theta_gaussian_beam(r, z, q_tot, s_r, s_z, gamma):
     """ Analytical azimuthal magnetic field for a Gaussian beam. """
     beta = np.sqrt(1 - 1/gamma**2)
-    e_r = ( 1/((2*np.pi)**(3/2) * ct.epsilon_0)
-            * (-q_tot) * 1e-12 / s_z * np.exp(-z**2 / (2*s_z**2)) 
-            * (1 - np.exp(-r**2 / (2*s_r**2))) / r )
+    e_r = (
+        1 / ((2 * np.pi) ** (3/2) * ct.epsilon_0)
+        * (-q_tot) * 1e-12 / s_z * np.exp(-z**2 / (2*s_z**2))
+        * (1 - np.exp(-r**2 / (2*s_r**2))) / r
+    )
     b_theta = beta / ct.c * e_r
     return b_theta
 
@@ -136,7 +138,7 @@ def b_theta_gaussian_beam(r, z, q_tot, s_r, s_z, gamma):
 def calculate_b_theta(rho, r_fld, dr):
     """ Calculate azimuthal magnetic field from rho. """
     subs = rho*r_fld/2
-    subs[:,0] += rho[:,0]*r_fld[0]/4
+    subs[:, 0] += rho[:, 0]*r_fld[0]/4
     b_theta = -(
         (np.cumsum(rho*r_fld, axis=1) - subs) * dr
         / np.abs(r_fld)

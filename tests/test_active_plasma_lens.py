@@ -50,7 +50,7 @@ def test_active_plasma_lens_with_wakefields():
     bunch = get_gaussian_bunch_from_twiss(
         en_x=en, en_y=en, a_x=alpha, a_y=alpha, b_x=beta, b_y=beta, ene=ene,
         ene_sp=ene_sp, s_t=s_t, xi_c=0e-6, q_tot=10, n_part=1e5)
-    
+
     # Define APL.
     apl = ActivePlasmaLens(
         1e-2, 1000, wakefields=True, n_out=3, density=1e23,

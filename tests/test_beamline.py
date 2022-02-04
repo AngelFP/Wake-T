@@ -12,7 +12,7 @@ def test_single_element():
     """
     This test checks that tracking a beamline made up of a single element
     produces the same result as tracking the element in itself.
-    
+
     """
     output_folder = os.path.join(tests_output_folder, 'beamline_test_single')
 
@@ -61,7 +61,7 @@ def test_multiple_element():
     """
     This test checks that tracking a beamline made up of multiple elements
     produces the same result as tracking each element separately.
-    
+
     """
     output_folder = os.path.join(tests_output_folder, 'beamline_test_multi')
 
