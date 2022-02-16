@@ -36,7 +36,7 @@ def test_downramp():
     assert beta_x == 0.009757683520255687
 
 
-def test_upramp():    
+def test_upramp():
     """
     Test that a plasma upramp changes the beta function of an initial beam
     as expected. The simplest `focusing_blowout` wakefield model is used in

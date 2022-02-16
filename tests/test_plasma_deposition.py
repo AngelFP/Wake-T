@@ -28,7 +28,6 @@ def test_uniform_plasma_deposition():
     n_part = int(np.round(r_max_plasma / dr * ppc))
     r_max_plasma = n_part * dr_p
     r = np.linspace(dr_p / 2, r_max_plasma - dr_p / 2, n_part)
-    pr = np.zeros_like(r)
     pz = np.zeros_like(r)
     gamma = np.ones_like(r)
     q = dr_p * r + dr_p * parabolic_coefficient * r**3

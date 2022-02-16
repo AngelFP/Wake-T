@@ -96,9 +96,9 @@ def test_sc_gaussian_beam(show=False):
 def b_theta_gaussian_beam(r, z, q_tot, s_r, s_z, gamma):
     """ Analytical azimuthal magnetic field for a Gaussian beam. """
     beta = np.sqrt(1 - 1/gamma**2)
-    e_r = ( 1/((2*np.pi)**(3/2) * ct.epsilon_0)
-            * (-q_tot) * 1e-12 / s_z * np.exp(-z**2 / (2*s_z**2)) 
-            * (1 - np.exp(-r**2 / (2*s_r**2))) / r )
+    e_r = (1/((2*np.pi)**(3/2) * ct.epsilon_0)
+           * (-q_tot) * 1e-12 / s_z * np.exp(-z**2 / (2*s_z**2))
+           * (1 - np.exp(-r**2 / (2*s_r**2))) / r)
     b_theta = beta / ct.c * e_r
     return b_theta
 
