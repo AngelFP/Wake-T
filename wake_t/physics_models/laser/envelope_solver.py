@@ -31,8 +31,7 @@ def L(sign, k, dr):
     """
     if sign == 0:
         return -2 / dr ** 2
-    else:
-        return (1 + sign * 1 / (2 * (k + 0.5))) / dr ** 2
+    return (1 + sign * 1 / (2 * (k + 0.5))) / dr ** 2
 
 
 @njit()
