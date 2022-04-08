@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.testing import assert_almost_equal
 import scipy.constants as ct
 import matplotlib.pyplot as plt
 from wake_t.physics_models.laser.laser_pulse import GaussianPulse
@@ -76,7 +77,7 @@ def test_gaussian_laser_in_vacuum(plot=False):
 
     # Check that solution hasn't changed.
     a_mod = np.abs(a_env)
-    assert np.sum(a_mod) == 7500.380569504027
+    assert_almost_equal(np.sum(a_mod), 7500.380569504027, decimal=10)
 
     # Make plots.
     if plot:
