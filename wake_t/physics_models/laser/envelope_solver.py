@@ -29,18 +29,9 @@ def L(sign, k, dr):
         Amount of grid points in the rho direction.
 
     """
-    if k > 0:
-        if sign == 1 or sign == -1:
-            return (1 + sign * 1 / (2 * (k + 0.5))) / dr ** 2
-        else:
-            return -2 / dr ** 2
-    else:
-        if sign == 1:
-            return 2 / dr ** 2
-        elif sign == 0:
-            return -2 / dr ** 2
-        else:
-            return 0
+    if sign == 0:
+        return -2 / dr ** 2
+    return (1 + sign * 1 / (2 * (k + 0.5))) / dr ** 2
 
 
 @njit()
