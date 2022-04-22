@@ -6,6 +6,8 @@ import numpy as np
 import scipy.constants as ct
 from aptools.plotting.quick_diagnostics import full_phase_space
 
+from .push.runge_kutta_4 import apply_rk4_pusher
+
 
 class ParticleBunch():
 
@@ -96,6 +98,68 @@ class ParticleBunch():
         self.x_ref = 0
         self.theta_ref = 0
         self.set_name(name)
+        self.__field_arrays_allocated = False
+        self.__rk4_arrays_allocated = False
+
+    def __preallocate_field_arrays(self):
+        """Preallocate the arrays where the gathered fields will be stored."""
+        n_part = len(self.x)
+        self.__e_x = np.zeros(n_part)
+        self.__e_y = np.zeros(n_part)
+        self.__e_z = np.zeros(n_part)
+        self.__b_x = np.zeros(n_part)
+        self.__b_y = np.zeros(n_part)
+        self.__b_z = np.zeros(n_part)
+        self.__field_arrays_allocated = True
+
+    def get_field_arrays(self):
+        """Get the arrays where the gathered fields will be stored."""
+        if not self.__field_arrays_allocated:
+            self.__preallocate_field_arrays()
+        return (
+            self.__e_x, self.__e_y, self.__e_z,
+            self.__b_x, self.__b_y, self.__b_z
+        )
+
+    def __preallocate_rk4_arrays(self):
+        """Preallocate the arrays needed by the RK4 pusher."""
+        n_part = len(self.x)
+
+        self.__k_x = np.zeros(n_part)
+        self.__k_y = np.zeros(n_part)
+        self.__k_xi = np.zeros(n_part)
+        self.__k_px = np.zeros(n_part)
+        self.__k_py = np.zeros(n_part)
+        self.__k_pz = np.zeros(n_part)
+        
+        self.__x_rk4 = np.zeros(n_part)
+        self.__y_rk4 = np.zeros(n_part)
+        self.__xi_rk4 = np.zeros(n_part)
+        self.__px_rk4 = np.zeros(n_part)
+        self.__py_rk4 = np.zeros(n_part)
+        self.__pz_rk4 = np.zeros(n_part)            
+        
+        self.__dx_rk4 = np.zeros(n_part)
+        self.__dy_rk4 = np.zeros(n_part)
+        self.__dxi_rk4 = np.zeros(n_part)
+        self.__dpx_rk4 = np.zeros(n_part)
+        self.__dpy_rk4 = np.zeros(n_part)
+        self.__dpz_rk4 = np.zeros(n_part)
+
+        self.__rk4_arrays_allocated = True
+
+    def get_rk4_arrays(self):
+        """Get the arrays needed by the RK4 pusher."""
+        if not self.__rk4_arrays_allocated:
+            self.__preallocate_rk4_arrays()
+        return (
+            self.__x_rk4, self.__y_rk4, self.__xi_rk4,
+            self.__px_rk4, self.__py_rk4, self.__pz_rk4,
+            self.__dx_rk4, self.__dy_rk4, self.__dxi_rk4,
+            self.__dpx_rk4, self.__dpy_rk4, self.__dpz_rk4,
+            self.__k_x, self.__k_y, self.__k_xi,
+            self.__k_px, self.__k_py, self.__k_pz
+        )
 
     def set_name(self, name):
         """ Set the particle bunch name """
@@ -234,3 +298,19 @@ class ParticleBunch():
         full_phase_space(
             self.x, self.y, self.xi, self.px, self.py, self.pz, self.q,
             show=True, **kwargs)
+
+    def evolve(self, fields, dt, pusher='rk4'):
+        """Evolve particle bunch to the next time step.
+
+        Parameters
+        ----------
+        fields : Field
+            Fields in which to evolve the particle bunch.
+        dt : float
+            Time step for evolving the bunch.
+        pusher : str, optional
+            The particle pusher to use, by default 'rk4'
+        """
+        if pusher == 'rk4':
+            apply_rk4_pusher(self, fields, dt)
+        self.prop_distance += dt * ct.c
