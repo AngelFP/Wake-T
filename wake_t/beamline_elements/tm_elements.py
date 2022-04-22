@@ -5,7 +5,7 @@ from copy import copy
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.particles.tracking import track_with_transfer_map
+from wake_t.particles.push.transfer_matrix import track_with_transfer_map
 from wake_t.particles.particle_bunch import ParticleBunch
 from wake_t.utilities.other import print_progress_bar
 from wake_t.utilities.bunch_manipulation import (
