@@ -183,8 +183,9 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     dxi_psi, dr_psi = np.gradient(psi[2:-2, 2:-2], dxi, dr, edge_order=2)
     E_z[2:-2, 2:-2] = -dxi_psi
     W_r[2:-2, 2:-2] = -dr_psi
-    # E_r = b_theta_bar + b_theta_0_mesh - W_r
-    return rho, chi, W_r, E_z, xi_fld, r_fld
+    B_theta = b_theta_bar + b_theta_0_mesh
+    E_r = W_r + B_theta
+    return rho, chi, E_r, E_z, B_theta, xi_fld, r_fld
 
 
 def evolve_plasma(r, pr, q, xi, dxi, dr_p, a2_rz, nabla_a2_rz, b_theta_0_mesh,
