@@ -131,14 +131,14 @@ class ParticleBunch():
         self.__k_px = np.zeros(n_part)
         self.__k_py = np.zeros(n_part)
         self.__k_pz = np.zeros(n_part)
-        
+
         self.__x_rk4 = np.zeros(n_part)
         self.__y_rk4 = np.zeros(n_part)
         self.__xi_rk4 = np.zeros(n_part)
         self.__px_rk4 = np.zeros(n_part)
         self.__py_rk4 = np.zeros(n_part)
-        self.__pz_rk4 = np.zeros(n_part)            
-        
+        self.__pz_rk4 = np.zeros(n_part)
+
         self.__dx_rk4 = np.zeros(n_part)
         self.__dy_rk4 = np.zeros(n_part)
         self.__dxi_rk4 = np.zeros(n_part)

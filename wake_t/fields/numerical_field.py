@@ -36,7 +36,7 @@ class NumericalField(Field):
         else:
             self.evolve_properties(bunches)
         self.calculate_field(bunches)
-        
+
     def initialize_properties(self, bunches):
         self.t = 0.
         self._initialize_properties(bunches)

@@ -8,13 +8,13 @@ from .base import Field
 
 class AnalyticField(Field):
     """Class used to define fields with analytical components.
-    
+
     The given components (Ex, Ey, Ez, Bx, By, Bz) must be functions taking 5
     arguments (3 arrays containing the x, y, z positions where to calculate the
     field; 1 array with the same size where the field values will be stored;
     and a list of constants). The given functions must be written in a way
     which allows them to be compiled with `numba`.
-    
+
     Not all components need to be given. Those which are not specified will
     simply return a zero array when gathered.
 

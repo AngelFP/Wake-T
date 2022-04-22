@@ -113,6 +113,7 @@ def initialize_coord(x, x_0):
     for i in prange(x.shape[0]):
         x[i] = x_0[i]
 
+
 @njit()
 def update_coord(x, x_0, dt, k_x, fac):
     for i in prange(x.shape[0]):
@@ -150,7 +151,7 @@ def calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,
         bx_i = bx[i]
         by_i = by[i]
         bz_i = bz[i]
-        
+
         c_over_gamma_i = ct.c / math.sqrt(1 + px_i**2 + py_i**2 + pz_i**2)
         vx_i = px_i * c_over_gamma_i
         vy_i = py_i * c_over_gamma_i

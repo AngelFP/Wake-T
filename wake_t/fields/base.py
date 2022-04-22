@@ -1,9 +1,10 @@
 """ Contains the base class for all EM fields. """
 
+
 class Field():
     """
     Base class for all EM fields.
-    
+
     It defines the interface for gathering all field components
     (i.e., Ex, Ey, Ez, Bx, By, Bz), updating the fields, and getting the
     openpmd diagnostics.

@@ -9,7 +9,6 @@ from wake_t.fields.numerical_field import NumericalField
 
 import wake_t.physics_models.plasma_wakefields as wf
 from wake_t.particles.particle_bunch import ParticleBunch
-from wake_t.utilities.other import print_progress_bar
 from wake_t.diagnostics import OpenPMDDiagnostics
 
 
