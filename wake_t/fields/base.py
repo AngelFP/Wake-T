@@ -9,8 +9,8 @@ class Field():
     openpmd diagnostics.
     """
 
-    def __init__(self):
-        self.openpmd_diag_supported = False
+    def __init__(self, openpmd_diag_supported=False):
+        self.__openpmd_diag_supported = openpmd_diag_supported
 
     def gather(self, x, y, z, ex, ey, ez, bx, by, bz):
         """Gather all field components at the specified locations.
@@ -53,8 +53,13 @@ class Field():
         """
         self._update(t, bunches)
 
-    def get_openpmd_diagnostics_data(self):
+    def get_openpmd_diagnostics_data(self, global_time):
         """Get the data for including the field in the openPMD diagnostics.
+
+        Parameters
+        ----------
+        global_time : float
+            Current global time of the simulation.
 
         Returns
         -------
@@ -62,8 +67,8 @@ class Field():
             If openPMD output is supported by the field, returns a Dict with
             all the required data.
         """
-        if self.openpmd_diag_supported:
-            return self._get_openpmd_diagnostics_data()
+        if self.__openpmd_diag_supported:
+            return self._get_openpmd_diagnostics_data(global_time)
 
     def _gather(self, x, y, z, ex, ey, ez, bx, by, bz):
         """To be implemented by the subclasses."""

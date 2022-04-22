@@ -97,7 +97,7 @@ class OpenPMDDiagnostics():
 
         # Write field diagnostics.
         if wakefield is not None:
-            wf_data = wakefield.get_openpmd_diagnostics_data()
+            wf_data = wakefield.get_openpmd_diagnostics_data(it.time)
             if wf_data is not None:
                 self._write_fields(it, wf_data)
 

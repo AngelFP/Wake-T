@@ -16,15 +16,17 @@ class NumericalField(Field):
     field and, optionally, for initializing and evolving any field properties.
     """
 
-    def __init__(self, dt_update):
+    def __init__(self, dt_update, openpmd_diag_supported=False):
         """Initialize the field.
 
         Parameters
         ----------
         dt_update : float
             Update period (in seconds) of the field.
+        openpmd_diag_supported : bool
+            Whether openPMD diagnostics are supported by the field.
         """
-        super().__init__()
+        super().__init__(openpmd_diag_supported=openpmd_diag_supported)
         self.dt_update = dt_update
         self.initialized = False
 
