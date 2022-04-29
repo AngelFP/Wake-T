@@ -7,6 +7,7 @@ import scipy.constants as ct
 from aptools.plotting.quick_diagnostics import full_phase_space
 
 from .push.runge_kutta_4 import apply_rk4_pusher
+from .push.boris_pusher import apply_boris_pusher
 
 
 class ParticleBunch():
@@ -309,8 +310,11 @@ class ParticleBunch():
         dt : float
             Time step for evolving the bunch.
         pusher : str, optional
-            The particle pusher to use, by default 'rk4'
+            The particle pusher to use. Either 'rk4' or 'boris'. By
+            default 'rk4'.
         """
         if pusher == 'rk4':
             apply_rk4_pusher(self, fields, dt)
+        elif pusher == 'boris':
+            apply_boris_pusher(self, fields, dt)
         self.prop_distance += dt * ct.c
