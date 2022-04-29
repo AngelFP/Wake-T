@@ -26,7 +26,7 @@ class PlasmaStage():
     """ Generic class for defining a plasma acceleration stage. """
 
     def __init__(self, length, density, wakefield_model='simple_blowout',
-                 n_out=1, **model_params):
+                 bunch_pusher='rk4', n_out=1, **model_params):
         """
         Initialize plasma stage.
 
@@ -42,6 +42,11 @@ class PlasmaStage():
             Wakefield model to be used. Possible values are 'blowout',
             'custom_blowout', 'focusing_blowout', 'cold_fluid_1d' and
             'quasistatic_2d'.
+
+        bunch_pusher : str
+            The pusher used to evolve the particle bunches in time within
+            the specified fields. Possible values are 'rk4' (Runge-Kutta
+            method of 4th order) or 'boris' (Boris method).
 
         n_out : int
             Number of times along the stage in which the particle distribution
@@ -205,6 +210,7 @@ class PlasmaStage():
             self.wakefield = wakefield_model
         else:
             self.wakefield = self._get_wakefield(wakefield_model, model_params)
+        self.bunch_pusher = bunch_pusher
         self.n_out = n_out
 
     def track(self, bunch, out_initial=False, opmd_diag=False, diag_dir=None):
@@ -351,7 +357,7 @@ class PlasmaStage():
             elif t_next_bunch < min(t_next_output, t_next_fields):
                 if not num_wf:
                     self.wakefield.update(t, [bunch])
-                bunch.evolve(self.wakefield, dt_bunch)
+                bunch.evolve(self.wakefield, dt_bunch, self.bunch_pusher)
                 t_bunch += dt_bunch
                 t = t_bunch
             # If the next closest time is `t_next_fields`, update fields and

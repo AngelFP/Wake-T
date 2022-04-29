@@ -13,7 +13,8 @@ class ActivePlasmaLens(PlasmaStage):
     """ Convenience class to define an active plasma lens. """
 
     def __init__(self, length, foc_strength, wakefields=False, density=None,
-                 wakefield_model='quasistatic_2d', n_out=1, **model_params):
+                 wakefield_model='quasistatic_2d', bunch_pusher='rk4', n_out=1,
+                 **model_params):
         """
         Initialize plasma lens.
 
@@ -41,6 +42,11 @@ class ActivePlasmaLens(PlasmaStage):
             of the APL in units of m^{-3}. See `PlasmaStage` documentation
             for more details.
 
+        bunch_pusher : str
+            The pusher used to evolve the particle bunches in time within
+            the specified fields. Possible values are 'rk4' (Runge-Kutta
+            method of 4th order) or 'boris' (Boris method).
+
         n_out : int
             Number of times along the lens in which the particle distribution
             should be returned (A list with all output bunches is returned
@@ -62,7 +68,7 @@ class ActivePlasmaLens(PlasmaStage):
             else:
                 # Give any value (it won't be used.)
                 density = 0.
-        super().__init__(length, density, wakefield_model, n_out,
+        super().__init__(length, density, wakefield_model, bunch_pusher, n_out,
                          **model_params)
 
     def _get_wakefield(self, model, model_params):
