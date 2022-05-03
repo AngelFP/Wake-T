@@ -1,7 +1,7 @@
 """
 Contains the Boris pusher
 
-Authors: Jorge Ordoñéz Carrasco, Ángel Ferran Pousa.
+Authors: Jorge Ordóñez Carrasco, Ángel Ferran Pousa.
 """
 import numpy as np
 from numba import njit
