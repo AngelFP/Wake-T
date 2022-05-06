@@ -357,6 +357,8 @@ class PlasmaStage():
             elif t_next_bunch < min(t_next_output, t_next_fields):
                 if not num_wf:
                     self.wakefield.update(t, [bunch])
+                if t_next_bunch > t_final:
+                    dt_bunch = t_final - t_bunch
                 bunch.evolve(self.wakefield, dt_bunch, self.bunch_pusher)
                 t_bunch += dt_bunch
                 t = t_bunch
