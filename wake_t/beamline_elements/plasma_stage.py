@@ -342,7 +342,7 @@ class PlasmaStage():
 
             # If the next closest time is `t_next_output`, generate output and
             # advance to `t_next_output`
-            if t_next_output < min(t_next_bunch, t_next_fields):
+            if t_next_output <= min(t_next_bunch, t_next_fields):
                 t_output += dt_output
                 t = t_output
                 bunch_list.append(
@@ -363,7 +363,7 @@ class PlasmaStage():
                         t, dt_bunch, [bunch], self.wakefield)
             # If the next closest time is `t_next_bunch`, push bunch and
             # advance to `t_next_bunch`
-            elif t_next_bunch < min(t_next_output, t_next_fields):
+            elif t_next_bunch <= min(t_next_output, t_next_fields):
                 if not num_wf:
                     self.wakefield.update(t, [bunch])
                 if t_next_bunch > t_final:
@@ -373,7 +373,7 @@ class PlasmaStage():
                 t = t_bunch
             # If the next closest time is `t_next_fields`, update fields and
             # advance to `t_next_fields`
-            elif t_next_fields < min(t_next_output, t_next_bunch) and num_wf:
+            elif t_next_fields <= min(t_next_output, t_next_bunch) and num_wf:
                 self.wakefield.update(t, [bunch])
                 t_fields += dt_fields
                 t = t_fields
