@@ -26,7 +26,7 @@ class PlasmaStage():
     """ Generic class for defining a plasma acceleration stage. """
 
     def __init__(self, length, density, wakefield_model='simple_blowout',
-                 bunch_pusher='rk4', n_out=1, **model_params):
+                 bunch_pusher='rk4', dt_bunch=None, n_out=1, **model_params):
         """
         Initialize plasma stage.
 
@@ -47,6 +47,11 @@ class PlasmaStage():
             The pusher used to evolve the particle bunches in time within
             the specified fields. Possible values are 'rk4' (Runge-Kutta
             method of 4th order) or 'boris' (Boris method).
+
+        dt_bunch : float
+            The time step for evolving the particle bunches. If `None`, it will
+            be automatically set to `dt = T/(10*2*pi)`, where T is the smallest
+            expected betatron period of the bunch along the plasma stage.
 
         n_out : int
             Number of times along the stage in which the particle distribution
@@ -211,6 +216,7 @@ class PlasmaStage():
         else:
             self.wakefield = self._get_wakefield(wakefield_model, model_params)
         self.bunch_pusher = bunch_pusher
+        self.dt_bunch = dt_bunch
         self.n_out = n_out
 
     def track(self, bunch, out_initial=False, opmd_diag=False, diag_dir=None):
@@ -288,7 +294,10 @@ class PlasmaStage():
         # Initialize current time of the particle bunch.
         t_bunch = 0.
         # Time step of the particle bunch.
-        dt_bunch = self._get_optimized_dt(bunch)
+        if self.dt_bunch is None:
+            dt_bunch = self._get_optimized_dt(bunch)
+        else:
+            dt_bunch = self.dt_bunch
         # Initialize current time of the fields and determine their time step.
         if isinstance(self.wakefield, NumericalField):
             num_wf = True
