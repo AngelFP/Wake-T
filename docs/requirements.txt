@@ -1,0 +1,10 @@
+numpy
+numba
+scipy
+matplotlib
+aptools>=0.1.23
+openpmd-api~=0.14.0
+openpmd-viewer>=1.2.0
+pydata-sphinx-theme
+sphinx-panels
+sphinx-gallery
