@@ -250,6 +250,23 @@ def get_matched_bunch(
 
 def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
                   **kwargs):
+    if code_name == 'openpmd':
+        #Check if species_name is given, read it via openpmd or guess is as the default bunch.name in wake-t
+        try: 
+            species_name=kwargs['species_name']
+        except:
+            try:
+                from openpmd_viewer import OpenPMDTimeSeries
+                openpmd_viewer_version = 1
+                import os
+                ts = OpenPMDTimeSeries(os.path.normpath(os.path.join(file_path,"..")))
+                avail_species = ts.avail_species
+                species_name=avail_species[0]
+                print("Species name read from file: "+str(species_name))
+            except:
+                print("Openpmd-viewer not installed. Guess species name as default wake-t bunch.name")
+                species_name = 'elec_bunch_0'
+            kwargs['species_name']=species_name
     x, y, z, px, py, pz, q = dr.read_beam(code_name, file_path, **kwargs)
     z_avg = np.average(z, weights=q)
     xi = z - z_avg
