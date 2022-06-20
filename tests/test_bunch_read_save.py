@@ -49,11 +49,7 @@ def test_bunch_read_save():
         file_path = os.path.join(
             output_folder,
             'bunch_{}.{}'.format(data_format, file_format))
-        if data_format in ['astra', 'csrtrack']:
-            bunch_saved = get_from_file(file_path, data_format)
-        if data_format in ['openpmd']:
-            bunch_saved = get_from_file(file_path, data_format,
-                                        species_name='elec_bunch')
+        bunch_saved = get_from_file(file_path, data_format)
 
         # For astra and csrtrack, remove the generated reference particle.
         if data_format in ['astra', 'csrtrack']:
