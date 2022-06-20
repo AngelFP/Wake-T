@@ -298,7 +298,6 @@ def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
                 )
             elif n_species == 1:
                 species_name = available_species[0]
-                kwargs['species_name'] = species_name
             else:
                 raise ValueError(
                     'More than one particle species is available in' +
@@ -306,6 +305,7 @@ def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
                     'Please specify a `species_name`. ' +
                     'Available species are: ' + str(available_species)
                 )
+        kwargs['species_name'] = species_name
         if name is None:
             name = species_name
     # Read particle species.
