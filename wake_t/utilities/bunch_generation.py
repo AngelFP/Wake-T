@@ -5,6 +5,7 @@ import scipy.constants as ct
 from scipy.stats import truncnorm
 import aptools.plasma_accel.general_equations as ge
 import aptools.data_handling.reading as dr
+from aptools.data_handling.utilities import get_available_species
 
 from wake_t.particles.particle_bunch import ParticleBunch
 
@@ -249,11 +250,72 @@ def get_matched_bunch(
 
 
 def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
-                  **kwargs):
+                  species_name=None, **kwargs):
+    """Get particle bunch from file.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the file containing the particle distribution.
+    code_name : str
+        Name of the code from which the particle distribution originates.
+        Possible values are 'astra', 'csrtrack' and 'openpmd'.
+    preserve_prop_dist : bool, optional
+        Whether to preserve the average longitudinal position of the
+        distribution in the `prop_distance` parameter of the `ParticleBunch`,
+        by default False.
+    name : str, optional
+        Name to assign to the ParticleBunch, by default None. If None, when
+        reading a particle species from an `openPMD` file, the `name` is set
+        to the original name of the species. For other data formats, the
+        default name `elec_bunch_i` will be assigned, where `i`>=0 is an
+        integer that is increased for each unnamed `ParticleBunch` that is
+        generated.
+    species_name : str, optional
+        Name of the particle species to be read from an `openpmd` file.
+        Required only when more than one particle species is present in the
+        file. 
+
+    Other Parameters
+    ----------------
+    **kwargs : dict
+        Other parameters to be passed to
+        `aptools.data_handling.reading.read_beam`.
+
+    Returns
+    -------
+    ParticleBunch
+        A ParticleBunch with the distribution from the specified file.
+    """
+    # If reading from an openPMD file, use the right `name` and `species_name`.
+    if code_name == 'openpmd':
+        if species_name is None:
+            available_species = get_available_species(file_path)
+            n_species = len(available_species)
+            if n_species == 0:
+                raise ValueError(
+                    "No particle species found in '{}'".format(file_path)
+                )
+            elif n_species == 1:
+                species_name = available_species[0]
+                kwargs['species_name'] = species_name
+            else:
+                raise ValueError(
+                    'More than one particle species is available in' +
+                    "'{}'. ".format(file_path) +
+                    'Please specify a `species_name`. ' +
+                    'Available species are: ' + str(available_species)
+                )
+        if name is None:
+            name = species_name
+    # Read particle species.
     x, y, z, px, py, pz, q = dr.read_beam(code_name, file_path, **kwargs)
+    # Center in z.
     z_avg = np.average(z, weights=q)
     xi = z - z_avg
+    # Create ParticleBunch
     bunch = ParticleBunch(q, x, y, xi, px, py, pz, name=name)
+    # Preserve `z_avg` as the initial propagation distance of the bunch.
     if preserve_prop_dist:
         bunch.prop_distance = z_avg
     return bunch
