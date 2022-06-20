@@ -274,7 +274,7 @@ def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
     species_name : str, optional
         Name of the particle species to be read from an `openpmd` file.
         Required only when more than one particle species is present in the
-        file. 
+        file.
 
     Other Parameters
     ----------------
