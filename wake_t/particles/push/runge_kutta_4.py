@@ -4,8 +4,10 @@ from numba import njit, prange
 import math
 import scipy.constants as ct
 
+from wake_t.fields.gather import gather_fields
 
-def apply_rk4_pusher(bunch, field, t, dt):
+
+def apply_rk4_pusher(bunch, fields, t, dt):
     """Evolve a particle bunch using the RK4 pusher.
 
     For a variable evolving as:
@@ -34,8 +36,8 @@ def apply_rk4_pusher(bunch, field, t, dt):
     ----------
     bunch : ParticleBunch
         The particle bunch to be evolved.
-    field : Field
-        The field within which the particle bunch will be evolved.
+    fields : list
+        List of fields within which the particle bunch will be evolved.
     t : float
         The current time.
     dt : float
@@ -67,8 +69,8 @@ def apply_rk4_pusher(bunch, field, t, dt):
         # Calculate contributions the push.
         if i == 0:
             # Gather field at the initial location of the particles.
-            field.gather(
-                bunch.x, bunch.y, bunch.xi, t_i, ex, ey, ez, bx, by, bz)
+            gather_fields(fields, bunch.x, bunch.y, bunch.xi, t_i,
+                          ex, ey, ez, bx, by, bz)
 
             # Calculate k_1.
             calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,
@@ -92,7 +94,7 @@ def apply_rk4_pusher(bunch, field, t, dt):
             update_coord(pz, bunch.pz, dt, k_pz, fac1)
 
             # Gather field at updated positions.
-            field.gather(x, y, xi, t_i, ex, ey, ez, bx, by, bz)
+            gather_fields(fields, x, y, xi, t_i, ex, ey, ez, bx, by, bz)
 
             # Calculate k_i.
             calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,

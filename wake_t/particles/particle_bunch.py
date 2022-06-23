@@ -305,8 +305,8 @@ class ParticleBunch():
 
         Parameters
         ----------
-        fields : Field
-            Fields in which to evolve the particle bunch.
+        fields : list
+            List of fields in which to evolve the particle bunch.
         t : float
             The current time.
         dt : float
