@@ -81,7 +81,7 @@ class Quasistatic2DWakefield(NumericalField):
         self.r_fld = r_arr*s_d
         self.n_p = n_p
 
-    def _gather(self, x, y, z, ex, ey, ez, bx, by, bz):
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
         dr = self.r_fld[1] - self.r_fld[0]
         dxi = self.xi_fld[1] - self.xi_fld[0]
         gather_main_fields_cyl_linear(

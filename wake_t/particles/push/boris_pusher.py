@@ -8,7 +8,7 @@ from numba import njit
 import scipy.constants as ct
 
 
-def apply_boris_pusher(bunch, field, dt):
+def apply_boris_pusher(bunch, field, t, dt):
     """Evolve a particle bunch using the Boris pusher.
 
     Parameters
@@ -17,8 +17,10 @@ def apply_boris_pusher(bunch, field, dt):
         The particle bunch to be evolved.
     field : Field
         The field within which the particle bunch will be evolved.
+    t : float
+        The current time.
     dt : float
-        Time step of the pusher.
+        Time step by which to push the particles.
     """
     # Get the necessary arrays where the fields  will be gathered.
     ex, ey, ez, bx, by, bz = bunch.get_field_arrays()
@@ -26,7 +28,7 @@ def apply_boris_pusher(bunch, field, dt):
     apply_half_position_push(
         bunch.x, bunch.y, bunch.xi, bunch.px, bunch.py, bunch.pz, dt)
     # Gather fields at this position.
-    field.gather(bunch.x, bunch.y, bunch.xi, ex, ey, ez, bx, by, bz)
+    field.gather(bunch.x, bunch.y, bunch.xi, t+dt/2, ex, ey, ez, bx, by, bz)
     # Advances the momentum one time step using the gathered fields.
     push_momentum(bunch.px, bunch.py, bunch.pz, ex, ey, ez, bx, by, bz, dt)
     # Completes the particles push using the updated momentum.

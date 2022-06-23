@@ -300,21 +300,23 @@ class ParticleBunch():
             self.x, self.y, self.xi, self.px, self.py, self.pz, self.q,
             show=True, **kwargs)
 
-    def evolve(self, fields, dt, pusher='rk4'):
+    def evolve(self, fields, t, dt, pusher='rk4'):
         """Evolve particle bunch to the next time step.
 
         Parameters
         ----------
         fields : Field
             Fields in which to evolve the particle bunch.
+        t : float
+            The current time.
         dt : float
-            Time step for evolving the bunch.
+            Time step by which to evolve the bunch.
         pusher : str, optional
             The particle pusher to use. Either 'rk4' or 'boris'. By
             default 'rk4'.
         """
         if pusher == 'rk4':
-            apply_rk4_pusher(self, fields, dt)
+            apply_rk4_pusher(self, fields, t, dt)
         elif pusher == 'boris':
-            apply_boris_pusher(self, fields, dt)
+            apply_boris_pusher(self, fields, t, dt)
         self.prop_distance += dt * ct.c

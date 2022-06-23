@@ -13,7 +13,7 @@ class Field():
     def __init__(self, openpmd_diag_supported=False):
         self.__openpmd_diag_supported = openpmd_diag_supported
 
-    def gather(self, x, y, z, ex, ey, ez, bx, by, bz):
+    def gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
         """Gather all field components at the specified locations.
 
         Parameters
@@ -24,6 +24,8 @@ class Field():
             1D array containing the x position where to gather the fields.
         z : ndarray
             1D array containing the x position where to gather the fields.
+        t : float
+            Time at which the field is being gathered.
         ex : ndarray
             1D array where the gathered Ex values will be stored.
         ey : ndarray
@@ -37,7 +39,7 @@ class Field():
         bz : ndarray
             1D array where the gathered Bz values will be stored
         """
-        self._gather(x, y, z, ex, ey, ez, bx, by, bz)
+        self._gather(x, y, z, t, ex, ey, ez, bx, by, bz)
 
     def update(self, t, bunches):
         """Update field.
@@ -71,7 +73,7 @@ class Field():
         if self.__openpmd_diag_supported:
             return self._get_openpmd_diagnostics_data(global_time)
 
-    def _gather(self, x, y, z, ex, ey, ez, bx, by, bz):
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
         """To be implemented by the subclasses."""
         raise NotImplementedError
 

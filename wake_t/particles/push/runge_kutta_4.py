@@ -5,7 +5,7 @@ import math
 import scipy.constants as ct
 
 
-def apply_rk4_pusher(bunch, field, dt):
+def apply_rk4_pusher(bunch, field, t, dt):
     """Evolve a particle bunch using the RK4 pusher.
 
     For a variable evolving as:
@@ -36,8 +36,10 @@ def apply_rk4_pusher(bunch, field, dt):
         The particle bunch to be evolved.
     field : Field
         The field within which the particle bunch will be evolved.
+    t : float
+        The current time.
     dt : float
-        Time step of the pusher.
+        Time step by which to push the particles.
     """
     # Get the necessary preallocated arrays.
     (x, y, xi, px, py, pz, dx, dy, dxi, dpx, dpy, dpz,
@@ -49,19 +51,24 @@ def apply_rk4_pusher(bunch, field, dt):
 
     # Calculate push.
     for i in range(4):
+        t_i = t
 
         # Calculate factors.
         if i in [0, 3]:
             fac1 = 1.
             fac2 = 1. / 6.
+            if i == 3:
+                t_i += dt
         else:
             fac1 = 0.5
             fac2 = 2. / 6.
+            t_i += dt / 2
 
         # Calculate contributions the push.
         if i == 0:
             # Gather field at the initial location of the particles.
-            field.gather(bunch.x, bunch.y, bunch.xi, ex, ey, ez, bx, by, bz)
+            field.gather(
+                bunch.x, bunch.y, bunch.xi, t_i, ex, ey, ez, bx, by, bz)
 
             # Calculate k_1.
             calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,
@@ -85,7 +92,7 @@ def apply_rk4_pusher(bunch, field, dt):
             update_coord(pz, bunch.pz, dt, k_pz, fac1)
 
             # Gather field at updated positions.
-            field.gather(x, y, xi, ex, ey, ez, bx, by, bz)
+            field.gather(x, y, xi, t_i, ex, ey, ez, bx, by, bz)
 
             # Calculate k_i.
             calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,

@@ -59,7 +59,7 @@ class AnalyticField(Field):
         super().__init__()
 
         @njit()
-        def zero_field(x, y, z, fld, k):
+        def zero_field(x, y, z, t, fld, k):
             """Default field component."""
             for i in range(len(fld)):
                 fld[i] = 0.
@@ -72,10 +72,10 @@ class AnalyticField(Field):
         self.__b_z = njit()(b_z) if b_z is not None else zero_field
         self.constants = np.array(constants)
 
-    def _gather(self, x, y, z, ex, ey, ez, bx, by, bz):
-        self.__e_x(x, y, z, ex, self.constants)
-        self.__e_y(x, y, z, ey, self.constants)
-        self.__e_z(x, y, z, ez, self.constants)
-        self.__b_x(x, y, z, bx, self.constants)
-        self.__b_y(x, y, z, by, self.constants)
-        self.__b_z(x, y, z, bz, self.constants)
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
+        self.__e_x(x, y, z, t, ex, self.constants)
+        self.__e_y(x, y, z, t, ey, self.constants)
+        self.__e_z(x, y, z, t, ez, self.constants)
+        self.__b_x(x, y, z, t, bx, self.constants)
+        self.__b_y(x, y, z, t, by, self.constants)
+        self.__b_z(x, y, z, t, bz, self.constants)
