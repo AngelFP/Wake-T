@@ -200,12 +200,11 @@ def gather_main_fields_cyl_linear(
             er_i = dr_u*er_z_1 + dr_l*er_z_2
             bt_i = dr_u*bt_z_1 + dr_l*bt_z_2
 
-            ex_part[i] = er_i * x_i * inv_r_i
-            ey_part[i] = er_i * y_i * inv_r_i
-            ez_part[i] = dr_u*ez_z_1 + dr_l*ez_z_2
-            bx_part[i] = - bt_i * y_i * inv_r_i
-            by_part[i] = bt_i * x_i * inv_r_i
-            bz_part[i] = 0.
+            ex_part[i] += er_i * x_i * inv_r_i
+            ey_part[i] += er_i * y_i * inv_r_i
+            ez_part[i] += dr_u*ez_z_1 + dr_l*ez_z_2
+            bx_part[i] += - bt_i * y_i * inv_r_i
+            by_part[i] += bt_i * x_i * inv_r_i
 
 
 @njit()
