@@ -5,11 +5,11 @@ from copy import deepcopy
 
 import numpy as np
 import scipy.constants as ct
-from wake_t.fields.numerical_field import NumericalField
 
 import wake_t.physics_models.plasma_wakefields as wf
 from wake_t.particles.particle_bunch import ParticleBunch
 from wake_t.diagnostics import OpenPMDDiagnostics
+from wake_t.tracking.tracker import Tracker
 
 
 wakefield_models = {
@@ -26,7 +26,7 @@ class PlasmaStage():
     """ Generic class for defining a plasma acceleration stage. """
 
     def __init__(self, length, density, wakefield_model='simple_blowout',
-                 bunch_pusher='rk4', dt_bunch=None, n_out=1, **model_params):
+                 bunch_pusher='rk4', dt_bunch='auto', n_out=1, **model_params):
         """
         Initialize plasma stage.
 
@@ -252,11 +252,30 @@ class PlasmaStage():
         print('')
         print('Plasma stage')
         print('-'*len('Plasma stage'))
+
+        # Create diagnostics instance.
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
             opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
-        bunch_list = self._track_numerically(bunch, out_initial, opmd_diag)
-        if opmd_diag is not False:
-            opmd_diag.increase_z_pos(self.length)
+
+        # Create tracker.
+        tracker = Tracker(
+            t_final=self.length/ct.c,
+            bunches=[bunch],
+            dt_bunches=[self.dt_bunch],
+            fields=[self.wakefield, bx],
+            n_diags=self.n_out,
+            opmd_diags=opmd_diag,
+            bunch_pusher=self.bunch_pusher,
+            auto_dt_bunch_f=self._get_optimized_dt
+        )
+
+        # Do tracking.
+        bunch_list = tracker.do_tracking()
+
+        # If only tracking one bunch, do not return list of lists.
+        if len(bunch_list) == 1:
+            bunch_list = bunch_list[0]            
+
         return bunch_list
 
     def _get_density_profile(self, density):
@@ -279,110 +298,6 @@ class PlasmaStage():
             raise ValueError(
                 'Wakefield model "{}" not recognized.'.format(model))
 
-    def _track_numerically(self, bunch, out_initial, opmd_diag):
-        """ Track bunch numerically. """
-        start = time.time()
-
-        # Initialize current time.
-        t = 0.
-        # Final time of the tracking.
-        t_final = self.length / ct.c
-        # Initialize current time of the output and diagnostics.
-        t_output = 0.
-        # Time step of the output and diagnostics.
-        dt_output = t_final / self.n_out
-        # Initialize current time of the particle bunch.
-        t_bunch = 0.
-        # Time step of the particle bunch.
-        if self.dt_bunch is None:
-            dt_bunch = self._get_optimized_dt(bunch)
-        else:
-            dt_bunch = self.dt_bunch
-        # Initialize current time of the fields and determine their time step.
-        if isinstance(self.wakefield, NumericalField):
-            num_wf = True
-            t_fields = 0.
-            dt_fields = self.wakefield.dt_update
-        else:
-            num_wf = False
-            t_fields = 0.
-            dt_fields = np.inf
-
-        # Update the fields (trigger initial calculation).
-        self.wakefield.update(t, [bunch])
-
-        # Initialize list where the output bunches will be stored.
-        bunch_list = []
-
-        # Generate output of initial bunch and fields.
-        if out_initial:
-            bunch_list.append(
-                ParticleBunch(
-                    deepcopy(bunch.q),
-                    deepcopy(bunch.x),
-                    deepcopy(bunch.y),
-                    deepcopy(bunch.xi),
-                    deepcopy(bunch.px),
-                    deepcopy(bunch.py),
-                    deepcopy(bunch.pz),
-                    prop_distance=deepcopy(bunch.prop_distance),
-                    name=bunch.name
-                )
-            )
-            if opmd_diag is not False:
-                opmd_diag.write_diagnostics(
-                    t, dt_bunch, [bunch], self.wakefield)
-
-        # Perform tracking.
-        while t < t_final:
-            # Determine next time for the output, bunch and fields.
-            t_next_output = t_output + dt_output
-            t_next_bunch = t_bunch + dt_bunch
-            t_next_fields = t_fields + dt_fields
-
-            # If the next closest time is `t_next_output`, generate output and
-            # advance to `t_next_output`
-            if t_next_output <= min(t_next_bunch, t_next_fields):
-                t_output += dt_output
-                t = t_output
-                bunch_list.append(
-                    ParticleBunch(
-                        deepcopy(bunch.q),
-                        deepcopy(bunch.x),
-                        deepcopy(bunch.y),
-                        deepcopy(bunch.xi),
-                        deepcopy(bunch.px),
-                        deepcopy(bunch.py),
-                        deepcopy(bunch.pz),
-                        prop_distance=deepcopy(bunch.prop_distance),
-                        name=bunch.name
-                    )
-                )
-                if opmd_diag is not False:
-                    opmd_diag.write_diagnostics(
-                        t, dt_bunch, [bunch], self.wakefield)
-            # If the next closest time is `t_next_bunch`, push bunch and
-            # advance to `t_next_bunch`
-            elif t_next_bunch <= min(t_next_output, t_next_fields):
-                if not num_wf:
-                    self.wakefield.update(t, [bunch])
-                if t_next_bunch > t_final:
-                    dt_bunch = t_final - t_bunch
-                bunch.evolve(self.wakefield, dt_bunch, self.bunch_pusher)
-                t_bunch += dt_bunch
-                t = t_bunch
-            # If the next closest time is `t_next_fields`, update fields and
-            # advance to `t_next_fields`
-            elif t_next_fields <= min(t_next_output, t_next_bunch) and num_wf:
-                self.wakefield.update(t, [bunch])
-                t_fields += dt_fields
-                t = t_fields
-
-        end = time.time()
-        print("Done ({:1.3f} seconds).".format(end-start))
-        print('-'*80)
-
-        return bunch_list
 
     def _get_optimized_dt(self, beam):
         """ Get tracking time step. """
