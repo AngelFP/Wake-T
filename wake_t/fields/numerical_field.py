@@ -30,7 +30,15 @@ class NumericalField(Field):
         self.dt_update = dt_update
         self.initialized = False
 
-    def _update(self, t, bunches):
+    def update(self, bunches):
+        """Update field to the next time step (`dt_update`).
+
+        Parameters
+        ----------
+        bunches : list
+            List of `ParticleBunch`es that can be used to recompute/update the
+            fields.
+        """
         if not self.initialized:
             self.initialize_properties(bunches)
         else:

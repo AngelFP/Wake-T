@@ -41,21 +41,6 @@ class Field():
         """
         self._gather(x, y, z, t, ex, ey, ez, bx, by, bz)
 
-    def update(self, t, bunches):
-        """Update field.
-
-        This method provides the option of updating the field as a function of
-        time and a list of particle bunches.
-
-        Parameters
-        ----------
-        t : float
-            A time value (in seconds).
-        bunches : list
-            List of `ParticleBunch`es.
-        """
-        self._update(t, bunches)
-
     def get_openpmd_diagnostics_data(self, global_time):
         """Get the data for including the field in the openPMD diagnostics.
 
@@ -76,10 +61,6 @@ class Field():
     def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
         """To be implemented by the subclasses."""
         raise NotImplementedError
-
-    def _update(self, t, bunches):
-        """(Optional) To be implemented by the subclasses."""
-        pass
 
     def _get_openpmd_diagnostics_data(self):
         """To be implemented by the subclasses."""
