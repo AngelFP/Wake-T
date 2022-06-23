@@ -1,13 +1,9 @@
 """ This module contains the definition of the PlasmaStage class """
 
-import time
-from copy import deepcopy
-
 import numpy as np
 import scipy.constants as ct
 
 import wake_t.physics_models.plasma_wakefields as wf
-from wake_t.particles.particle_bunch import ParticleBunch
 from wake_t.diagnostics import OpenPMDDiagnostics
 from wake_t.tracking.tracker import Tracker
 
@@ -262,7 +258,7 @@ class PlasmaStage():
             t_final=self.length/ct.c,
             bunches=[bunch],
             dt_bunches=[self.dt_bunch],
-            fields=[self.wakefield, bx],
+            fields=[self.wakefield],
             n_diags=self.n_out,
             opmd_diags=opmd_diag,
             bunch_pusher=self.bunch_pusher,
