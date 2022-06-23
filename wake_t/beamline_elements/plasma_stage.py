@@ -297,14 +297,14 @@ class PlasmaStage():
 
     def _get_optimized_dt(self, beam):
         """ Get tracking time step. """
-        gamma = np.sqrt(1 + beam.px**2 + beam.py**2 + beam.pz**2)
-        mean_gamma = np.average(gamma, weights=beam.q)
+        # Get minimum gamma in the bunch (assumes px,py << pz).
+        min_gamma = np.sqrt(np.min(beam.pz)**2 + 1)
         # calculate maximum focusing along stage.
         z = np.linspace(0, self.length, 100)
         n_p = self.density(z)
         w_p = np.sqrt(max(n_p)*ct.e**2/(ct.m_e*ct.epsilon_0))
         max_kx = (ct.m_e/(2*ct.e*ct.c))*w_p**2
-        w_x = np.sqrt(ct.e*ct.c/ct.m_e * max_kx/mean_gamma)
+        w_x = np.sqrt(ct.e*ct.c/ct.m_e * max_kx/min_gamma)
         period_x = 1/w_x
         dt = 0.1*period_x
         return dt
