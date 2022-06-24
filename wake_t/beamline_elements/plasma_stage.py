@@ -23,7 +23,7 @@ class PlasmaStage():
 
     def __init__(self, length, density, wakefield_model='simple_blowout',
                  bunch_pusher='rk4', dt_bunch='auto', n_out=1,
-                 name='Plasma stage', **model_params):
+                 name='Plasma stage', external_fields=[], **model_params):
         """
         Initialize plasma stage.
 
@@ -38,7 +38,7 @@ class PlasmaStage():
         wakefield_model : str
             Wakefield model to be used. Possible values are 'blowout',
             'custom_blowout', 'focusing_blowout', 'cold_fluid_1d' and
-            'quasistatic_2d'.
+            'quasistatic_2d'. If `None`, no wakefields will be computed.
 
         bunch_pusher : str
             The pusher used to evolve the particle bunches in time within
@@ -212,14 +212,12 @@ class PlasmaStage():
 
         self.length = length
         self.density = self._get_density_profile(density)
-        if isinstance(wakefield_model, wf.Wakefield):
-            self.wakefield = wakefield_model
-        else:
-            self.wakefield = self._get_wakefield(wakefield_model, model_params)
+        self.wakefield = self._get_wakefield(wakefield_model, model_params)
         self.bunch_pusher = bunch_pusher
         self.dt_bunch = dt_bunch
         self.n_out = n_out
         self.name = name
+        self.external_fields = external_fields
 
     def track(self, bunch, out_initial=False, opmd_diag=False, diag_dir=None):
         """
@@ -256,12 +254,17 @@ class PlasmaStage():
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
             opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
 
+        fields = []
+        if self.wakefield is not None:
+            fields.append(self.wakefield)
+        fields.extend(self.external_fields)
+
         # Create tracker.
         tracker = Tracker(
             t_final=self.length/ct.c,
             bunches=[bunch],
             dt_bunches=[self.dt_bunch],
-            fields=[self.wakefield],
+            fields=fields,
             n_diags=self.n_out,
             opmd_diags=opmd_diag,
             bunch_pusher=self.bunch_pusher,
@@ -292,7 +295,9 @@ class PlasmaStage():
 
     def _get_wakefield(self, model, model_params):
         """ Initialize and return corresponding wakefield model. """
-        if model in wakefield_models:
+        if model is None:
+            return None
+        elif model in wakefield_models:
             return wakefield_models[model](self.density, **model_params)
         else:
             raise ValueError(
