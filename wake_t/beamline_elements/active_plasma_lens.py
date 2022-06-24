@@ -14,7 +14,7 @@ class ActivePlasmaLens(PlasmaStage):
 
     def __init__(self, length, foc_strength, wakefields=False, density=None,
                  wakefield_model='quasistatic_2d', bunch_pusher='rk4', n_out=1,
-                 **model_params):
+                 name='Active plasma lens', **model_params):
         """
         Initialize plasma lens.
 
@@ -52,6 +52,10 @@ class ActivePlasmaLens(PlasmaStage):
             should be returned (A list with all output bunches is returned
             after tracking).
 
+        name : str
+            Name of the plasma lens. This is only used for displaying the
+            progress bar during tracking. By default, `'Active plasma lens'`.
+
         **model_params
             Optional. Required only if `wakefields=true`. Keyword arguments
             which will be given to the wakefield model. See `PlasmaStage`
@@ -69,7 +73,7 @@ class ActivePlasmaLens(PlasmaStage):
                 # Give any value (it won't be used.)
                 density = 0.
         super().__init__(length, density, wakefield_model, bunch_pusher, n_out,
-                         **model_params)
+                         name=name, **model_params)
 
     def _get_wakefield(self, model, model_params):
         """ Return the APL field, including plasma wakefields if needed. """

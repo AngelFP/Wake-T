@@ -47,7 +47,7 @@ class PlasmaRamp(PlasmaStage):
                  wakefield_model='focusing_blowout', decay_length=None,
                  plasma_dens_top=None, plasma_dens_down=None,
                  position_down=None, bunch_pusher='rk4', n_out=1,
-                 **model_params):
+                 name='Plasma ramp', **model_params):
         """
         Initialize plasma ramp.
 
@@ -99,6 +99,10 @@ class PlasmaRamp(PlasmaStage):
             should be returned (A list with all output bunches is returned
             after tracking).
 
+        name : str
+            Name of the plasma ramp. This is only used for displaying the
+            progress bar during tracking. By default, `'Plasma ramp'`.
+
         **model_params
             Keyword arguments which will be given to the wakefield model. Each
             model requires a different set of parameters. See `PlasmaStage`
@@ -123,7 +127,7 @@ class PlasmaRamp(PlasmaStage):
         self.profile = profile
         super().__init__(
             length, self.ramp_profile, wakefield_model, bunch_pusher, n_out,
-            **model_params)
+            name=name, **model_params)
 
     def ramp_profile(self, z):
         """ Return the density value at a certain z location. """
