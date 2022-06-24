@@ -7,6 +7,7 @@ import scipy.constants as ct
 from wake_t.particles.particle_bunch import ParticleBunch
 from wake_t.fields.analytic_field import AnalyticField
 from wake_t.fields.numerical_field import NumericalField
+from .progress_bar import get_progress_bar
 
 
 class Tracker():
@@ -35,7 +36,7 @@ class Tracker():
     def __init__(
             self, t_final, bunches=[], dt_bunches=[], fields=[],
             n_diags=0, opmd_diags=False, auto_dt_bunch_f=None,
-            bunch_pusher='rk4'):
+            bunch_pusher='rk4', section_name='Simulation'):
         """Initialize tracker.
 
         Parameters
@@ -61,6 +62,9 @@ class Tracker():
         bunch_pusher : str, optional
             The particle pusher used to evolve the bunches. Possible values
             are `'boris'` or `'rk4'`.
+        section_name : str, optional
+            Name of the section to be tracked. This will be appended to the
+            beginning of the progress bar.
         """
         self.t_final = t_final
         self.bunches = bunches
@@ -72,6 +76,7 @@ class Tracker():
         self.n_diags = n_diags
         self.auto_dt_bunch_f = auto_dt_bunch_f
         self.bunch_pusher = bunch_pusher
+        self.section_name = section_name
 
         # Make lists with all objects to track and their time steps.
         self.objects_to_track = [*self.bunches, *self.num_fields]
@@ -103,6 +108,9 @@ class Tracker():
             Each item is another list with `n_diag` copies of the particle
             bunch along the tracking.
         """
+        # Initialize progress bar.
+        progress_bar = get_progress_bar(self.section_name, self.t_final*ct.c)
+
         # Calculate fields at t=0.
         for field in self.num_fields:
             field.update(self.bunches)
@@ -179,9 +187,15 @@ class Tracker():
             # Advance tracking time.
             self.t_tracking = t_next
 
+            # Update progress bar.
+            progress_bar.update(self.t_tracking*ct.c - progress_bar.n)
+
         # Finalize tracking by increasing z position of diagnostics.
         if self.opmd_diags is not False:
             self.opmd_diag.increase_z_pos(self.t_final * ct.c)
+
+        # Close progress bar.
+        progress_bar.close()
 
         return self.bunch_list
 
