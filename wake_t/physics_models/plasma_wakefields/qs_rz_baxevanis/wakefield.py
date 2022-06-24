@@ -39,10 +39,11 @@ class Quasistatic2DWakefield(NumericalField):
 
     def _initialize_properties(self, bunches):
         # Initialize laser.
-        self.laser.set_envelope_solver_params(
-            self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
-            self.dt_update)
-        self.laser.initialize_envelope()
+        if self.laser is not None:
+            self.laser.set_envelope_solver_params(
+                self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
+                self.dt_update)
+            self.laser.initialize_envelope()
 
     def _evolve_properties(self, bunches):
         if self.laser is not None:
