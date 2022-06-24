@@ -274,7 +274,7 @@ class PlasmaStage():
 
         # If only tracking one bunch, do not return list of lists.
         if len(bunch_list) == 1:
-            bunch_list = bunch_list[0]            
+            bunch_list = bunch_list[0]
 
         return bunch_list
 
@@ -297,7 +297,6 @@ class PlasmaStage():
         else:
             raise ValueError(
                 'Wakefield model "{}" not recognized.'.format(model))
-
 
     def _get_optimized_dt(self, beam):
         """ Get tracking time step. """
