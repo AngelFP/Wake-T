@@ -22,7 +22,8 @@ class PlasmaStage():
     """ Generic class for defining a plasma acceleration stage. """
 
     def __init__(self, length, density, wakefield_model='simple_blowout',
-                 bunch_pusher='rk4', dt_bunch='auto', n_out=1, **model_params):
+                 bunch_pusher='rk4', dt_bunch='auto', n_out=1,
+                 name='Plasma stage', **model_params):
         """
         Initialize plasma stage.
 
@@ -53,6 +54,10 @@ class PlasmaStage():
             Number of times along the stage in which the particle distribution
             should be returned (A list with all output bunches is returned
             after tracking).
+
+        name : str
+            Name of the plasma stage. This is only used for displaying the
+            progress bar during tracking. By default, `'Plasma stage'`.
 
         **model_params
             Keyword arguments which will be given to the wakefield model. Each
@@ -214,6 +219,7 @@ class PlasmaStage():
         self.bunch_pusher = bunch_pusher
         self.dt_bunch = dt_bunch
         self.n_out = n_out
+        self.name = name
 
     def track(self, bunch, out_initial=False, opmd_diag=False, diag_dir=None):
         """
@@ -245,9 +251,6 @@ class PlasmaStage():
         A list of size 'n_out' containing the bunch distribution at each step.
 
         """
-        print('')
-        print('Plasma stage')
-        print('-'*len('Plasma stage'))
 
         # Create diagnostics instance.
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
@@ -262,7 +265,8 @@ class PlasmaStage():
             n_diags=self.n_out,
             opmd_diags=opmd_diag,
             bunch_pusher=self.bunch_pusher,
-            auto_dt_bunch_f=self._get_optimized_dt
+            auto_dt_bunch_f=self._get_optimized_dt,
+            section_name=self.name
         )
 
         # Do tracking.
