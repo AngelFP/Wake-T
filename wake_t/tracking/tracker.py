@@ -26,7 +26,7 @@ class Tracker():
         Field: x-------x-------x-------x-------x-------x-------x|
         Diags: x-----------x-----------x-----------x-----------x|
         Time:  ------------------------------------------------>| End
-    
+
     Where the `x` denote the moments in time where each quantity is updated.
 
     The job of the `Tracker` is to orchestrate this flow and update each
@@ -94,7 +94,7 @@ class Tracker():
             self.dt_diags = self.t_final/self.n_diags
             self.dt_objects.append(self.dt_diags)
             self.bunch_list = [[]] * len(bunches)
-        
+
         # Initialize tracking time.
         self.t_tracking = 0.
 
@@ -143,7 +143,7 @@ class Tracker():
             # the same `t_next_objects` do not have it due to precision issues.
             # Going from float64 to float32 reduces the number of decimals,
             # thus making sure that two "almost identical" numbers at float64
-            # are actually identical as float32. 
+            # are actually identical as float32.
             i_next = np.argmin(t_next_objects.astype(np.float32))
 
             # Get next object and its corresponding time and time step.
@@ -171,7 +171,7 @@ class Tracker():
                 # Make sure the last push of the bunch advances it to exactly
                 # `t_final`.
                 if not final_push and next_push_beyond_final_time:
-                        dt_objects[i_next] = self.t_final - t_next
+                    dt_objects[i_next] = self.t_final - t_next
 
             # If next object is a NumericalField, update it.
             elif isinstance(obj_next, NumericalField):
@@ -203,19 +203,19 @@ class Tracker():
         """Generate tracking diagnostics."""
         # Make copy of current bunches and store in output list.
         for i, bunch in enumerate(self.bunches):
-                self.bunch_list[i].append(
-                    ParticleBunch(
-                        deepcopy(bunch.q),
-                        deepcopy(bunch.x),
-                        deepcopy(bunch.y),
-                        deepcopy(bunch.xi),
-                        deepcopy(bunch.px),
-                        deepcopy(bunch.py),
-                        deepcopy(bunch.pz),
-                        prop_distance=deepcopy(bunch.prop_distance),
-                        name=bunch.name
-                    )
+            self.bunch_list[i].append(
+                ParticleBunch(
+                    deepcopy(bunch.q),
+                    deepcopy(bunch.x),
+                    deepcopy(bunch.y),
+                    deepcopy(bunch.xi),
+                    deepcopy(bunch.px),
+                    deepcopy(bunch.py),
+                    deepcopy(bunch.pz),
+                    prop_distance=deepcopy(bunch.prop_distance),
+                    name=bunch.name
                 )
+            )
 
         # If needed, write also the openPMD diagnostics.
         if self.opmd_diags is not False:
