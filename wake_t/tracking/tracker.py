@@ -196,7 +196,7 @@ class Tracker():
 
         # Finalize tracking by increasing z position of diagnostics.
         if self.opmd_diags is not False:
-            self.opmd_diag.increase_z_pos(self.t_final * ct.c)
+            self.opmd_diags.increase_z_pos(self.t_final * ct.c)
 
         # Close progress bar.
         progress_bar.close()
