@@ -69,14 +69,18 @@ class Tracker():
         self.t_final = t_final
         self.bunches = bunches
         self.dt_bunches = dt_bunches
-        self.fields = fields if fields is not None else [AnalyticField()]
-        self.num_fields = [f for f in fields if isinstance(f, NumericalField)]
-        self.dt_fields = [f.dt_update for f in self.num_fields]
+        self.fields = fields if len(fields) > 0 else [AnalyticField()]
         self.opmd_diags = opmd_diags
         self.n_diags = n_diags
         self.auto_dt_bunch_f = auto_dt_bunch_f
         self.bunch_pusher = bunch_pusher
         self.section_name = section_name
+
+        # Get all numerical fields and their time steps.
+        self.num_fields = [f for f in fields if isinstance(f, NumericalField)]
+        for field in self.num_fields:
+            field.adjust_dt(self.t_final)
+        self.dt_fields = [f.dt_update for f in self.num_fields]
 
         # Make lists with all objects to track and their time steps.
         self.objects_to_track = [*self.bunches, *self.num_fields]
@@ -182,7 +186,7 @@ class Tracker():
                 self.generate_diagnostics()
 
             # Advance current time of the update object.
-            t_objects[i_next] += dt_objects[i_next]
+            t_objects[i_next] += dt_next
 
             # Advance tracking time.
             self.t_tracking = t_next

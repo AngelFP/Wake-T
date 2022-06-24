@@ -29,7 +29,13 @@ class Quasistatic2DWakefield(NumericalField):
             parabolic_coefficient)
         self.p_shape = p_shape
         self.max_gamma = max_gamma
-        super().__init__(dt_update=dz_fields/ct.c, openpmd_diag_supported=True)
+        # If a laser is included, make sure it is evolved for the whole
+        # duration of the plasma stage. See `force_even_updates` parameter.
+        super().__init__(
+            dt_update=dz_fields/ct.c,
+            openpmd_diag_supported=True,
+            force_even_updates=laser is not None
+        )
 
     def _initialize_properties(self, bunches):
         # Initialize laser.
