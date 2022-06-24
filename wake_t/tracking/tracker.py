@@ -86,11 +86,11 @@ class Tracker():
         self.objects_to_track = [*self.bunches, *self.num_fields]
         self.dt_objects = [*self.dt_bunches, *self.dt_fields]
 
-        # Get indices of bunches with adaptive time step.
-        self.auto_bunch_indices = []
+        # Get list of bunches with adaptive time step.
+        self.auto_dt_bunches = []
         for i, dt in enumerate(self.dt_bunches):
             if dt == 'auto':
-                self.auto_bunch_indices.append(i)
+                self.auto_dt_bunches.append(self.bunches[i])
 
         # If needed, add diagnostics to objects to track.
         if self.n_diags > 0:
@@ -164,9 +164,9 @@ class Tracker():
             if isinstance(obj_next, ParticleBunch):
                 obj_next.evolve(
                     self.fields, self.t_tracking, dt_next, self.bunch_pusher)
-                # Update the time steps labeled as `'auto'`.
-                for i in self.auto_bunch_indices:
-                    dt_objects[i] = self.auto_dt_bunch_f(self.bunches[i])
+                # Update the time step if set to `'auto'`.
+                if obj_next in self.auto_dt_bunches:
+                    dt_objects[i_next] = self.auto_dt_bunch_f(obj_next)
                 # Determine if this was the last push.
                 final_push = np.float32(t_next) == np.float32(self.t_final)
                 # Determine is next push brings the bunch beyond `t_final`.
