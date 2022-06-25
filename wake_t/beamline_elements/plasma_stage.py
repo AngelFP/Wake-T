@@ -91,8 +91,7 @@ class PlasmaStage():
 
         xi_fields : float
             Longitudinal position at which the wakefields have the values
-            specified by the parameter above. If not specified, this will
-            be the bunch center at the beginning of the plasma stage.
+            specified by the parameter above. By default, 0.
 
 
         Model 'cold_fluid_1d'
