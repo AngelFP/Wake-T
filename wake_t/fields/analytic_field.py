@@ -24,7 +24,7 @@ class AnalyticField(Field):
 
     Example
     -------
-    >>> def linear_ex(x, y, z, ex, constants):
+    >>> def linear_ex(x, y, z, t, ex, constants):
     ...     ex_slope = constants[0]
     ...     for i in range(x.shape[0]):
     ...         ex[i] = ex_slope * x[i]
