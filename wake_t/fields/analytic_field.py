@@ -70,7 +70,17 @@ class AnalyticField(Field):
         self.__b_z = njit()(b_z) if b_z is not None else no_field
         self.constants = np.array(constants)
 
+    def _pre_gather(self, x, y, z, t):
+        """Function that is automatically called just before gathering.
+        
+        This method can be overwritten by derived classes and used to,
+        for example, pre-compute any useful quantities. This method is not
+        compiled by numba.
+        """
+        pass
+
     def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
+        self._pre_gather(x, y, z, t)
         self.__e_x(x, y, z, t, ex, self.constants)
         self.__e_y(x, y, z, t, ey, self.constants)
         self.__e_z(x, y, z, t, ez, self.constants)
