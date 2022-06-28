@@ -49,8 +49,7 @@ class Quasistatic2DWakefield(NumericalField):
         if self.laser is not None:
             # Evolve laser envelope
             if self.laser_evolution:
-                n_p = self.density_function(self.t*ct.c)
-                self.laser.evolve(self.chi[2:-2, 2:-2], n_p)
+                self.laser.evolve(self.chi[2:-2, 2:-2], self.n_p)
 
     def _calculate_field(self, bunches):
         n_p = self.density_function(self.t*ct.c)
