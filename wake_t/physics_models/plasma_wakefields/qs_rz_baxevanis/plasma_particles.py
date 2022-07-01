@@ -51,6 +51,24 @@ class PlasmaParticles():
         self.allocate_field_arrays()
         if self.pusher == 'ab5':
             self.allocate_ab5_arrays()
+        elif self.pusher == 'rk4':
+            self.allocate_rk4_arrays()
+            self.allocate_rk4_field_arrays()
+
+    def allocate_field_arrays(self):
+        self.__a2 = np.zeros(self.n_part)
+        self.__nabla_a2 = np.zeros(self.n_part)
+        self.__b_t_0 = np.zeros(self.n_part)
+        self.__b_t = np.zeros(self.n_part)
+        self.__psi = np.zeros(self.n_part)
+        self.__dr_psi = np.zeros(self.n_part)
+        self.__dxi_psi = np.zeros(self.n_part)
+
+    def get_field_arrays(self):
+        return self.__a2, self.__nabla_a2, self.__b_t_0, self.__b_t
+
+    def get_psi_arrays(self):
+        return self.__psi, self.__dr_psi, self.__dxi_psi
 
     def allocate_ab5_arrays(self):
         self.__dr_1 = np.zeros(self.n_part)
@@ -63,23 +81,68 @@ class PlasmaParticles():
         self.__dpr_3 = np.zeros(self.n_part)
         self.__dpr_4 = np.zeros(self.n_part)
         self.__dpr_5 = np.zeros(self.n_part)
-        self.__dr_arrays = [self.__dr_1, self.__dr_2, self.__dr_3, self.__dr_4, self.__dr_5]
-        self.__dpr_arrays = [self.__dpr_1, self.__dpr_2, self.__dpr_3, self.__dpr_4, self.__dpr_5]
+        self.__dr_arrays = [
+            self.__dr_1, self.__dr_2, self.__dr_3, self.__dr_4, self.__dr_5]
+        self.__dpr_arrays = [
+            self.__dpr_1, self.__dpr_2, self.__dpr_3, self.__dpr_4,
+            self.__dpr_5]
 
     def get_ab5_arrays(self):
         return self.__dr_arrays, self.__dpr_arrays
 
-    def allocate_field_arrays(self):
-        self.__a2 = np.zeros(self.n_part)
-        self.__nabla_a2 = np.zeros(self.n_part)
-        self.__b_theta_0 = np.zeros(self.n_part)
-        self.__b_theta = np.zeros(self.n_part)
-        self.__psi = np.zeros(self.n_part)
-        self.__dr_psi = np.zeros(self.n_part)
-        self.__dxi_psi = np.zeros(self.n_part)
+    def allocate_rk4_arrays(self):
+        self.__dr_1 = np.zeros(self.n_part)
+        self.__dr_2 = np.zeros(self.n_part)
+        self.__dr_3 = np.zeros(self.n_part)
+        self.__dr_4 = np.zeros(self.n_part)
+        self.__dpr_1 = np.zeros(self.n_part)
+        self.__dpr_2 = np.zeros(self.n_part)
+        self.__dpr_3 = np.zeros(self.n_part)
+        self.__dpr_4 = np.zeros(self.n_part)
+        self.__dr_arrays = [self.__dr_1, self.__dr_2, self.__dr_3, self.__dr_4]
+        self.__dpr_arrays = [
+            self.__dpr_1, self.__dpr_2, self.__dpr_3, self.__dpr_4]
 
-    def get_field_arrays(self):
-        return self.__a2, self.__nabla_a2, self.__b_theta_0, self.__b_theta
+    def get_rk4_arrays(self):
+        return self.__dr_arrays, self.__dpr_arrays
 
-    def get_psi_arrays(self):
-        return self.__psi, self.__dr_psi, self.__dxi_psi
+    def allocate_rk4_field_arrays(self):
+        self.__a2_2 = np.zeros(self.n_part)
+        self.__nabla_a2_2 = np.zeros(self.n_part)
+        self.__b_t_0_2 = np.zeros(self.n_part)
+        self.__b_t_2 = np.zeros(self.n_part)
+        self.__psi_2 = np.zeros(self.n_part)
+        self.__dr_psi_2 = np.zeros(self.n_part)
+        self.__dxi_psi_2 = np.zeros(self.n_part)
+        self.__a2_3 = np.zeros(self.n_part)
+        self.__nabla_a2_3 = np.zeros(self.n_part)
+        self.__b_t_0_3 = np.zeros(self.n_part)
+        self.__b_t_3 = np.zeros(self.n_part)
+        self.__psi_3 = np.zeros(self.n_part)
+        self.__dr_psi_3 = np.zeros(self.n_part)
+        self.__dxi_psi_3 = np.zeros(self.n_part)        
+        self.__a2_4 = np.zeros(self.n_part)
+        self.__nabla_a2_4 = np.zeros(self.n_part)
+        self.__b_t_0_4 = np.zeros(self.n_part)
+        self.__b_t_4 = np.zeros(self.n_part)
+        self.__psi_4 = np.zeros(self.n_part)
+        self.__dr_psi_4 = np.zeros(self.n_part)
+        self.__dxi_psi_4 = np.zeros(self.n_part)
+        self.__rk4_flds = [
+            [self.__a2, self.__nabla_a2, self.__b_t_0, self.__b_t],
+            [self.__a2_2, self.__nabla_a2_2, self.__b_t_0_2, self.__b_t_2],
+            [self.__a2_3, self.__nabla_a2_3, self.__b_t_0_3, self.__b_t_3],
+            [self.__a2_4, self.__nabla_a2_4, self.__b_t_0_4, self.__b_t_4]
+        ]
+        self.__rk4_psi =[
+            [self.__psi, self.__dr_psi, self.__dxi_psi],
+            [self.__psi_2, self.__dr_psi_2, self.__dxi_psi_2],
+            [self.__psi_3, self.__dr_psi_3, self.__dxi_psi_3],
+            [self.__psi_4, self.__dr_psi_4, self.__dxi_psi_4],
+        ]
+
+    def get_rk4_field_arrays(self, i):
+        return self.__rk4_flds[i]
+
+    def get_rk4_psi_arrays(self, i):
+        return self.__rk4_psi[i]
