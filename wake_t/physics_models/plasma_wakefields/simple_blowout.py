@@ -2,10 +2,9 @@ import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.fields.analytic_field import AnalyticField
+from wake_t.fields.analytical_field import AnalyticalField
 
-
-class SimpleBlowoutWakefield(AnalyticField):
+class SimpleBlowoutWakefield(AnalyticalField):
     def __init__(self, n_p, laser, field_offset=0):
         """
         [n_p] = m^-3

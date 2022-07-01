@@ -1,10 +1,9 @@
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.fields.analytic_field import AnalyticField
+from wake_t.fields.analytical_field import AnalyticalField
 
-
-class FocusingBlowoutField(AnalyticField):
+class FocusingBlowoutField(AnalyticalField):
     def __init__(self, density_function):
         self.density = density_function
 

@@ -1,7 +1,6 @@
 """ Defines a linearly-varying (in radius) azimuthal magnetic field """
 
-from wake_t.fields.analytic_field import AnalyticField
-
+from wake_t.fields.analytical_field import AnalyticalField
 
 def b_x(x, y, z, t, bx, constants):
     """B_x component."""
@@ -17,7 +16,7 @@ def b_y(x, y, z, t, by, constants):
         by[i] += k * x[i]
 
 
-class LinearBThetaField(AnalyticField):
+class LinearBThetaField(AnalyticalField):
     """Defines a linear azimuthal magnetic field.
 
     Defining `k` as the constant focusing gradient, the field can be expressed

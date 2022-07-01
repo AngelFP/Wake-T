@@ -5,7 +5,7 @@ import numpy as np
 import scipy.constants as ct
 
 from wake_t.particles.particle_bunch import ParticleBunch
-from wake_t.fields.analytic_field import AnalyticField
+from wake_t.fields.analytical_field import AnalyticalField
 from wake_t.fields.numerical_field import NumericalField
 from .progress_bar import get_progress_bar
 
@@ -69,7 +69,7 @@ class Tracker():
         self.t_final = t_final
         self.bunches = bunches
         self.dt_bunches = dt_bunches
-        self.fields = fields if len(fields) > 0 else [AnalyticField()]
+        self.fields = fields if len(fields) > 0 else [AnalyticalField()]
         self.opmd_diags = opmd_diags
         self.n_diags = n_diags
         self.auto_dt_bunch_f = auto_dt_bunch_f

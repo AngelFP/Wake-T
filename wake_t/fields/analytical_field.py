@@ -6,7 +6,7 @@ from numba import njit
 from .base import Field
 
 
-class AnalyticField(Field):
+class AnalyticalField(Field):
     """Class used to define fields with analytical components.
 
     The given components (Ex, Ey, Ez, Bx, By, Bz) must be functions taking 5

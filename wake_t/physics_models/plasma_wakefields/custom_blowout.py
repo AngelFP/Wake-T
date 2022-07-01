@@ -1,10 +1,9 @@
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.fields.analytic_field import AnalyticField
+from wake_t.fields.analytical_field import AnalyticalField
 
-
-class CustomBlowoutWakefield(AnalyticField):
+class CustomBlowoutWakefield(AnalyticalField):
     def __init__(self, n_p, laser, lon_field=None, lon_field_slope=None,
                  foc_strength=None, xi_fields=0.):
         """
