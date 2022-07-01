@@ -29,7 +29,7 @@ def evolve_plasma_ab5(pp, dxi):
         pp.pr, pp.gamma, b_theta_0_pp, nabla_a2_pp, b_theta_pp,
         psi_pp, dr_psi_pp, dr_pp, dpr_pp
     )
-    
+
     # Get derivatives of r and pr of last 5 steps.
     dr_arrays, dpr_arrays = pp.get_ab5_arrays()
 
@@ -108,6 +108,6 @@ def apply_ab5(x, dt, dx_1, dx_2, dx_3, dx_4, dx_5):
     """
     inv_720 = 1. / 720.
     for i in range(x.shape[0]):
-        x[i] +=  dt * (
+        x[i] += dt * (
             1901. * dx_1[i] - 2774. * dx_2[i] + 2616. * dx_3[i]
             - 1274. * dx_4[i] + 251. * dx_5[i]) * inv_720

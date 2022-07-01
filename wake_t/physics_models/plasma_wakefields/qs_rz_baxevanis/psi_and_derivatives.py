@@ -157,7 +157,7 @@ def calculate_psi_and_derivatives_at_particles(
         dxi_psi_pp += sum_3
     else:
         dxi_psi_pp += sum_3 - ((sum_1 - r_max**2/2 - pc*r_max/4)
-                            * pr_i / (r_right * (1 + psi_i)))
+                               * pr_i / (r_right * (1 + psi_i)))
 
     # Again, near the peak of a strong blowout, very large and unphysical
     # values could appear. This condition makes sure a threshold us not

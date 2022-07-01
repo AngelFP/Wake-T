@@ -17,7 +17,8 @@ from wake_t.particles.interpolation import gather_sources_qs_baxevanis
 from wake_t.utilities.other import radial_gradient
 from .plasma_push.rk4 import evolve_plasma_rk4
 from .plasma_push.ab5 import evolve_plasma_ab5
-from .psi_and_derivatives import calculate_psi, calculate_psi_and_derivatives_at_particles
+from .psi_and_derivatives import (
+    calculate_psi, calculate_psi_and_derivatives_at_particles)
 from .b_theta import calculate_b_theta, calculate_b_theta_at_particles
 from .plasma_particles import PlasmaParticles
 
@@ -93,8 +94,8 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     xi_max = xi_max / s_d
     dr = r_max / n_r
     dxi = (xi_max - xi_min) / (n_xi - 1)
-    parabolic_coefficient = parabolic_coefficient * s_d**2    
-    
+    parabolic_coefficient = parabolic_coefficient * s_d**2
+
     # Maximum radial extent of the plasma.
     if r_max_plasma is None:
         r_max_plasma = r_max
@@ -147,8 +148,8 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
 
         # Calculate wakefield potential and derivatives at plasma particles.
         calculate_psi_and_derivatives_at_particles(
-            pp.r, pp.pr, pp.q, idx, pp.r_max_plasma, pp.dr_p, pp.parabolic_coefficient,
-            psi_pp, dr_psi_pp, dxi_psi_pp)
+            pp.r, pp.pr, pp.q, idx, pp.r_max_plasma, pp.dr_p,
+            pp.parabolic_coefficient, psi_pp, dr_psi_pp, dxi_psi_pp)
 
         # Update gamma and pz of plasma particles
         update_gamma_and_pz(pp.gamma, pp.pz, pp.pr, a2_pp, psi_pp)
@@ -179,9 +180,9 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
         w_rho = pp.q / (dr * pp.r * (1 - pp.pz/pp.gamma))
         w_chi = w_rho / pp.gamma
         deposit_plasma_particles(xi, pp.r, w_rho, xi_min, r_fld[0], n_xi, n_r,
-                                dxi, dr, rho, p_shape=p_shape)
+                                 dxi, dr, rho, p_shape=p_shape)
         deposit_plasma_particles(xi, pp.r, w_chi, xi_min, r_fld[0], n_xi, n_r,
-                                dxi, dr, chi, p_shape=p_shape)
+                                 dxi, dr, chi, p_shape=p_shape)
 
         if step < n_xi-1:
             # Evolve plasma to next xi step.

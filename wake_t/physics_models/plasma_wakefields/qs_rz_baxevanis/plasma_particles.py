@@ -27,7 +27,7 @@ class PlasmaParticles():
             Particle pusher used to evolve the plasma particles. Possible
             values are `'rk4'` and `'ab5'`.
         """
-        
+
         n_part = int(np.round(r_max_plasma / dr * ppc))
         # Readjust plasma extent to match number of particles.
         dr_p = dr / ppc
@@ -42,12 +42,14 @@ class PlasmaParticles():
         self.pusher = pusher
         self.n_part = n_part
 
-    def initialize(self):        
-        self.r = np.linspace(self.dr_p / 2, self.r_max_plasma - self.dr_p / 2, self.n_part)
+    def initialize(self):
+        self.r = np.linspace(
+            self.dr_p / 2, self.r_max_plasma - self.dr_p / 2, self.n_part)
         self.pr = np.zeros(self.n_part)
         self.pz = np.zeros(self.n_part)
         self.gamma = np.ones(self.n_part)
-        self.q = self.dr_p * self.r + self.dr_p * self.parabolic_coefficient * self.r**3
+        self.q = (self.dr_p * self.r
+                  + self.dr_p * self.parabolic_coefficient * self.r**3)
         self.allocate_field_arrays()
         if self.pusher == 'ab5':
             self.allocate_ab5_arrays()
@@ -120,7 +122,7 @@ class PlasmaParticles():
         self.__b_t_3 = np.zeros(self.n_part)
         self.__psi_3 = np.zeros(self.n_part)
         self.__dr_psi_3 = np.zeros(self.n_part)
-        self.__dxi_psi_3 = np.zeros(self.n_part)        
+        self.__dxi_psi_3 = np.zeros(self.n_part)
         self.__a2_4 = np.zeros(self.n_part)
         self.__nabla_a2_4 = np.zeros(self.n_part)
         self.__b_t_0_4 = np.zeros(self.n_part)
@@ -134,7 +136,7 @@ class PlasmaParticles():
             [self.__a2_3, self.__nabla_a2_3, self.__b_t_0_3, self.__b_t_3],
             [self.__a2_4, self.__nabla_a2_4, self.__b_t_0_4, self.__b_t_4]
         ]
-        self.__rk4_psi =[
+        self.__rk4_psi = [
             [self.__psi, self.__dr_psi, self.__dxi_psi],
             [self.__psi_2, self.__dr_psi_2, self.__dxi_psi_2],
             [self.__psi_3, self.__dr_psi_3, self.__dxi_psi_3],
