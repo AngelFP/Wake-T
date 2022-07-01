@@ -95,7 +95,7 @@ def calculate_derivatives(
 
 @njit()
 def apply_ab5(x, dt, dx_1, dx_2, dx_3, dx_4, dx_5):
-    """Apply the Adams-B method of 5th order to evolve `x`.
+    """Apply the Adams-Bashforth method of 5th order to evolve `x`.
 
     Parameters
     ----------
