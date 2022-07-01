@@ -145,7 +145,7 @@ class PlasmaParticles():
 
     def allocate_rk4_field_arrays(self):
         """Allocate field arrays needed by the 4th order Runge-Kutta pusher.
-        
+
         In order to compute the derivatives of r and pr at the 3 subteps
         of the RK4 pusher, the field values at the location of the particles
         in these substeps are needed. This method allocates the arrays
