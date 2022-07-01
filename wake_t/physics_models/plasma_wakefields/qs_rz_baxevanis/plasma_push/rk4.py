@@ -83,8 +83,8 @@ def derivatives_substep(i, pp, xi, a2, nabla_a2, b_theta_0, r_fld, xi_fld):
     """
     # Get arrays that contain the fields at the position of plasma particles.
     # There is one set of arrays for each substep of the Runge-Kutta push.
-    a2_pp, nabla_a2_pp, b_theta_0_pp, b_theta_pp = pp.get_rk4_field_arrays(i)
-    psi_pp, dr_psi_pp, dxi_psi_pp = pp.get_rk4_psi_arrays(i)
+    (a2_pp, nabla_a2_pp, b_theta_0_pp, b_theta_pp,
+     psi_pp, dr_psi_pp, dxi_psi_pp) = pp.get_rk4_field_arrays(i)
 
     # Get arrays that contain, or will contain, the derivatives of r and pr
     # at each substep.

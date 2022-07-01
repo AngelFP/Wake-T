@@ -18,8 +18,8 @@ def evolve_plasma_ab5(pp, dxi):
         Longitudinal step.
     """
     # Get fields at the position of plasma particles in current slice.
-    a2_pp, nabla_a2_pp, b_theta_0_pp, b_theta_pp = pp.get_field_arrays()
-    psi_pp, dr_psi_pp, dxi_psi_pp = pp.get_psi_arrays()
+    (a2_pp, nabla_a2_pp, b_theta_0_pp, b_theta_pp, psi_pp, dr_psi_pp,
+     dxi_psi_pp) = pp.get_field_arrays()
 
     # Using these fields, compute derivatives of r and pr at the current slice.
     dr_arrays, dpr_arrays = pp.get_ab5_arrays()

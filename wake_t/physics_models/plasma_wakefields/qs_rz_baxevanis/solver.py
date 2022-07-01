@@ -106,8 +106,8 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     pp = PlasmaParticles(
         r_max, r_max_plasma, parabolic_coefficient, dr, ppc, plasma_pusher)
     pp.initialize()
-    psi_pp, dr_psi_pp, dxi_psi_pp = pp.get_psi_arrays()
-    a2_pp, nabla_a2_pp, b_theta_0_pp, b_theta_pp = pp.get_field_arrays()
+    (a2_pp, nabla_a2_pp, b_theta_0_pp, b_theta_pp,
+     psi_pp, dr_psi_pp, dxi_psi_pp) = pp.get_field_arrays()
 
     # Calculate and allocate laser quantities, including guard cells.
     a2_rz = np.zeros((n_xi+4, n_r+4))
