@@ -13,7 +13,8 @@ class Quasistatic2DWakefield(NumericalField):
     def __init__(self, density_function, laser=None, laser_evolution=True,
                  r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, ppc=2, dz_fields=None, r_max_plasma=None,
-                 parabolic_coefficient=0., p_shape='cubic', max_gamma=10):
+                 parabolic_coefficient=0., p_shape='cubic', max_gamma=10,
+                 plasma_pusher='rk4'):
         self.density_function = density_function
         self.laser = laser
         self.laser_evolution = laser_evolution
@@ -29,6 +30,7 @@ class Quasistatic2DWakefield(NumericalField):
             parabolic_coefficient)
         self.p_shape = p_shape
         self.max_gamma = max_gamma
+        self.plasma_pusher = plasma_pusher
         # If a laser is included, make sure it is evolved for the whole
         # duration of the plasma stage. See `force_even_updates` parameter.
         super().__init__(
@@ -73,7 +75,8 @@ class Quasistatic2DWakefield(NumericalField):
             a_env, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, n_p, r_max_plasma=self.r_max_plasma,
             parabolic_coefficient=parabolic_coefficient,
-            p_shape=self.p_shape, max_gamma=self.max_gamma)
+            p_shape=self.p_shape, max_gamma=self.max_gamma,
+            plasma_pusher=self.plasma_pusher)
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
         s_d = ge.plasma_skin_depth(n_p*1e-6)
