@@ -209,7 +209,8 @@ def gather_main_fields_cyl_linear(
 
 @njit()
 def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
-                                r_max, dz, dr, r, z):
+                                r_max, dz, dr, r, z, fld_1_pp, fld_2_pp,
+                                fld_3_pp):
     """
     Convenient method for gathering at once the three source fields needed
     by the Baxevanis wakefield model (a2 and nabla_a from the laser, and
@@ -248,15 +249,9 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
     position of each particle.
 
     """
-    n_part = r.shape[0]
-
-    # Preallocate output arrays with field values.
-    fld_1_part = np.zeros(n_part)
-    fld_2_part = np.zeros(n_part)
-    fld_3_part = np.zeros(n_part)
 
     # Iterate over all particles.
-    for i in prange(n_part):
+    for i in prange(r.shape[0]):
 
         # Get particle position.
         z_i = z
@@ -309,7 +304,6 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
             # Interpolate in r
             dr_u = ir_upper - r_i_cell
             dr_l = 1 - dr_u
-            fld_1_part[i] = dr_u*fld_1_z_1 + dr_l*fld_1_z_2
-            fld_2_part[i] = dr_u*fld_2_z_1 + dr_l*fld_2_z_2
-            fld_3_part[i] = dr_u*fld_3_z_1 + dr_l*fld_3_z_2
-    return fld_1_part, fld_2_part, fld_3_part
+            fld_1_pp[i] = dr_u*fld_1_z_1 + dr_l*fld_1_z_2
+            fld_2_pp[i] = dr_u*fld_2_z_1 + dr_l*fld_2_z_2
+            fld_3_pp[i] = dr_u*fld_3_z_1 + dr_l*fld_3_z_2
