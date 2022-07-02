@@ -46,8 +46,8 @@ class PlasmaRamp(PlasmaStage):
     def __init__(self, length, profile='inverse_square', ramp_type='upramp',
                  wakefield_model='focusing_blowout', decay_length=None,
                  plasma_dens_top=None, plasma_dens_down=None,
-                 position_down=None, bunch_pusher='rk4', n_out=1,
-                 **model_params):
+                 position_down=None, bunch_pusher='rk4', dt_bunch='auto',
+                 n_out=1, name='Plasma ramp', **model_params):
         """
         Initialize plasma ramp.
 
@@ -94,10 +94,19 @@ class PlasmaRamp(PlasmaStage):
             the specified fields. Possible values are 'rk4' (Runge-Kutta
             method of 4th order) or 'boris' (Boris method).
 
+        dt_bunch : float
+            The time step for evolving the particle bunches. If `None`, it will
+            be automatically set to `dt = T/(10*2*pi)`, where T is the smallest
+            expected betatron period of the bunch along the plasma stage.
+
         n_out : int
             Number of times along the stage in which the particle distribution
             should be returned (A list with all output bunches is returned
             after tracking).
+
+        name : str
+            Name of the plasma ramp. This is only used for displaying the
+            progress bar during tracking. By default, `'Plasma ramp'`.
 
         **model_params
             Keyword arguments which will be given to the wakefield model. Each
@@ -122,8 +131,15 @@ class PlasmaRamp(PlasmaStage):
                     'Ramp profile "{}" not recognized'.format(profile))
         self.profile = profile
         super().__init__(
-            length, self.ramp_profile, wakefield_model, bunch_pusher, n_out,
-            **model_params)
+            length=length,
+            density=self.ramp_profile,
+            wakefield_model=wakefield_model,
+            bunch_pusher=bunch_pusher,
+            dt_bunch=dt_bunch,
+            n_out=n_out,
+            name=name,
+            **model_params
+        )
 
     def ramp_profile(self, z):
         """ Return the density value at a certain z location. """

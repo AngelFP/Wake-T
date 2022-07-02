@@ -6,7 +6,7 @@ from numba import njit
 from .base import Field
 
 
-class AnalyticField(Field):
+class AnalyticalField(Field):
     """Class used to define fields with analytical components.
 
     The given components (Ex, Ey, Ez, Bx, By, Bz) must be functions taking 5
@@ -24,7 +24,7 @@ class AnalyticField(Field):
 
     Example
     -------
-    >>> def linear_ex(x, y, z, ex, constants):
+    >>> def linear_ex(x, y, z, t, ex, constants):
     ...     ex_slope = constants[0]
     ...     for i in range(x.shape[0]):
     ...         ex[i] = ex_slope * x[i]
@@ -58,24 +58,32 @@ class AnalyticField(Field):
         """
         super().__init__()
 
-        @njit()
-        def zero_field(x, y, z, fld, k):
+        def no_field(x, y, z, t, fld, k):
             """Default field component."""
-            for i in range(len(fld)):
-                fld[i] = 0.
+            pass
 
-        self.__e_x = njit()(e_x) if e_x is not None else zero_field
-        self.__e_y = njit()(e_y) if e_y is not None else zero_field
-        self.__e_z = njit()(e_z) if e_z is not None else zero_field
-        self.__b_x = njit()(b_x) if b_x is not None else zero_field
-        self.__b_y = njit()(b_y) if b_y is not None else zero_field
-        self.__b_z = njit()(b_z) if b_z is not None else zero_field
+        self.__e_x = njit()(e_x) if e_x is not None else no_field
+        self.__e_y = njit()(e_y) if e_y is not None else no_field
+        self.__e_z = njit()(e_z) if e_z is not None else no_field
+        self.__b_x = njit()(b_x) if b_x is not None else no_field
+        self.__b_y = njit()(b_y) if b_y is not None else no_field
+        self.__b_z = njit()(b_z) if b_z is not None else no_field
         self.constants = np.array(constants)
 
-    def _gather(self, x, y, z, ex, ey, ez, bx, by, bz):
-        self.__e_x(x, y, z, ex, self.constants)
-        self.__e_y(x, y, z, ey, self.constants)
-        self.__e_z(x, y, z, ez, self.constants)
-        self.__b_x(x, y, z, bx, self.constants)
-        self.__b_y(x, y, z, by, self.constants)
-        self.__b_z(x, y, z, bz, self.constants)
+    def _pre_gather(self, x, y, z, t):
+        """Function that is automatically called just before gathering.
+        
+        This method can be overwritten by derived classes and used to,
+        for example, pre-compute any useful quantities. This method is not
+        compiled by numba.
+        """
+        pass
+
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
+        self._pre_gather(x, y, z, t)
+        self.__e_x(x, y, z, t, ex, self.constants)
+        self.__e_y(x, y, z, t, ey, self.constants)
+        self.__e_z(x, y, z, t, ez, self.constants)
+        self.__b_x(x, y, z, t, bx, self.constants)
+        self.__b_y(x, y, z, t, by, self.constants)
+        self.__b_z(x, y, z, t, bz, self.constants)

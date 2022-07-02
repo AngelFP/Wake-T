@@ -2,34 +2,48 @@ import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
+from wake_t.fields.analytical_field import AnalyticalField
 
-
-class SimpleBlowoutWakefield(Wakefield):
+class SimpleBlowoutWakefield(AnalyticalField):
     def __init__(self, n_p, laser, field_offset=0):
         """
         [n_p] = m^-3
         """
-        super().__init__()
-        self.n_p = n_p
-        self.field_off = field_offset
+        self.density = n_p
         self.laser = laser
-        self._calculate_base_quantities()
+        self.field_offset = field_offset
+        
+        def e_x(x, y, xi, t, ex, constants):
+            k = constants[0]
+            for i in range(x.shape[0]):
+                ex[i] = ct.c * k * x[i]
 
-    def _calculate_base_quantities(self):
-        w_p = ge.plasma_frequency(self.n_p*1e-6)
-        self.l_p = 2*np.pi*ct.c / w_p
-        self.g_x = w_p**2/2 * ct.m_e / (ct.e * ct.c)
-        self.E_z_p = w_p**2/2 * ct.m_e / ct.e
-        self.l_c = self.laser.xi_c
-        self.b_w = self.laser.get_group_velocity(self.n_p)
+        def e_y(x, y, xi, t, ey, constants):
+            k = constants[0]
+            for i in range(x.shape[0]):
+                ey[i] = ct.c * k * y[i]
 
-    def Wx(self, x, y, xi, px, py, pz, q, t):
-        return ct.c * self.g_x*x
+        def e_z(x, y, xi, t, ez, constants):
+            e_z_p = constants[1]
+            l_p = constants[2]
+            l_c = constants[3]
+            field_off = constants[4]
+            b_w = constants[5]
 
-    def Wy(self, x, y, xi, px, py, pz, q, t):
-        return ct.c * self.g_x*y
+            # Precalculate offset.
+            xi_off = l_p/2 - l_c - field_off + (1-b_w)*ct.c*t
+            for i in range(x.shape[0]):
+                ez[i] = e_z_p * (xi[i] + xi_off)
 
-    def Wz(self, x, y, xi, px, py, pz, q, t):
-        return self.E_z_p * (self.l_p/2 + xi - self.l_c - self.field_off +
-                             (1-self.b_w)*ct.c*t)
+        super().__init__(e_x=e_x, e_y=e_y, e_z=e_z)
+
+    def _pre_gather(self, x, y, xi, t):
+        n_p = self.density(t*ct.c)
+        w_p = ge.plasma_frequency(n_p*1e-6)
+        l_p = 2*np.pi*ct.c / w_p
+        g_x = w_p**2/2 * ct.m_e / (ct.e * ct.c)
+        e_z_p = w_p**2/2 * ct.m_e / ct.e
+        l_c = self.laser.xi_c
+        b_w = self.laser.get_group_velocity(n_p)
+        self.constants = np.array(
+            [g_x, e_z_p, l_p, l_c, self.field_offset, b_w])

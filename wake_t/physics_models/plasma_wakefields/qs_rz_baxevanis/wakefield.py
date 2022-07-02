@@ -29,21 +29,27 @@ class Quasistatic2DWakefield(NumericalField):
             parabolic_coefficient)
         self.p_shape = p_shape
         self.max_gamma = max_gamma
-        super().__init__(dt_update=dz_fields/ct.c, openpmd_diag_supported=True)
+        # If a laser is included, make sure it is evolved for the whole
+        # duration of the plasma stage. See `force_even_updates` parameter.
+        super().__init__(
+            dt_update=dz_fields/ct.c,
+            openpmd_diag_supported=True,
+            force_even_updates=laser is not None
+        )
 
     def _initialize_properties(self, bunches):
         # Initialize laser.
-        self.laser.set_envelope_solver_params(
-            self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
-            self.dt_update)
-        self.laser.initialize_envelope()
+        if self.laser is not None:
+            self.laser.set_envelope_solver_params(
+                self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
+                self.dt_update)
+            self.laser.initialize_envelope()
 
     def _evolve_properties(self, bunches):
         if self.laser is not None:
             # Evolve laser envelope
             if self.laser_evolution:
-                n_p = self.density_function(self.t*ct.c)
-                self.laser.evolve(self.chi[2:-2, 2:-2], n_p)
+                self.laser.evolve(self.chi[2:-2, 2:-2], self.n_p)
 
     def _calculate_field(self, bunches):
         n_p = self.density_function(self.t*ct.c)
@@ -81,7 +87,7 @@ class Quasistatic2DWakefield(NumericalField):
         self.r_fld = r_arr*s_d
         self.n_p = n_p
 
-    def _gather(self, x, y, z, ex, ey, ez, bx, by, bz):
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
         dr = self.r_fld[1] - self.r_fld[0]
         dxi = self.xi_fld[1] - self.xi_fld[0]
         gather_main_fields_cyl_linear(
