@@ -7,7 +7,6 @@ from wake_t.beamline_elements import PlasmaStage
 from wake_t.physics_models.em_fields.linear_b_theta import LinearBThetaField
 
 
-
 class ActivePlasmaLens(PlasmaStage):
 
     """ Convenience class to define an active plasma lens. """

@@ -3,6 +3,7 @@ import scipy.constants as ct
 
 from wake_t.fields.analytical_field import AnalyticalField
 
+
 class CustomBlowoutWakefield(AnalyticalField):
     def __init__(self, n_p, laser, lon_field=None, lon_field_slope=None,
                  foc_strength=None, xi_fields=0.):
@@ -15,7 +16,7 @@ class CustomBlowoutWakefield(AnalyticalField):
         self.laser = laser
         self.k = foc_strength
         self.e_z_0 = lon_field
-        self.e_z_p = lon_field_slope        
+        self.e_z_p = lon_field_slope
 
         def e_x(x, y, xi, t, ex, constants):
             k = constants[0]
@@ -41,6 +42,6 @@ class CustomBlowoutWakefield(AnalyticalField):
 
     def _pre_gather(self, x, y, xi, t):
         n_p = self.density(t*ct.c)
-        b_w = self.laser.get_group_velocity(n_p)        
+        b_w = self.laser.get_group_velocity(n_p)
         self.constants = np.array(
             [self.k, self.e_z_0, self.e_z_p, self.xi_fields, b_w])

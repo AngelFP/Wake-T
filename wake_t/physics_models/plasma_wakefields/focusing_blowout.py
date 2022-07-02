@@ -3,6 +3,7 @@ import scipy.constants as ct
 
 from wake_t.fields.analytical_field import AnalyticalField
 
+
 class FocusingBlowoutField(AnalyticalField):
     def __init__(self, density_function):
         self.density = density_function

@@ -4,6 +4,7 @@ import aptools.plasma_accel.general_equations as ge
 
 from wake_t.fields.analytical_field import AnalyticalField
 
+
 class SimpleBlowoutWakefield(AnalyticalField):
     def __init__(self, n_p, laser, field_offset=0):
         """
@@ -12,7 +13,7 @@ class SimpleBlowoutWakefield(AnalyticalField):
         self.density = n_p
         self.laser = laser
         self.field_offset = field_offset
-        
+
         def e_x(x, y, xi, t, ex, constants):
             k = constants[0]
             for i in range(x.shape[0]):

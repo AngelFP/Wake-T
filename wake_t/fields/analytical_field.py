@@ -72,7 +72,7 @@ class AnalyticalField(Field):
 
     def _pre_gather(self, x, y, z, t):
         """Function that is automatically called just before gathering.
-        
+
         This method can be overwritten by derived classes and used to,
         for example, pre-compute any useful quantities. This method is not
         compiled by numba.

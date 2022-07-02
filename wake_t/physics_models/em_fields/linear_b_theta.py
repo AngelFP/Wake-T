@@ -2,6 +2,7 @@
 
 from wake_t.fields.analytical_field import AnalyticalField
 
+
 def b_x(x, y, z, t, bx, constants):
     """B_x component."""
     k = constants[0]

@@ -77,7 +77,7 @@ class NonLinearColdFluidWakefield(NumericalField):
         y = bunch.y
         xi = bunch.xi
         q = bunch.q
-        
+
         # Get charge distribution and remove guard cells.
         beam_hist = np.zeros((self.n_xi+4, self.n_r+4))
         deposit_3d_distribution(
