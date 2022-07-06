@@ -118,8 +118,8 @@ class Quasistatic2DWakefield(NumericalField):
         fld_names = ['E', 'B', 'rho']
         fld_comps = [['r', 'z'], ['t'], None]
         fld_arrays = [
-            [np.ascontiguousarray(self.E_r.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.E_z.T[2:-2, 2:-2])],
+            [np.ascontiguousarray(self.E_r.T[2:-2, 2:-2]),
+             np.ascontiguousarray(self.E_z.T[2:-2, 2:-2])],
             [np.ascontiguousarray(self.B_t.T[2:-2, 2:-2])],
             [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * self.n_p * (-ct.e)]
             ]

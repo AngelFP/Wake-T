@@ -184,8 +184,8 @@ class NonLinearColdFluidWakefield(NumericalField):
         # Need to make sure it is a contiguous array to prevent incorrect
         # openPMD output.
         fld_arrays = [
-            [np.ascontiguousarray(self.E_r.T)],
-            [np.ascontiguousarray(self.E_z.T)],
+            [np.ascontiguousarray(self.E_r.T),
+             np.ascontiguousarray(self.E_z.T)],
             [np.ascontiguousarray(self.B_t.T)],
             [np.ascontiguousarray(self.n_fl.T) * self.current_n_p * (-ct.e)]
             ]
