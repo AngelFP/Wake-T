@@ -106,103 +106,358 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     pp = PlasmaParticles(
         r_max, r_max_plasma, parabolic_coefficient, dr, ppc, plasma_pusher)
     pp.initialize()
-    (a2_pp, nabla_a2_pp, b_theta_0_pp, b_theta_pp,
-     psi_pp, dr_psi_pp, dxi_psi_pp) = pp.get_field_arrays()
-
-    # Calculate and allocate laser quantities, including guard cells.
-    a2_rz = np.zeros((n_xi+4, n_r+4))
-    nabla_a2_rz = np.zeros((n_xi+4, n_r+4))
-    a2_rz[2:-2, 2:-2] = laser_a2
-    nabla_a2_rz[2:-2, 2:-2] = radial_gradient(laser_a2, dr)
 
     # Initialize field arrays, including guard cells.
+    a2 = np.zeros((n_xi+4, n_r+4))
+    nabla_a2 = np.zeros((n_xi+4, n_r+4))
     rho = np.zeros((n_xi+4, n_r+4))
     chi = np.zeros((n_xi+4, n_r+4))
     psi = np.zeros((n_xi+4, n_r+4))
     W_r = np.zeros((n_xi+4, n_r+4))
     E_z = np.zeros((n_xi+4, n_r+4))
-    b_theta_bar = np.zeros((n_xi+4, n_r+4))
+    b_t_bar = np.zeros((n_xi+4, n_r+4))
 
     # Field node coordinates.
     r_fld = np.linspace(dr / 2, r_max - dr / 2, n_r)
     xi_fld = np.linspace(xi_min, xi_max, n_xi)
 
+    # Laser source.
+    a2[2:-2, 2:-2] = laser_a2
+    nabla_a2[2:-2, 2:-2] = radial_gradient(laser_a2, dr)
+
     # Beam source. This code is needed while no proper support particle
     # beams as input is implemented.
-    b_theta_0_mesh = calculate_beam_source_from_particles(
+    b_t_0 = calculate_beam_source_from_particles(
         *beam_part, n_p, n_r, n_xi, r_fld[0], xi_fld[0], dr, dxi, p_shape)
 
-    # Main loop.
-    for step in np.arange(n_xi):
-        i = -1 - step
-        xi = xi_fld[i]
-
-        # Gather source terms at position of plasma particles.
-        gather_sources_qs_baxevanis(
-            a2_rz, nabla_a2_rz, b_theta_0_mesh, xi_fld[0], xi_fld[-1],
-            r_fld[0], r_fld[-1], dxi, dr, pp.r, xi, a2_pp, nabla_a2_pp,
-            b_theta_0_pp)
-
-        # Get sorted particle indices
-        idx = np.argsort(pp.r)
-
-        # Calculate wakefield potential and derivatives at plasma particles.
-        calculate_psi_and_derivatives_at_particles(
-            pp.r, pp.pr, pp.q, idx, pp.r_max_plasma, pp.dr_p,
-            pp.parabolic_coefficient, psi_pp, dr_psi_pp, dxi_psi_pp)
-
-        # Update gamma and pz of plasma particles
-        update_gamma_and_pz(pp.gamma, pp.pz, pp.pr, a2_pp, psi_pp)
-
-        # Calculate azimuthal magnetic field from the plasma at the location of
-        # the plasma particles.
-        calculate_b_theta_at_particles(
-            pp.r, pp.pr, pp.q, pp.gamma, psi_pp, dr_psi_pp, dxi_psi_pp,
-            b_theta_0_pp, nabla_a2_pp, idx, pp.dr_p, b_theta_pp)
-
-        # If particles violate the quasistatic condition, slow them down again.
-        # This preserves the charge and shows better behavior than directly
-        # removing them.
-        idx_keep = np.where(pp.gamma >= max_gamma)
-        if idx_keep[0].size > 0:
-            pp.pz[idx_keep] = 0.
-            pp.gamma[idx_keep] = 1.
-            pp.pr[idx_keep] = 0.
-
-        # Calculate fields at specified radii for current plasma column.
-        psi[i-2, 2:-2] = calculate_psi(
-            r_fld, pp.r, pp.q, idx, pp.r_max_plasma, pp.parabolic_coefficient)
-        b_theta_bar[i-2, 2:-2] = calculate_b_theta(
-            r_fld, pp.r, pp.pr, pp.q, pp.gamma, psi_pp, dr_psi_pp, dxi_psi_pp,
-            b_theta_0_pp, nabla_a2_pp, idx)
-
-        # Deposit rho and chi of plasma column
-        w_rho = pp.q / (dr * pp.r * (1 - pp.pz/pp.gamma))
-        w_chi = w_rho / pp.gamma
-        deposit_plasma_particles(xi, pp.r, w_rho, xi_min, r_fld[0], n_xi, n_r,
-                                 dxi, dr, rho, p_shape=p_shape)
-        deposit_plasma_particles(xi, pp.r, w_chi, xi_min, r_fld[0], n_xi, n_r,
-                                 dxi, dr, chi, p_shape=p_shape)
-
-        if step < n_xi-1:
-            # Evolve plasma to next xi step.
-            if plasma_pusher == 'ab5':
-                evolve_plasma_ab5(pp, dxi)
-            elif plasma_pusher == 'rk4':
-                evolve_plasma_rk4(
-                    pp, dxi, xi, a2_rz, nabla_a2_rz, b_theta_0_mesh,
-                    r_fld, xi_fld)
-            else:
-                raise ValueError(
-                    "Plasma pusher '{}' not recognized.".format(plasma_pusher))
+    # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
+    # chi on a grid.
+    evolve_plasma_and_calculate_fields(
+        pp, a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+        xi_fld, r_fld, dxi, dr, n_xi, n_r,
+        max_gamma, p_shape, plasma_pusher)
 
     # Calculate derived fields (E_z, W_r, and E_r).
     dxi_psi, dr_psi = np.gradient(psi[2:-2, 2:-2], dxi, dr, edge_order=2)
     E_z[2:-2, 2:-2] = -dxi_psi
     W_r[2:-2, 2:-2] = -dr_psi
-    B_theta = b_theta_bar + b_theta_0_mesh
+    B_theta = b_t_bar + b_t_0
     E_r = W_r + B_theta
     return rho, chi, E_r, E_z, B_theta, xi_fld, r_fld
+
+
+def evolve_plasma_and_calculate_fields(
+        pp, a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+        xi_fld, r_fld, dxi, dr, n_xi, n_r,
+        max_gamma, p_shape, plasma_pusher):
+    """Evolve plasma column from right to left and calculate plasma fields.
+
+    Parameters
+    ----------
+    pp : PlasmaParticles
+        The column of plasma particles to be evolved.
+    a2, nabla_a2, b_t_0 : ndarray
+        Arrays containing the laser and beam sources.
+    psi, b_t_bar, rhi, chi : ndarray
+        Arrays to be filled in while evolving the plasma column. They contain,
+        respectively, the wakefield potential, the azimuthal magnetic field
+        from the plasma, the plasma charge density and the plasma
+        susceptibility.
+    xi_fld, r_fld : ndarray
+        Array containing the longitudinal and radial coordinates of the
+        grid points.
+    dxi, dr : float
+        Longitudinal and radial step size.
+    n_xi, n_r : int
+        Number of grid elements in the longitudinal and radial direction.
+    max_gamma : float
+        Maximum gamma allowed for the plasma particles.
+    p_shape : str
+        Particle shape.
+    plasma_pusher : str
+        The plasma particle pusher.
+    """
+
+    # Calculate plasma evolution with Adams-Bashforth pusher.
+    if plasma_pusher == 'ab5':
+        dr_arrays, dpr_arrays = pp.get_ab5_arrays()
+        calculate_with_ab5(
+            pp.r, pp.pr, pp.pz, pp.gamma, pp.q,
+            pp.r_max_plasma, pp.dr_p, pp.parabolic_coefficient,
+            *pp.get_field_arrays(),
+            a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+            xi_fld, r_fld, dxi, dr, n_xi, n_r,
+            max_gamma, p_shape,
+            *dr_arrays, *dpr_arrays
+        )
+
+    # Calculate plasma evolution with Runge-Kutta pusher.
+    elif plasma_pusher == 'rk4':
+        dr_arrays, dpr_arrays = pp.get_rk4_arrays()
+        calculate_with_rk4(
+            pp.r, pp.pr, pp.pz, pp.gamma, pp.q,
+            pp.r_max_plasma, pp.dr_p, pp.parabolic_coefficient,
+            a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+            xi_fld, r_fld, dxi, dr, n_xi, n_r,
+            max_gamma, p_shape,
+            *dr_arrays, *dpr_arrays,
+            *pp.get_rk4_field_arrays(0),
+            *pp.get_rk4_field_arrays(1),
+            *pp.get_rk4_field_arrays(2),
+            *pp.get_rk4_field_arrays(3)
+        )
+
+    # Raise error if pusher is not recognized.
+    else:
+        raise ValueError(
+            "Plasma pusher '{}' not recognized.".format(plasma_pusher))
+
+@njit()
+def calculate_with_ab5(
+        r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
+        r_max_plasma, dr_p, parabolic_coefficient,
+        a2_pp, nabla_a2_pp, b_t_0_pp, b_t_pp, psi_pp, dr_psi_pp, dxi_psi_pp,
+        a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+        xi_fld, r_fld, dxi, dr, n_xi, n_r,
+        max_gamma, p_shape,
+        dr_1, dr_2, dr_3, dr_4, dr_5, dpr_1, dpr_2, dpr_3, dpr_4, dpr_5
+    ):
+    """Calculate plasma evolution using the Adams-Bashforth pusher.
+
+    Parameters
+    ----------
+    r_pp, pr_pp, pz_pp, gamma_pp, q_pp : ndarray
+        Radial position, radial momentum, longitudinal momentum,
+        Lorentz factor and charge of the plasma particles.
+    r_max_plasma : float
+        Maximum radial extent of the plasma
+    dr_p : float
+        Initial radial spacing between plasma particles.
+    parabolic_coefficient : float
+        Coefficient for the parabolic radial plasma profile.
+    a2_pp, ..., dxi_psi_pp : ndarray
+        Arrays where the value of the fields at the particle positions will
+        be stored.
+    a2, nabla_a2, b_t_0 : ndarray
+        Laser and beam source fields.
+    psi, b_t_bar, rho, chi : ndarray
+        Arrays to be filled in during plasma evolution.
+    xi_fld, r_fld : ndarray
+        Grid coordinates
+    dxi, dr : float
+        Grid spacing
+    n_xi, n_r : int
+        Number of grid elements.
+    max_gamma : float
+        Maximum gamma of the plasma particles.
+    p_shape : str
+        Particle shape.
+    dr_1, ..., dr_5 : ndarray
+        Arrays containing the derivative of the radial position of the
+        particles at the 5 slices previous to the next one.
+    dpr_1, ..., dpr_5 : ndarray
+        Arrays containing the derivative of the radial momentum of the
+        particles at the 5 slices previous to the next one.
+    """
+    # Loop from the right to the left of the domain.
+    for step in range(n_xi):
+        i = -1 - step
+        xi = xi_fld[i]
+
+        # Calculate fields at the position of the particles and
+        # calculate/deposit psi, b_t_bar, rho and chi at the current slice
+        # of the grid.
+        calculate_and_deposit_plasma_column(
+            i, xi, r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
+            r_max_plasma, dr_p, parabolic_coefficient,
+            a2_pp, nabla_a2_pp, b_t_0_pp, b_t_pp,
+            psi_pp, dr_psi_pp, dxi_psi_pp,
+            a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+            xi_fld, r_fld, dxi, dr, n_xi, n_r,
+            max_gamma, p_shape)
+
+        if step < n_xi-1:
+            # Evolve plasma to next xi step.
+            evolve_plasma_ab5(
+                dxi, r_pp, pr_pp, gamma_pp,
+                nabla_a2_pp, b_t_0_pp, b_t_pp, psi_pp, dr_psi_pp,
+                dr_1, dr_2, dr_3, dr_4, dr_5,
+                dpr_1, dpr_2, dpr_3, dpr_4, dpr_5)
+
+
+@njit()
+def calculate_with_rk4(
+        r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
+        r_max_plasma, dr_p, parabolic_coefficient,
+        a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+        xi_fld, r_fld, dxi, dr, n_xi, n_r,
+        max_gamma, p_shape,
+        dr_1, dr_2, dr_3, dr_4, dpr_1, dpr_2, dpr_3, dpr_4,
+        a2_1, nabla_a2_1, b_t_0_1, b_t_1, psi_1, dr_psi_1, dxi_psi_1,
+        a2_2, nabla_a2_2, b_t_0_2, b_t_2, psi_2, dr_psi_2, dxi_psi_2,
+        a2_3, nabla_a2_3, b_t_0_3, b_t_3, psi_3, dr_psi_3, dxi_psi_3,
+        a2_4, nabla_a2_4, b_t_0_4, b_t_4, psi_4, dr_psi_4, dxi_psi_4
+    ):
+    """Calculate plasma evolution using the Adams-Bashforth pusher.
+
+    Parameters
+    ----------
+    r_pp, pr_pp, pz_pp, gamma_pp, q_pp : ndarray
+        Radial position, radial momentum, longitudinal momentum,
+        Lorentz factor and charge of the plasma particles.
+    r_max_plasma : float
+        Maximum radial extent of the plasma
+    dr_p : float
+        Initial radial spacing between plasma particles.
+    parabolic_coefficient : float
+        Coefficient for the parabolic radial plasma profile.
+    a2, nabla_a2, b_t_0 : ndarray
+        Laser and beam source fields.
+    psi, b_t_bar, rho, chi : ndarray
+        Arrays to be filled in during plasma evolution.
+    xi_fld, r_fld : ndarray
+        Grid coordinates
+    dxi, dr : float
+        Grid spacing
+    n_xi, n_r : int
+        Number of grid elements.
+    max_gamma : float
+        Maximum gamma of the plasma particles.
+    p_shape : str
+        Particle shape.
+    dr_1, ..., dr_4 : ndarray
+        Arrays containing the derivative of the radial position of the
+        particles at the current slice and the 3 intermediate steps.
+    dpr_1, ..., dpr_4 : ndarray
+        Arrays containing the derivative of the radial momentum of the
+        particles at the current slice and the 3 intermediate steps.
+    a2_i, ..., dxi_psi_i : ndarray
+        Arrays where the field values at the particle positions at substep i
+        will be stored.
+    """
+    # Loop from the right to the left of the domain.
+    for step in range(n_xi):
+        i = -1 - step
+        xi = xi_fld[i]
+
+        # Calculate fields at the position of the particles and
+        # calculate/deposit psi, b_t_bar, rho and chi at the current slice
+        # of the grid.
+        calculate_and_deposit_plasma_column(
+            i, xi, r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
+            r_max_plasma, dr_p, parabolic_coefficient,
+            a2_1, nabla_a2_1, b_t_0_1, b_t_1,
+            psi_1, dr_psi_1, dxi_psi_1,
+            a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+            xi_fld, r_fld, dxi, dr, n_xi, n_r,
+            max_gamma, p_shape)
+
+        if step < n_xi-1:
+            # Evolve plasma to next xi step.
+            evolve_plasma_rk4(
+                dxi, dr, xi, r_pp, pr_pp, gamma_pp, q_pp,
+                r_max_plasma, dr_p, parabolic_coefficient,
+                a2, nabla_a2, b_t_0, r_fld, xi_fld,
+                dr_1, dr_2, dr_3, dr_4, dpr_1, dpr_2, dpr_3, dpr_4,
+                a2_1, nabla_a2_1, b_t_0_1, b_t_1, psi_1, dr_psi_1, dxi_psi_1,
+                a2_2, nabla_a2_2, b_t_0_2, b_t_2, psi_2, dr_psi_2, dxi_psi_2,
+                a2_3, nabla_a2_3, b_t_0_3, b_t_3, psi_3, dr_psi_3, dxi_psi_3,
+                a2_4, nabla_a2_4, b_t_0_4, b_t_4, psi_4, dr_psi_4, dxi_psi_4)
+
+
+@njit()
+def calculate_and_deposit_plasma_column(
+        i, xi, r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
+        r_max_plasma, dr_p, parabolic_coefficient,
+        a2_pp, nabla_a2_pp, b_t_0_pp, b_t_pp, psi_pp, dr_psi_pp, dxi_psi_pp,
+        a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+        xi_fld, r_fld, dxi, dr, n_xi, n_r,
+        max_gamma, p_shape
+    ):
+    """Calculate the fields at the current position of the plasma particles
+    and calculate/deposit the azimuthal magnetic field from the plasma
+    (b_t_bar), the wakefield potential (psi), the plasma charge density (rho)
+    and the plasma susceptibility (chi) at the current slice of the grid.
+
+    Parameters
+    ----------
+    i : int
+        Index of the current step.
+    xi : float
+        Current longitudinal position of the plasma slice.
+    r_pp, pr_pp, pz_pp, gamma_pp, q_pp : ndarray
+        Radial position, radial momentum, longitudinal momentum,
+        Lorentz factor and charge of the plasma particles.
+    r_max_plasma : float
+        Maximum radial extent of the plasma.
+    dr_p : float
+        Initial radial spacing between plasma particles.
+    parabolic_coefficient : float
+        Coefficient for the parabolic radial plasma profile.
+    a2_pp, ..., dxi_psi_pp : ndarray
+        Arrays where the value of the fields at the particle positions will
+        be stored.
+    a2, nabla_a2, b_t_0 : ndarray
+        Laser and beam source fields.
+    psi, b_t_bar, rho, chi : ndarray
+        Arrays to be filled in during plasma evolution.
+    xi_fld, r_fld : ndarray
+        Grid coordinates.
+    dxi, dr : float
+        Grid spacing.
+    n_xi, n_r : int
+        Number of grid elements.
+    max_gamma : float
+        Maximum gamma of the plasma particles.
+    p_shape : str
+        Particle shape.
+    """
+    # Gather source terms at position of plasma particles.
+    gather_sources_qs_baxevanis(
+        a2, nabla_a2, b_t_0, xi_fld[0], xi_fld[-1],
+        r_fld[0], r_fld[-1], dxi, dr, r_pp, xi, a2_pp, nabla_a2_pp,
+        b_t_0_pp)
+
+    # Get sorted particle indices
+    idx = np.argsort(r_pp)
+
+    # Calculate wakefield potential and derivatives at plasma particles.
+    calculate_psi_and_derivatives_at_particles(
+        r_pp, pr_pp, q_pp, idx, r_max_plasma, dr_p,
+        parabolic_coefficient, psi_pp, dr_psi_pp, dxi_psi_pp)
+
+    # Update gamma and pz of plasma particles
+    update_gamma_and_pz(gamma_pp, pz_pp, pr_pp, a2_pp, psi_pp)
+
+    # Calculate azimuthal magnetic field from the plasma at the location of
+    # the plasma particles.
+    calculate_b_theta_at_particles(
+        r_pp, pr_pp, q_pp, gamma_pp, psi_pp, dr_psi_pp, dxi_psi_pp,
+        b_t_0_pp, nabla_a2_pp, idx, dr_p, b_t_pp)
+
+    # If particles violate the quasistatic condition, slow them down again.
+    # This preserves the charge and shows better behavior than directly
+    # removing them.
+    idx_keep = np.where(gamma_pp >= max_gamma)
+    if idx_keep[0].size > 0:
+        pz_pp[idx_keep] = 0.
+        gamma_pp[idx_keep] = 1.
+        pr_pp[idx_keep] = 0.
+
+    # Calculate fields at specified radii for current plasma column.
+    calculate_psi(
+        r_fld, r_pp, q_pp, idx, r_max_plasma, parabolic_coefficient, psi, i)
+    calculate_b_theta(
+        r_fld, r_pp, pr_pp, q_pp, gamma_pp, psi_pp, dr_psi_pp, dxi_psi_pp,
+        b_t_0_pp, nabla_a2_pp, idx, b_t_bar, i)
+
+    # Deposit rho and chi of plasma column
+    w_rho = q_pp / (dr * r_pp * (1 - pz_pp/gamma_pp))
+    w_chi = w_rho / gamma_pp
+    deposit_plasma_particles(xi, r_pp, w_rho, xi_fld[0], r_fld[0], n_xi, n_r,
+                             dxi, dr, rho, p_shape=p_shape)
+    deposit_plasma_particles(xi, r_pp, w_chi, xi_fld[0], r_fld[0], n_xi, n_r,
+                             dxi, dr, chi, p_shape=p_shape)
 
 
 @njit
@@ -253,7 +508,7 @@ def calculate_beam_source_from_particles(
     q_dist = q_dist[2:-2, 2:-2]
 
     # Allovate magnetic field array.
-    b_theta = np.zeros((n_xi+4, n_r+4))
+    b_t = np.zeros((n_xi+4, n_r+4))
 
     # Radial position of grid points.
     r_grid_g = (0.5 + np.arange(n_r)) * dr
@@ -268,7 +523,7 @@ def calculate_beam_source_from_particles(
     subs[:, 0] += q_dist[:, 0]/4
 
     # Calculate field by integration.
-    b_theta[2:-2, 2:-2] = (
+    b_t[2:-2, 2:-2] = (
         (np.cumsum(q_dist, axis=1) - subs) * dr / np.abs(r_grid_g))
 
-    return b_theta
+    return b_t
