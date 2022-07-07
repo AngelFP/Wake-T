@@ -56,20 +56,20 @@ def evolve_plasma_rk4(
 
     # Calculate derivatives of r and pr at the three RK4 substeps.
     derivatives_substep(
-        xi, r + dxi * dr_1 * 0.5, pr + dxi * dpr_1 * 0.5, q, dxi, dr,
-        r_max_plasma, dr_p, parabolic_coefficient,
+        xi - dxi * 0.5, r + dxi * dr_1 * 0.5, pr + dxi * dpr_1 * 0.5, q,
+        dxi, dr, r_max_plasma, dr_p, parabolic_coefficient,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
         a2_2, nabla_a2_2, b_t_0_2, b_t_2, psi_2, dr_psi_2, dxi_psi_2,
         dr_2, dpr_2)
     derivatives_substep(
-        xi, r + dxi * dr_2 * 0.5, pr + dxi * dpr_2 * 0.5, q, dxi, dr,
-        r_max_plasma, dr_p, parabolic_coefficient,
+        xi - dxi * 0.5, r + dxi * dr_2 * 0.5, pr + dxi * dpr_2 * 0.5, q,
+        dxi, dr, r_max_plasma, dr_p, parabolic_coefficient,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
         a2_3, nabla_a2_3, b_t_0_3, b_t_3, psi_3, dr_psi_3, dxi_psi_3,
         dr_3, dpr_3)
     derivatives_substep(
-        xi, r + dxi * dr_3, pr + dxi * dpr_3, q, dxi, dr,
-        r_max_plasma, dr_p, parabolic_coefficient,
+        xi - dxi, r + dxi * dr_3, pr + dxi * dpr_3, q,
+        dxi, dr, r_max_plasma, dr_p, parabolic_coefficient,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
         a2_4, nabla_a2_4, b_t_0_4, b_t_4, psi_4, dr_psi_4, dxi_psi_4,
         dr_4, dpr_4)
