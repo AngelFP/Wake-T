@@ -8,6 +8,7 @@ import math
 from numba import njit
 
 
+@njit()
 def deposit_plasma_particles(z, r, w, z_min, r_min, nz, nr, dz, dr,
                              deposition_array, p_shape='cubic'):
     """
@@ -55,10 +56,6 @@ def deposit_plasma_particles(z, r, w, z_min, r_min, nz, nr, dz, dr,
     elif p_shape == 'cubic':
         return deposit_plasma_particles_cubic(
             z, r, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
-    else:
-        err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
-                      "Possible values are 'linear' or 'cubic'.")
-        raise ValueError(err_string)
 
 
 @njit
