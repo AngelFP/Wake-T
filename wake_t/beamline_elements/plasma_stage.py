@@ -1,16 +1,11 @@
 """ This module contains the definition of the PlasmaStage class """
 
-import time
-from copy import copy
-
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.particles.tracking import runge_kutta_4
 import wake_t.physics_models.plasma_wakefields as wf
-from wake_t.particles.particle_bunch import ParticleBunch
-from wake_t.utilities.other import print_progress_bar
 from wake_t.diagnostics import OpenPMDDiagnostics
+from wake_t.tracking.tracker import Tracker
 
 
 wakefield_models = {
@@ -27,7 +22,8 @@ class PlasmaStage():
     """ Generic class for defining a plasma acceleration stage. """
 
     def __init__(self, length, density, wakefield_model='simple_blowout',
-                 n_out=1, **model_params):
+                 bunch_pusher='rk4', dt_bunch='auto', n_out=1,
+                 name='Plasma stage', external_fields=[], **model_params):
         """
         Initialize plasma stage.
 
@@ -42,12 +38,26 @@ class PlasmaStage():
         wakefield_model : str
             Wakefield model to be used. Possible values are 'blowout',
             'custom_blowout', 'focusing_blowout', 'cold_fluid_1d' and
-            'quasistatic_2d'.
+            'quasistatic_2d'. If `None`, no wakefields will be computed.
+
+        bunch_pusher : str
+            The pusher used to evolve the particle bunches in time within
+            the specified fields. Possible values are 'rk4' (Runge-Kutta
+            method of 4th order) or 'boris' (Boris method).
+
+        dt_bunch : float
+            The time step for evolving the particle bunches. If `None`, it will
+            be automatically set to `dt = T/(10*2*pi)`, where T is the smallest
+            expected betatron period of the bunch along the plasma stage.
 
         n_out : int
             Number of times along the stage in which the particle distribution
             should be returned (A list with all output bunches is returned
             after tracking).
+
+        name : str
+            Name of the plasma stage. This is only used for displaying the
+            progress bar during tracking. By default, `'Plasma stage'`.
 
         **model_params
             Keyword arguments which will be given to the wakefield model. Each
@@ -81,8 +91,7 @@ class PlasmaStage():
 
         xi_fields : float
             Longitudinal position at which the wakefields have the values
-            specified by the parameter above. If not specified, this will
-            be the bunch center at the beginning of the plasma stage.
+            specified by the parameter above. By default, 0.
 
 
         Model 'cold_fluid_1d'
@@ -202,11 +211,12 @@ class PlasmaStage():
 
         self.length = length
         self.density = self._get_density_profile(density)
-        if isinstance(wakefield_model, wf.Wakefield):
-            self.wakefield = wakefield_model
-        else:
-            self.wakefield = self._get_wakefield(wakefield_model, model_params)
+        self.wakefield = self._get_wakefield(wakefield_model, model_params)
+        self.bunch_pusher = bunch_pusher
+        self.dt_bunch = dt_bunch
         self.n_out = n_out
+        self.name = name
+        self.external_fields = external_fields
 
     def track(self, bunch, out_initial=False, opmd_diag=False, diag_dir=None):
         """
@@ -238,14 +248,36 @@ class PlasmaStage():
         A list of size 'n_out' containing the bunch distribution at each step.
 
         """
-        print('')
-        print('Plasma stage')
-        print('-'*len('Plasma stage'))
+
+        # Create diagnostics instance.
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
             opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
-        bunch_list = self._track_numerically(bunch, out_initial, opmd_diag)
-        if opmd_diag is not False:
-            opmd_diag.increase_z_pos(self.length)
+
+        fields = []
+        if self.wakefield is not None:
+            fields.append(self.wakefield)
+        fields.extend(self.external_fields)
+
+        # Create tracker.
+        tracker = Tracker(
+            t_final=self.length/ct.c,
+            bunches=[bunch],
+            dt_bunches=[self.dt_bunch],
+            fields=fields,
+            n_diags=self.n_out,
+            opmd_diags=opmd_diag,
+            bunch_pusher=self.bunch_pusher,
+            auto_dt_bunch_f=self._get_optimized_dt,
+            section_name=self.name
+        )
+
+        # Do tracking.
+        bunch_list = tracker.do_tracking()
+
+        # If only tracking one bunch, do not return list of lists.
+        if len(bunch_list) == 1:
+            bunch_list = bunch_list[0]
+
         return bunch_list
 
     def _get_density_profile(self, density):
@@ -262,73 +294,24 @@ class PlasmaStage():
 
     def _get_wakefield(self, model, model_params):
         """ Initialize and return corresponding wakefield model. """
-        if model in wakefield_models:
+        if model is None:
+            return None
+        elif model in wakefield_models:
             return wakefield_models[model](self.density, **model_params)
         else:
             raise ValueError(
                 'Wakefield model "{}" not recognized.'.format(model))
 
-    def _track_numerically(self, bunch, out_initial, opmd_diag):
-        """ Track beam using Runge-Kutta method """
-        # Get 6D matrix
-        mat = bunch.get_6D_matrix_with_charge()
-        # Plasma length in time
-        t_final = self.length/ct.c
-        t_step = t_final/self.n_out
-        dt = self._get_optimized_dt(bunch)
-        iterations = int(np.ceil(t_final/dt))
-        # force at least 1 iteration per step
-        it_per_step = int(max(np.ceil(iterations/self.n_out), 1))
-        iterations = it_per_step*self.n_out
-        dt_adjusted = t_final/iterations
-        # initialize list to store the distribution at each step
-        bunch_list = list()
-        if out_initial:
-            bunch_list.append(copy(bunch))
-            if opmd_diag is not False:
-                opmd_diag.write_diagnostics(
-                    0., t_step, [bunch_list[-1]])
-        # get start time
-        start = time.time()
-
-        st_0 = "Tracking in {} step(s)... ".format(self.n_out)
-        for s in np.arange(self.n_out):
-            print_progress_bar(st_0, s+1, self.n_out)
-            # if auto_update_fields:
-            #    self.wakefield.check_if_update_fields(s*t_step)
-            bunch_matrix = runge_kutta_4(
-                mat, WF=self.wakefield, t0=s*t_step,  dt=dt_adjusted,
-                iterations=it_per_step)
-            x, px, y, py, xi, pz, q = copy(bunch_matrix)
-            new_prop_dist = bunch.prop_distance + (s+1)*t_step*ct.c
-            bunch_list.append(
-                ParticleBunch(bunch.q, x, y, xi, px, py, pz,
-                              prop_distance=new_prop_dist, name=bunch.name)
-            )
-            if opmd_diag is not False:
-                opmd_diag.write_diagnostics(
-                    (s+1)*t_step, t_step, [bunch_list[-1]], self.wakefield)
-        # print computing time
-        end = time.time()
-        print("Done ({:1.3f} seconds).".format(end-start))
-        print('-'*80)
-        # update bunch data
-        last_bunch = bunch_list[-1]
-        bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
-                              last_bunch.px, last_bunch.py, last_bunch.pz)
-        bunch.increase_prop_distance(self.length)
-        return bunch_list
-
     def _get_optimized_dt(self, beam):
         """ Get tracking time step. """
-        gamma = np.sqrt(1 + beam.px**2 + beam.py**2 + beam.pz**2)
-        mean_gamma = np.average(gamma, weights=beam.q)
+        # Get minimum gamma in the bunch (assumes px,py << pz).
+        min_gamma = np.sqrt(np.min(beam.pz)**2 + 1)
         # calculate maximum focusing along stage.
         z = np.linspace(0, self.length, 100)
         n_p = self.density(z)
         w_p = np.sqrt(max(n_p)*ct.e**2/(ct.m_e*ct.epsilon_0))
         max_kx = (ct.m_e/(2*ct.e*ct.c))*w_p**2
-        w_x = np.sqrt(ct.e*ct.c/ct.m_e * max_kx/mean_gamma)
+        w_x = np.sqrt(ct.e*ct.c/ct.m_e * max_kx/min_gamma)
         period_x = 1/w_x
         dt = 0.1*period_x
         return dt

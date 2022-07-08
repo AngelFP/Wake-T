@@ -46,7 +46,7 @@ class OpenPMDDiagnostics():
         # each other.
         self._current_z_pos = 0.
 
-    def write_diagnostics(self, time, dt, species_list=[], wakefield=None):
+    def write_diagnostics(self, time, dt, species_list=[], fields=[]):
         """
         Write to disk the diagnostics of a certain time step.
 
@@ -96,10 +96,10 @@ class OpenPMDDiagnostics():
             self._write_species(it, diag_data)
 
         # Write field diagnostics.
-        if wakefield is not None:
-            wf_data = wakefield.get_openpmd_diagnostics_data()
-            if wf_data is not None:
-                self._write_fields(it, wf_data)
+        for field in fields:
+            f_data = field.get_openpmd_diagnostics_data(it.time)
+            if f_data is not None:
+                self._write_fields(it, f_data)
 
         # Flush data and increase counter for next step.
         opmd_series.flush()

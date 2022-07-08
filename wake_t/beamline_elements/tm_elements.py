@@ -1,11 +1,11 @@
 """ Contains the classes of all elements tracked using transfer matrices. """
 import time
-from copy import copy
+from copy import deepcopy
 
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.particles.tracking import track_with_transfer_map
+from wake_t.particles.push.transfer_matrix import track_with_transfer_map
 from wake_t.particles.particle_bunch import ParticleBunch
 from wake_t.utilities.other import print_progress_bar
 from wake_t.utilities.bunch_manipulation import (
@@ -65,7 +65,7 @@ class TMElement():
         start_time = time.time()
         output_bunch_list = list()
         if out_initial:
-            output_bunch_list.append(copy(bunch))
+            output_bunch_list.append(deepcopy(bunch))
             if opmd_diag is not False:
                 opmd_diag.write_diagnostics(
                     0., l_step/ct.c, [output_bunch_list[-1]])
@@ -144,7 +144,7 @@ class TMElement():
             last_bunch = self._create_new_bunch(bunch, new_bunch_mat,
                                                 self.length)
         else:
-            last_bunch = output_bunch_list[-1]
+            last_bunch = deepcopy(output_bunch_list[-1])
         bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
                               last_bunch.px, last_bunch.py, last_bunch.pz)
         bunch.prop_distance = last_bunch.prop_distance

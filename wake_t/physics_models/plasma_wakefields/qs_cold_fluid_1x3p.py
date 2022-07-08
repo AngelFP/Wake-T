@@ -6,16 +6,14 @@ from wake_t.particles.deposition import deposit_3d_distribution
 from wake_t.particles.interpolation import (
     gather_field_cyl_linear, gather_main_fields_cyl_linear)
 from wake_t.utilities.other import generate_field_diag_dictionary
-from wake_t.physics_models.plasma_wakefields.base_wakefield import Wakefield
+from wake_t.fields.numerical_field import NumericalField
 
 
-class NonLinearColdFluidWakefield(Wakefield):
+class NonLinearColdFluidWakefield(NumericalField):
     def __init__(self, density_function, laser=None, laser_evolution=True,
                  r_max=None, xi_min=None, xi_max=None, n_r=100,
                  n_xi=100, dz_fields=None, beam_wakefields=False,
                  p_shape='linear'):
-        super().__init__()
-        self.openpmd_diag_supported = True
         self.density_function = density_function
         self.laser = laser
         self.laser_evolution = laser_evolution
@@ -27,13 +25,26 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.dz_fields = xi_max - xi_min if dz_fields is None else dz_fields
         self.beam_wakefields = beam_wakefields
         self.p_shape = p_shape
-        # Last time at which the fields where requested.
-        self.current_t = None
-        # Last step at which the fields where calculated.
-        self.current_wf_step = None
-        # Last time at which the fields where interpolated to the particles.
-        self.current_t_interp = None
-        self.current_n_p = None
+        # If a laser is included, make sure it is evolved for the whole
+        # duration of the plasma stage. See `force_even_updates` parameter.
+        super().__init__(
+            dt_update=dz_fields/ct.c,
+            openpmd_diag_supported=True,
+            force_even_updates=laser is not None
+        )
+
+    def _initialize_properties(self, bunches):
+        # Initialize laser.
+        if self.laser is not None:
+            self.laser.set_envelope_solver_params(
+                self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
+                self.dt_update)
+            self.laser.initialize_envelope()
+
+    def _evolve_properties(self, bunches):
+        if self.laser is not None and self.laser_evolution:
+            # Evolve laser envelope
+            self.laser.evolve(self.chi_fl, self.current_n_p)
 
     def __wakefield_ode_system(self, u_1, u_2, laser_a0, n_beam):
         if self.beam_wakefields:
@@ -42,35 +53,12 @@ class NonLinearColdFluidWakefield(Wakefield):
         else:
             return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) - 1/2])
 
-    def __calculate_wakefields(self, x, y, xi, px, py, pz, q, t):
-        self.current_t = t
-        required_wf_step = int(np.round(t * ct.c / self.dz_fields))
-        if self.current_wf_step is None:
-            self.current_wf_step = required_wf_step
-            if self.laser is not None:
-                # Initialize laser.
-                self.laser.set_envelope_solver_params(
-                    self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
-                    self.dz_fields/ct.c)
-                self.laser.initialize_envelope()
-            d_step = required_wf_step
-        elif required_wf_step > self.current_wf_step:
-            d_step = required_wf_step - self.current_wf_step
-            self.current_wf_step = required_wf_step
-        else:
-            return
-        n_p = self.density_function(t*ct.c)
+    def _calculate_field(self, bunches):
+        n_p = self.density_function(self.t*ct.c)
 
+        # Get laser envelope
         if self.laser is not None:
-            # Evolve laser envelope
-            if self.laser_evolution:
-                for s in range(d_step):
-                    # Evolve laser in the current chi.
-                    self.laser.evolve(self.chi_fl, n_p)
-
-            # Laser envelope
             a_env = np.abs(self.laser.get_envelope())
-
         else:
             a_env = np.zeros((self.n_xi, self.n_r))
 
@@ -82,6 +70,13 @@ class NonLinearColdFluidWakefield(Wakefield):
         dz = (self.xi_max - self.xi_min) / (self.n_xi - 1) / s_d
         dr = self.r_max / self.n_r / s_d
         r = np.linspace(dr/2, self.r_max/s_d-dr/2, self.n_r)
+
+        # Currently, only one bunch supported
+        bunch = bunches[0]
+        x = bunch.x
+        y = bunch.y
+        xi = bunch.xi
+        q = bunch.q
 
         # Get charge distribution and remove guard cells.
         beam_hist = np.zeros((self.n_xi+4, self.n_r+4))
@@ -138,43 +133,36 @@ class NonLinearColdFluidWakefield(Wakefield):
         self.gamma_fl = (1 + a_env**2 + (1 + u_1)**2) / (2 * (1 + u_1))
         self.n_fl = self.gamma_fl / (1 + u_1)
         self.chi_fl = self.n_fl / self.gamma_fl
-        self.E_z = E_z*E_0
-        self.W_x = W_r*E_0
+
+        # Calculate B_theta and E_r.
+        u_z = (1 + a_env**2 - (1 + u_1)**2) / (2 * (1 + u_1))
+        dE_z = np.gradient(E_z, dz, axis=0, edge_order=2)
+        v_z = u_z / self.gamma_fl
+        nv_z = self.n_fl * v_z
+        integrand = (dE_z - nv_z - beam_hist) * r
+        subs = integrand / 2
+        B_theta = (np.cumsum(integrand, axis=1) - subs) * dr / np.abs(r)
+        E_r = W_r + B_theta
+
+        # Store fields.
+        self.B_t = np.zeros((self.n_xi+4, self.n_r+4))
+        self.E_r = np.zeros((self.n_xi+4, self.n_r+4))
+        self.E_z = np.zeros((self.n_xi+4, self.n_r+4))
+        self.B_t[2:-2, 2:-2] = B_theta*E_0/ct.c
+        self.E_r[2:-2, 2:-2] = E_r*E_0
+        self.E_z[2:-2, 2:-2] = E_z*E_0
         self.xi_fld = z_arr * s_d
         self.r_fld = r * s_d
 
-    def Wx(self, x, y, xi, px, py, pz, q, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        self.__interpolate_fields_to_particles(x, y, xi, t)
-        return self.wx_part
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
+        dr = self.r_fld[1] - self.r_fld[0]
+        dxi = self.xi_fld[1] - self.xi_fld[0]
+        gather_main_fields_cyl_linear(
+            self.E_r, self.E_z, self.B_t, self.xi_fld[0], self.xi_fld[-1],
+            self.r_fld[0], self.r_fld[-1], dxi, dr, x, y, z,
+            ex, ey, ez, bx, by, bz)
 
-    def Wy(self, x, y, xi, px, py, pz, q, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        self.__interpolate_fields_to_particles(x, y, xi, t)
-        return self.wy_part
-
-    def Wz(self, x, y, xi, px, py, pz, q, t):
-        self.__calculate_wakefields(x, y, xi, px, py, pz, q, t)
-        self.__interpolate_fields_to_particles(x, y, xi, t)
-        return self.ez_part
-
-    def __interpolate_fields_to_particles(self, x, y, xi, t):
-        if (self.current_t_interp is None) or (self.current_t_interp != t):
-            self.current_t_interp = t
-            # Create arrays with guard cells
-            Wx = np.zeros((self.n_xi+4, self.n_r+4))
-            Ez = np.zeros((self.n_xi+4, self.n_r+4))
-            Wx[2:-2, 2:-2] = self.W_x
-            Ez[2:-2, 2:-2] = self.E_z
-            # Gather fields
-            dr = self.r_fld[1] - self.r_fld[0]
-            dxi = self.xi_fld[1] - self.xi_fld[0]
-            interp_flds = gather_main_fields_cyl_linear(
-                Wx, Ez, self.xi_fld[0], self.xi_fld[-1], self.r_fld[0],
-                self.r_fld[-1], dxi, dr, x, y, xi)
-            self.wx_part, self.wy_part, self.ez_part = interp_flds
-
-    def _get_openpmd_diagnostics_data(self):
+    def _get_openpmd_diagnostics_data(self, global_time):
         # Prepare necessary data.
         fld_solver = 'other'
         fld_solver_params = 'cold_fluid_1d'
@@ -188,16 +176,17 @@ class NonLinearColdFluidWakefield(Wakefield):
         dz = np.abs(self.xi_fld[1] - self.xi_fld[0])
         grid_spacing = [dr, dz]
         grid_labels = ['r', 'z']
-        grid_global_offset = [0., self.current_t*ct.c+self.xi_min]
+        grid_global_offset = [0., global_time*ct.c+self.xi_min]
         # Cell-centered in 'r' and node centered in 'z'.
         fld_position = [0.5, 0.]
-        fld_names = ['E', 'W', 'rho']
-        fld_comps = [['z'], ['r'], None]
+        fld_names = ['E', 'B', 'rho']
+        fld_comps = [['r', 'z'], ['t'], None]
         # Need to make sure it is a contiguous array to prevent incorrect
         # openPMD output.
         fld_arrays = [
-            [np.ascontiguousarray(self.E_z.T)],
-            [np.ascontiguousarray(self.W_x.T)],
+            [np.ascontiguousarray(self.E_r.T),
+             np.ascontiguousarray(self.E_z.T)],
+            [np.ascontiguousarray(self.B_t.T)],
             [np.ascontiguousarray(self.n_fl.T) * self.current_n_p * (-ct.e)]
             ]
         if self.laser is not None:

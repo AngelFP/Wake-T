@@ -93,8 +93,9 @@ def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
 
 
 @njit()
-def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
-                                  x, y, z):
+def gather_main_fields_cyl_linear(
+        er, ez, bt, z_min, z_max, r_min, r_max, dz, dr, x, y, z,
+        ex_part, ey_part, ez_part, bx_part, by_part, bz_part):
     """
     Convenient method for interpolating at once (more efficient) the transverse
     and longitudinal wakefields.
@@ -102,11 +103,14 @@ def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
     Parameters:
     -----------
 
-    wx : 2darray
-        The transverse wakefield.
+    er : 2darray
+        The radial electric field.
 
     ez : 2darray
-        The longitudinal wakefield.
+        The longitudinal electric field.
+
+    bt : 2darray
+        The azimuthal magnetic field.
 
     z_min, z_max : float
         Position of the first and last field values along z.
@@ -120,19 +124,10 @@ def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
     x, y, z : 1darray
         Coordinates of the particle distribution.
 
-    Returns:
-    --------
-
-    A tuple with three 1darray containing the values of the longitudinal (z)
-    and transverse (x and y) fields acting on each particle.
-
+    ex_part, ey_part, ez_part, bx_part, by_part, bz_part : 1darray
+        Arrays where the gathered field components will be stored.
     """
     n_part = x.shape[0]
-
-    # Preallocate output arrays with field values.
-    wx_part = np.zeros(n_part)
-    wy_part = np.zeros(n_part)
-    ez_part = np.zeros(n_part)
 
     # Iterate over all particles.
     for i in prange(n_part):
@@ -159,16 +154,27 @@ def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
             # If lower r cell is below axis, assume same value as first cell
             # for `ez` and sign inverse of the first cell value for `wx`. This
             # ensures that wx=0 on axis.
-            wx_corr = 1
+            wr_corr = 1
             if ir_lower < 2:
                 ir_lower = 2
-                wx_corr = -1
+                wr_corr = -1
 
             # Get field value at each bounding cell.
-            wx_ll = wx[iz_lower, ir_lower] * wx_corr
-            wx_lu = wx[iz_lower, ir_upper]
-            wx_ul = wx[iz_upper, ir_lower] * wx_corr
-            wx_uu = wx[iz_upper, ir_upper]
+            # wx_ll = wx[iz_lower, ir_lower] * wx_corr
+            # wx_lu = wx[iz_lower, ir_upper]
+            # wx_ul = wx[iz_upper, ir_lower] * wx_corr
+            # wx_uu = wx[iz_upper, ir_upper]
+
+            er_ll = er[iz_lower, ir_lower] * wr_corr
+            er_lu = er[iz_lower, ir_upper]
+            er_ul = er[iz_upper, ir_lower] * wr_corr
+            er_uu = er[iz_upper, ir_upper]
+
+            bt_ll = bt[iz_lower, ir_lower] * wr_corr
+            bt_lu = bt[iz_lower, ir_upper]
+            bt_ul = bt[iz_upper, ir_lower] * wr_corr
+            bt_uu = bt[iz_upper, ir_upper]
+
             ez_ll = ez[iz_lower, ir_lower]
             ez_lu = ez[iz_lower, ir_upper]
             ez_ul = ez[iz_upper, ir_lower]
@@ -177,24 +183,34 @@ def gather_main_fields_cyl_linear(wx, ez, z_min, z_max, r_min, r_max, dz, dr,
             # Interpolate in z
             dz_u = iz_upper - z_i_cell
             dz_l = z_i_cell - iz_lower
-            wx_z_1 = dz_u*wx_ll + dz_l*wx_ul
-            wx_z_2 = dz_u*wx_lu + dz_l*wx_uu
+
+            er_z_1 = dz_u*er_ll + dz_l*er_ul
+            er_z_2 = dz_u*er_lu + dz_l*er_uu
+
+            bt_z_1 = dz_u*bt_ll + dz_l*bt_ul
+            bt_z_2 = dz_u*bt_lu + dz_l*bt_uu
+
             ez_z_1 = dz_u*ez_ll + dz_l*ez_ul
             ez_z_2 = dz_u*ez_lu + dz_l*ez_uu
 
             # Interpolate in r
             dr_u = ir_upper - r_i_cell
-            dr_l = 1 - dr_u
-            w = dr_u*wx_z_1 + dr_l*wx_z_2
-            wx_part[i] = w * x_i * inv_r_i
-            wy_part[i] = w * y_i * inv_r_i
-            ez_part[i] = dr_u*ez_z_1 + dr_l*ez_z_2
-    return wx_part, wy_part, ez_part
+            dr_l = 1. - dr_u
+
+            er_i = dr_u*er_z_1 + dr_l*er_z_2
+            bt_i = dr_u*bt_z_1 + dr_l*bt_z_2
+
+            ex_part[i] += er_i * x_i * inv_r_i
+            ey_part[i] += er_i * y_i * inv_r_i
+            ez_part[i] += dr_u*ez_z_1 + dr_l*ez_z_2
+            bx_part[i] += - bt_i * y_i * inv_r_i
+            by_part[i] += bt_i * x_i * inv_r_i
 
 
 @njit()
 def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
-                                r_max, dz, dr, r, z):
+                                r_max, dz, dr, r, z, fld_1_pp, fld_2_pp,
+                                fld_3_pp):
     """
     Convenient method for gathering at once the three source fields needed
     by the Baxevanis wakefield model (a2 and nabla_a from the laser, and
@@ -233,15 +249,9 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
     position of each particle.
 
     """
-    n_part = r.shape[0]
-
-    # Preallocate output arrays with field values.
-    fld_1_part = np.zeros(n_part)
-    fld_2_part = np.zeros(n_part)
-    fld_3_part = np.zeros(n_part)
 
     # Iterate over all particles.
-    for i in prange(n_part):
+    for i in prange(r.shape[0]):
 
         # Get particle position.
         z_i = z
@@ -294,7 +304,6 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
             # Interpolate in r
             dr_u = ir_upper - r_i_cell
             dr_l = 1 - dr_u
-            fld_1_part[i] = dr_u*fld_1_z_1 + dr_l*fld_1_z_2
-            fld_2_part[i] = dr_u*fld_2_z_1 + dr_l*fld_2_z_2
-            fld_3_part[i] = dr_u*fld_3_z_1 + dr_l*fld_3_z_2
-    return fld_1_part, fld_2_part, fld_3_part
+            fld_1_pp[i] = dr_u*fld_1_z_1 + dr_l*fld_1_z_2
+            fld_2_pp[i] = dr_u*fld_2_z_1 + dr_l*fld_2_z_2
+            fld_3_pp[i] = dr_u*fld_3_z_1 + dr_l*fld_3_z_2
