@@ -37,7 +37,6 @@ def evolve_plasma_ab5(
         psi_pp, dr_psi_pp, dr_1, dpr_1
     )
 
-
     # Push radial position.
     apply_ab5(r, dxi, dr_1, dr_2, dr_3, dr_4, dr_5)
 

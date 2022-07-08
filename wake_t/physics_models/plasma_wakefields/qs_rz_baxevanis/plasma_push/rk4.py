@@ -8,7 +8,7 @@ from ..b_theta import calculate_b_theta_at_particles
 
 @njit()
 def evolve_plasma_rk4(
-        dxi, dr, xi, r, pr, gamma, q, r_max_plasma, dr_p, parabolic_coefficient,
+        dxi, dr, xi, r, pr, gamma, q, r_max_plasma, dr_p, pc,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
         dr_1, dr_2, dr_3, dr_4, dpr_1, dpr_2, dpr_3, dpr_4,
         a2_1, nabla_a2_1, b_t_0_1, b_t_1, psi_1, dr_psi_1, dxi_psi_1,
@@ -32,7 +32,7 @@ def evolve_plasma_rk4(
         Maximum radial extent of the plasma
     dr_p : float
         Initial radial spacing between plasma particles.
-    parabolic_coefficient : float
+    pc : float
         Coefficient for the parabolic radial plasma profile.
     a2, nabla_a2, b_t_0 : ndarray
         Laser and beam source fields.
@@ -57,19 +57,19 @@ def evolve_plasma_rk4(
     # Calculate derivatives of r and pr at the three RK4 substeps.
     derivatives_substep(
         xi - dxi * 0.5, r + dxi * dr_1 * 0.5, pr + dxi * dpr_1 * 0.5, q,
-        dxi, dr, r_max_plasma, dr_p, parabolic_coefficient,
+        dxi, dr, r_max_plasma, dr_p, pc,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
         a2_2, nabla_a2_2, b_t_0_2, b_t_2, psi_2, dr_psi_2, dxi_psi_2,
         dr_2, dpr_2)
     derivatives_substep(
         xi - dxi * 0.5, r + dxi * dr_2 * 0.5, pr + dxi * dpr_2 * 0.5, q,
-        dxi, dr, r_max_plasma, dr_p, parabolic_coefficient,
+        dxi, dr, r_max_plasma, dr_p, pc,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
         a2_3, nabla_a2_3, b_t_0_3, b_t_3, psi_3, dr_psi_3, dxi_psi_3,
         dr_3, dpr_3)
     derivatives_substep(
         xi - dxi, r + dxi * dr_3, pr + dxi * dpr_3, q,
-        dxi, dr, r_max_plasma, dr_p, parabolic_coefficient,
+        dxi, dr, r_max_plasma, dr_p, pc,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
         a2_4, nabla_a2_4, b_t_0_4, b_t_4, psi_4, dr_psi_4, dxi_psi_4,
         dr_4, dpr_4)
@@ -87,7 +87,7 @@ def evolve_plasma_rk4(
 
 @njit()
 def derivatives_substep(
-        xi, r, pr, q, dxi, dr, r_max_plasma, dr_p, parabolic_coefficient,
+        xi, r, pr, q, dxi, dr, r_max_plasma, dr_p, pc,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
         a2_i, nabla_a2_i, b_t_0_i, b_t_i, psi_i, dr_psi_i, dxi_psi_i,
         dr_i, dpr_i):
@@ -112,7 +112,7 @@ def derivatives_substep(
         Maximum radial extent of the plasma
     dr_p : float
         Initial radial spacing between plasma particles.
-    parabolic_coefficient : float
+    pc : float
         Coefficient for the parabolic radial plasma profile.
     a2, nabla_a2, b_t_0 : ndarray
         Laser and beam source fields.
@@ -143,7 +143,7 @@ def derivatives_substep(
 
     # Calculate wakefield potential and derivatives at plasma particles.
     calculate_psi_and_derivatives_at_particles(
-        r, pr, q, idx, r_max_plasma, dr_p, parabolic_coefficient,
+        r, pr, q, idx, r_max_plasma, dr_p, pc,
         psi_i, dr_psi_i, dxi_psi_i)
 
     # Calculate gamma of plasma particles

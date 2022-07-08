@@ -212,6 +212,7 @@ def evolve_plasma_and_calculate_fields(
         raise ValueError(
             "Plasma pusher '{}' not recognized.".format(plasma_pusher))
 
+
 @njit()
 def calculate_with_ab5(
         r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
@@ -220,8 +221,7 @@ def calculate_with_ab5(
         a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
         xi_fld, r_fld, dxi, dr, n_xi, n_r,
         max_gamma, p_shape,
-        dr_1, dr_2, dr_3, dr_4, dr_5, dpr_1, dpr_2, dpr_3, dpr_4, dpr_5
-    ):
+        dr_1, dr_2, dr_3, dr_4, dr_5, dpr_1, dpr_2, dpr_3, dpr_4, dpr_5):
     """Calculate plasma evolution using the Adams-Bashforth pusher.
 
     Parameters
@@ -296,8 +296,7 @@ def calculate_with_rk4(
         a2_1, nabla_a2_1, b_t_0_1, b_t_1, psi_1, dr_psi_1, dxi_psi_1,
         a2_2, nabla_a2_2, b_t_0_2, b_t_2, psi_2, dr_psi_2, dxi_psi_2,
         a2_3, nabla_a2_3, b_t_0_3, b_t_3, psi_3, dr_psi_3, dxi_psi_3,
-        a2_4, nabla_a2_4, b_t_0_4, b_t_4, psi_4, dr_psi_4, dxi_psi_4
-    ):
+        a2_4, nabla_a2_4, b_t_0_4, b_t_4, psi_4, dr_psi_4, dxi_psi_4):
     """Calculate plasma evolution using the Adams-Bashforth pusher.
 
     Parameters
@@ -372,8 +371,7 @@ def calculate_and_deposit_plasma_column(
         a2_pp, nabla_a2_pp, b_t_0_pp, b_t_pp, psi_pp, dr_psi_pp, dxi_psi_pp,
         a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
         xi_fld, r_fld, dxi, dr, n_xi, n_r,
-        max_gamma, p_shape
-    ):
+        max_gamma, p_shape):
     """Calculate the fields at the current position of the plasma particles
     and calculate/deposit the azimuthal magnetic field from the plasma
     (b_t_bar), the wakefield potential (psi), the plasma charge density (rho)
