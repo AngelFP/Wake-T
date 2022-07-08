@@ -5,10 +5,11 @@ according to the paper by P. Baxevanis and G. Stupakov.
 """
 
 import numpy as np
-from numba import njit
+
+from wake_t.utilities.numba import njit_serial
 
 
-@njit()
+@njit_serial()
 def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
                                    b_theta_0, nabla_a2, idx, dr_p, b_theta_pp):
     """
@@ -85,7 +86,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
             b_theta_pp[i] = -3.
 
 
-@njit()
+@njit_serial()
 def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                       nabla_a2, idx, b_theta, k):
     """
@@ -152,7 +153,7 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             b_theta_mesh[2+j] = a_i[i_p] * r_j + b_i[i_p] / r_j
 
 
-@njit()
+@njit_serial()
 def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                               nabla_a2, idx):
     """
@@ -265,7 +266,7 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     return a_i, b_i, a_0
 
 
-@njit()
+@njit_serial()
 def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                               nabla_a2, idx):
     """

@@ -8,7 +8,6 @@ for the full details about this model.
 
 import numpy as np
 import scipy.constants as ct
-from numba import njit
 import aptools.plasma_accel.general_equations as ge
 
 from wake_t.particles.deposition import deposit_3d_distribution
@@ -21,6 +20,7 @@ from .psi_and_derivatives import (
     calculate_psi, calculate_psi_and_derivatives_at_particles)
 from .b_theta import calculate_b_theta, calculate_b_theta_at_particles
 from .plasma_particles import PlasmaParticles
+from wake_t.utilities.numba import njit_serial
 
 
 def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
@@ -213,7 +213,7 @@ def evolve_plasma_and_calculate_fields(
             "Plasma pusher '{}' not recognized.".format(plasma_pusher))
 
 
-@njit()
+@njit_serial()
 def calculate_with_ab5(
         r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
         r_max_plasma, dr_p, parabolic_coefficient,
@@ -285,7 +285,7 @@ def calculate_with_ab5(
                 dpr_1, dpr_2, dpr_3, dpr_4, dpr_5)
 
 
-@njit()
+@njit_serial()
 def calculate_with_rk4(
         r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
         r_max_plasma, dr_p, parabolic_coefficient,
@@ -364,7 +364,7 @@ def calculate_with_rk4(
                 a2_4, nabla_a2_4, b_t_0_4, b_t_4, psi_4, dr_psi_4, dxi_psi_4)
 
 
-@njit()
+@njit_serial()
 def calculate_and_deposit_plasma_column(
         i, xi, r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
         r_max_plasma, dr_p, parabolic_coefficient,
@@ -458,7 +458,7 @@ def calculate_and_deposit_plasma_column(
                              dxi, dr, chi, p_shape=p_shape)
 
 
-@njit
+@njit_serial
 def update_gamma_and_pz(gamma, pz, pr, a2, psi):
     """
     Update the gamma factor and longitudinal momentum of the plasma particles.

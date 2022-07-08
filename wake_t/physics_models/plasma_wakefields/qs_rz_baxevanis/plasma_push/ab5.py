@@ -2,10 +2,11 @@
 
 
 import numpy as np
-from numba import njit
+
+from wake_t.utilities.numba import njit_serial
 
 
-@njit()
+@njit_serial()
 def evolve_plasma_ab5(
         dxi, r, pr, gamma,
         nabla_a2_pp, b_theta_0_pp, b_theta_pp, psi_pp, dr_psi_pp,
@@ -71,7 +72,7 @@ def evolve_plasma_ab5(
         dpr_5[idx_neg] *= -1.
 
 
-@njit()
+@njit_serial()
 def calculate_derivatives(
         pr, gamma, b_theta_0, nabla_a2, b_theta_bar, psi, dr_psi, dr, dpr):
     """
@@ -109,7 +110,7 @@ def calculate_derivatives(
         dr[i] = pr[i] / (1. + psi_i)
 
 
-@njit()
+@njit_serial()
 def apply_ab5(x, dt, dx_1, dx_2, dx_3, dx_4, dx_5):
     """Apply the Adams-Bashforth method of 5th order to evolve `x`.
 

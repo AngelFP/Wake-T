@@ -5,10 +5,11 @@ according to the paper by P. Baxevanis and G. Stupakov.
 """
 
 import numpy as np
-from numba import njit
+
+from wake_t.utilities.numba import njit_serial
 
 
-@njit()
+@njit_serial()
 def calculate_psi_and_derivatives_at_particles(
         r, pr, q, idx, r_max, dr_p, pc, psi_pp, dr_psi_pp, dxi_psi_pp):
     """
@@ -169,7 +170,7 @@ def calculate_psi_and_derivatives_at_particles(
             dxi_psi_pp[i] = -3.
 
 
-@njit()
+@njit_serial()
 def calculate_psi(r_fld, r, q, idx, r_max, pc, psi, k):
     """
     Calculate the wakefield potential at the radial
@@ -254,7 +255,7 @@ def calculate_psi(r_fld, r, q, idx, r_max, pc, psi, k):
     psi_slice -= delta_psi_eq(r_furthest, sum_1, sum_2, r_max, pc)
 
 
-@njit()
+@njit_serial()
 def calculate_psi_and_derivatives(r_fld, r, pr, q):
     """
     Calculate the wakefield potential and its derivatives at the radial
@@ -342,7 +343,7 @@ def calculate_psi_and_derivatives(r_fld, r, pr, q):
     return psi, dr_psi, dxi_psi
 
 
-@njit()
+@njit_serial()
 def delta_psi_eq(r, sum_1, sum_2, r_max, pc):
     """ Adapted equation (29) from original paper. """
     delta_psi_elec = sum_1*np.log(r) - sum_2
@@ -356,7 +357,7 @@ def delta_psi_eq(r, sum_1, sum_2, r_max, pc):
     return delta_psi_elec - delta_psi_ion
 
 
-@njit()
+@njit_serial()
 def dr_psi_eq(r, sum_1, r_max, pc):
     """ Adapted equation (31) from original paper. """
     dr_psi_elec = sum_1 / r

@@ -1,12 +1,12 @@
 import numpy as np
-from numba import njit
 
+from wake_t.utilities.numba import njit_serial
 from wake_t.particles.interpolation import gather_sources_qs_baxevanis
 from ..psi_and_derivatives import calculate_psi_and_derivatives_at_particles
 from ..b_theta import calculate_b_theta_at_particles
 
 
-@njit()
+@njit_serial()
 def evolve_plasma_rk4(
         dxi, dr, xi, r, pr, gamma, q, r_max_plasma, dr_p, pc,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
@@ -85,7 +85,7 @@ def evolve_plasma_rk4(
         pr[idx_neg] *= -1.
 
 
-@njit()
+@njit_serial()
 def derivatives_substep(
         xi, r, pr, q, dxi, dr, r_max_plasma, dr_p, pc,
         a2, nabla_a2, b_t_0, r_fld, xi_fld,
@@ -170,7 +170,7 @@ def derivatives_substep(
         dpr_i[idx_neg] *= -1.
 
 
-@njit()
+@njit_serial()
 def calculate_derivatives(
         pr, gamma, b_t_0, nabla_a2, b_t_bar, psi, dr_psi, dr, dpr):
     """
@@ -208,7 +208,7 @@ def calculate_derivatives(
         dr[i] = pr[i] / (1. + psi_i)
 
 
-@njit()
+@njit_serial()
 def apply_rk4(x, dt, kx_1, kx_2, kx_3, kx_4):
     """Apply the Runge-Kutta method of 4th order to evolve `x`
 

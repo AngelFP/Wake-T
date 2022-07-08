@@ -11,10 +11,11 @@ shapes.
 
 import math
 import numpy as np
-from numba import njit, prange
+
+from wake_t.utilities.numba import njit_serial
 
 
-@njit()
+@njit_serial()
 def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
     """
     Interpolate a 2D field defined on an r-z grid to the particle positions
@@ -92,7 +93,7 @@ def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
     return fld_part
 
 
-@njit()
+@njit_serial()
 def gather_main_fields_cyl_linear(
         er, ez, bt, z_min, z_max, r_min, r_max, dz, dr, x, y, z,
         ex_part, ey_part, ez_part, bx_part, by_part, bz_part):
@@ -130,7 +131,7 @@ def gather_main_fields_cyl_linear(
     n_part = x.shape[0]
 
     # Iterate over all particles.
-    for i in prange(n_part):
+    for i in range(n_part):
 
         # Get particle position.
         x_i = x[i]
@@ -207,7 +208,7 @@ def gather_main_fields_cyl_linear(
             by_part[i] += bt_i * x_i * inv_r_i
 
 
-@njit()
+@njit_serial()
 def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
                                 r_max, dz, dr, r, z, fld_1_pp, fld_2_pp,
                                 fld_3_pp):
@@ -251,7 +252,7 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
     """
 
     # Iterate over all particles.
-    for i in prange(r.shape[0]):
+    for i in range(r.shape[0]):
 
         # Get particle position.
         z_i = z

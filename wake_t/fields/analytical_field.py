@@ -1,9 +1,9 @@
 """Contains the class used to define analytic fields."""
 
 import numpy as np
-from numba import njit
 
 from .base import Field
+from wake_t.utilities.numba import njit_serial
 
 
 class AnalyticalField(Field):
@@ -62,12 +62,12 @@ class AnalyticalField(Field):
             """Default field component."""
             pass
 
-        self.__e_x = njit()(e_x) if e_x is not None else no_field
-        self.__e_y = njit()(e_y) if e_y is not None else no_field
-        self.__e_z = njit()(e_z) if e_z is not None else no_field
-        self.__b_x = njit()(b_x) if b_x is not None else no_field
-        self.__b_y = njit()(b_y) if b_y is not None else no_field
-        self.__b_z = njit()(b_z) if b_z is not None else no_field
+        self.__e_x = njit_serial(e_x) if e_x is not None else no_field
+        self.__e_y = njit_serial(e_y) if e_y is not None else no_field
+        self.__e_z = njit_serial(e_z) if e_z is not None else no_field
+        self.__b_x = njit_serial(b_x) if b_x is not None else no_field
+        self.__b_y = njit_serial(b_y) if b_y is not None else no_field
+        self.__b_z = njit_serial(b_z) if b_z is not None else no_field
         self.constants = np.array(constants)
 
     def _pre_gather(self, x, y, z, t):
