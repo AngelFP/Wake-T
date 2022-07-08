@@ -5,10 +5,11 @@ of plasma particles in a 2D r-z grid.
 """
 
 import math
-from numba import njit
+
+from wake_t.utilities.numba import njit_serial
 
 
-@njit()
+@njit_serial()
 def deposit_plasma_particles(z, r, w, z_min, r_min, nz, nr, dz, dr,
                              deposition_array, p_shape='cubic'):
     """
@@ -58,7 +59,7 @@ def deposit_plasma_particles(z, r, w, z_min, r_min, nz, nr, dz, dr,
             z, r, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
 
 
-@njit
+@njit_serial
 def deposit_plasma_particles_linear(z, r, q, z_min, r_min, nz, nr, dz, dr,
                                     deposition_array):
     """ Calculate charge distribution assuming linear particle shape. """
@@ -115,7 +116,7 @@ def deposit_plasma_particles_linear(z, r, q, z_min, r_min, nz, nr, dz, dr,
             deposition_array[iz_cell + 1, ir_cell + 1] += zsl_1 * rsl_1 * w_i
 
 
-@njit
+@njit_serial
 def deposit_plasma_particles_cubic(z, r, q, z_min, r_min, nz, nr, dz, dr,
                                    deposition_array):
     """ Calculate charge distribution assuming cubic particle shape. """

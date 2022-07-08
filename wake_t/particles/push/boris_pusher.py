@@ -4,9 +4,9 @@ Contains the Boris pusher
 Authors: Jorge Ordóñez Carrasco, Ángel Ferran Pousa.
 """
 import numpy as np
-from numba import njit
 import scipy.constants as ct
 
+from wake_t.utilities.numba import njit_serial
 from wake_t.fields.gather import gather_fields
 
 
@@ -39,7 +39,7 @@ def apply_boris_pusher(bunch, fields, t, dt):
         bunch.x, bunch.y, bunch.xi, bunch.px, bunch.py, bunch.pz, dt)
 
 
-@njit()
+@njit_serial()
 def apply_half_position_push(x, y, xi, px, py, pz, dt):
     for i in range(x.shape[0]):
         # Get particle momentum
@@ -55,7 +55,7 @@ def apply_half_position_push(x, y, xi, px, py, pz, dt):
         xi[i] += 0.5 * (pz_i * c_over_gamma_i - ct.c) * dt
 
 
-@njit()
+@njit_serial()
 def push_momentum(px, py, pz, ex, ey, ez, bx, by, bz, dt):
     k = -ct.e*dt/(ct.m_e*2*ct.c)
 
