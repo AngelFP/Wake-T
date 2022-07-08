@@ -87,7 +87,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
 
 @njit()
 def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
-                      nabla_a2, idx):
+                      nabla_a2, idx, b_theta, k):
     """
     Calculate the azimuthal magnetic field from the plasma at the radial
     locations in r_fld using Eqs. (24), (26) and (27) from the paper
@@ -114,6 +114,14 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     idx : ndarray
         Array containing the (radially) sorted indices of the plasma particles.
 
+    b_theta : ndarray
+        Array where the values of the plasma azimuthal magnetic field will be
+        stored.
+
+    k : int
+        Index that determines the slice of b_theta where the values will
+        be filled in (the index is k-2 due to the guard cells in the array).
+
     """
     # Calculate a_i and b_i, as well as a_0 and the sorted particle indices.
     a_i, b_i, a_0 = calculate_ai_bi_from_edge(
@@ -122,7 +130,7 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     # Calculate fields at r_fld
     n_part = r.shape[0]
     n_points = r_fld.shape[0]
-    b_theta_mesh = np.zeros(n_points)
+    b_theta_mesh = b_theta[k-2]
     i_last = 0
     for j in range(n_points):
         r_j = r_fld[j]
@@ -137,13 +145,11 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                 break
         # Calculate fields.
         if i_last == -1:
-            b_theta_mesh[j] = a_0 * r_j
+            b_theta_mesh[2+j] = a_0 * r_j
             i_last = 0
         else:
             i_p = idx[i_last]
-            b_theta_mesh[j] = a_i[i_p] * r_j + b_i[i_p] / r_j
-
-    return b_theta_mesh
+            b_theta_mesh[2+j] = a_i[i_p] * r_j + b_i[i_p] / r_j
 
 
 @njit()

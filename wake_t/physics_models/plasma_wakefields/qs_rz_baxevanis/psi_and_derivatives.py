@@ -170,7 +170,7 @@ def calculate_psi_and_derivatives_at_particles(
 
 
 @njit()
-def calculate_psi(r_fld, r, q, idx, r_max, pc):
+def calculate_psi(r_fld, r, q, idx, r_max, pc, psi, k):
     """
     Calculate the wakefield potential at the radial
     positions specified in r_fld. This is done by using Eq. (29) in
@@ -194,6 +194,13 @@ def calculate_psi(r_fld, r, q, idx, r_max, pc):
     pc : float
         The parabolic density profile coefficient.
 
+    psi : ndarray
+        Array where the values of the wakefield potential will be stored.
+
+    k : int
+        Index that determines the slice of psi where the values will
+        be filled in (the index is k-2 due to the guard cells in the array).
+
     """
     # Initialize arrays with values of psi and sums at plasma particles.
     n_part = r.shape[0]
@@ -216,7 +223,7 @@ def calculate_psi(r_fld, r, q, idx, r_max, pc):
 
     # Initialize array for psi at r_fld locations.
     n_points = r_fld.shape[0]
-    psi = np.zeros(n_points)
+    psi_slice = psi[k-2]
 
     # Calculate fields at r_fld.
     i_last = 0
@@ -240,12 +247,11 @@ def calculate_psi(r_fld, r, q, idx, r_max, pc):
             i = idx[i_last]
             sum_1_j = sum_1_arr[i]
             sum_2_j = sum_2_arr[i]
-        psi[j] = delta_psi_eq(r_j, sum_1_j, sum_2_j, r_max, pc)
+        psi_slice[2+j] = delta_psi_eq(r_j, sum_1_j, sum_2_j, r_max, pc)
 
     # Apply boundary conditions.
     r_furthest = max(r_N, r_max)
-    psi = psi - delta_psi_eq(r_furthest, sum_1, sum_2, r_max, pc)
-    return psi
+    psi_slice -= delta_psi_eq(r_furthest, sum_1, sum_2, r_max, pc)
 
 
 @njit()

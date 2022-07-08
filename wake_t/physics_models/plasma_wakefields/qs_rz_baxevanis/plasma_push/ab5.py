@@ -5,54 +5,70 @@ import numpy as np
 from numba import njit
 
 
-def evolve_plasma_ab5(pp, dxi):
+@njit()
+def evolve_plasma_ab5(
+        dxi, r, pr, gamma,
+        nabla_a2_pp, b_theta_0_pp, b_theta_pp, psi_pp, dr_psi_pp,
+        dr_1, dr_2, dr_3, dr_4, dr_5, dpr_1, dpr_2, dpr_3, dpr_4, dpr_5):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
     using an Adams–Bashforth method of 5th order.
 
-    Parameters:
-    -----------
-    pp : PlasmaParticles
-        The plasma particles to be evolved.
+    Parameters
+    ----------
     dxi : float
         Longitudinal step.
+    r, pr, gamma : ndarray
+        Radial position, radial momentum, and Lorentz factor of the plasma
+        particles.
+    a2_pp, ..., dxi_psi_pp : ndarray
+        Arrays where the value of the fields at the particle positions will
+        be stored.
+    dr_1, ..., dr_5 : ndarray
+        Arrays containing the derivative of the radial position of the
+        particles at the 5 slices previous to the next one.
+    dpr_1, ..., dpr_5 : ndarray
+        Arrays containing the derivative of the radial momentum of the
+        particles at the 5 slices previous to the next one.
     """
-    # Get fields at the position of plasma particles in current slice.
-    (a2_pp, nabla_a2_pp, b_theta_0_pp, b_theta_pp, psi_pp, dr_psi_pp,
-     dxi_psi_pp) = pp.get_field_arrays()
 
-    # Using these fields, compute derivatives of r and pr at the current slice.
-    dr_arrays, dpr_arrays = pp.get_ab5_arrays()
-    dr_pp = dr_arrays[0]
-    dpr_pp = dpr_arrays[0]
     calculate_derivatives(
-        pp.pr, pp.gamma, b_theta_0_pp, nabla_a2_pp, b_theta_pp,
-        psi_pp, dr_psi_pp, dr_pp, dpr_pp
+        pr, gamma, b_theta_0_pp, nabla_a2_pp, b_theta_pp,
+        psi_pp, dr_psi_pp, dr_1, dpr_1
     )
 
-    # Get derivatives of r and pr of last 5 steps.
-    dr_arrays, dpr_arrays = pp.get_ab5_arrays()
-
     # Push radial position.
-    apply_ab5(pp.r, dxi, *dr_arrays)
+    apply_ab5(r, dxi, dr_1, dr_2, dr_3, dr_4, dr_5)
 
     # Push radial momentum.
-    apply_ab5(pp.pr, dxi, *dpr_arrays)
+    apply_ab5(pr, dxi, dpr_1, dpr_2, dpr_3, dpr_4, dpr_5)
 
     # Shift derivatives for next step (i.e., the derivative at step i will be
     # the derivative at step i+i in the next iteration.)
-    for i in reversed(range(len(dr_arrays)-1)):
-        dr_arrays[i+1][:] = dr_arrays[i]
-        dpr_arrays[i+1][:] = dpr_arrays[i]
+    dr_5[:] = dr_4
+    dr_4[:] = dr_3
+    dr_3[:] = dr_2
+    dr_2[:] = dr_1
+    dpr_5[:] = dpr_4
+    dpr_4[:] = dpr_3
+    dpr_3[:] = dpr_2
+    dpr_2[:] = dpr_1
 
     # If a particle has crossed the axis, mirror it.
-    idx_neg = np.where(pp.r < 0.)
+    idx_neg = np.where(r < 0.)
     if idx_neg[0].size > 0:
-        pp.r[idx_neg] *= -1.
-        pp.pr[idx_neg] *= -1.
-        for i in range(len(dr_arrays)):
-            dr_arrays[i][idx_neg] *= -1.
-            dpr_arrays[i][idx_neg] *= -1.
+        r[idx_neg] *= -1.
+        pr[idx_neg] *= -1.
+        dr_1[idx_neg] *= -1.
+        dr_2[idx_neg] *= -1.
+        dr_3[idx_neg] *= -1.
+        dr_4[idx_neg] *= -1.
+        dr_5[idx_neg] *= -1.
+        dpr_1[idx_neg] *= -1.
+        dpr_2[idx_neg] *= -1.
+        dpr_3[idx_neg] *= -1.
+        dpr_4[idx_neg] *= -1.
+        dpr_5[idx_neg] *= -1.
 
 
 @njit()
