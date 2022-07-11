@@ -92,7 +92,7 @@ class OpenPMDDiagnostics():
 
         # Write particle diagnostics.
         for species in species_list:
-            diag_data = species.get_openpmd_diagnostics_data()
+            diag_data = species.get_openpmd_diagnostics_data(it.time)
             self._write_species(it, diag_data)
 
         # Write field diagnostics.
@@ -265,26 +265,32 @@ class OpenPMDDiagnostics():
                 fld[SCALAR].set_attribute(
                     'position', wf_data[field]['position'])
 
-            if field in ['E', 'W']:
+            if field == 'E':
                 fld.unit_dimension = {
                     Unit_Dimension.L: 1,
                     Unit_Dimension.M: 1,
                     Unit_Dimension.T: -3,
                     Unit_Dimension.I: -1
-                    }
+                }
+            elif field == 'B':
+                fld.unit_dimension = {
+                    Unit_Dimension.M: 1,
+                    Unit_Dimension.T: -2,
+                    Unit_Dimension.I: -1
+                }
             elif field in ['rho', 'chi']:
                 fld.unit_dimension = {
                     Unit_Dimension.L: -3,
                     Unit_Dimension.T: 1,
                     Unit_Dimension.I: 1
-                    }
+                }
             elif field == 'a':
                 fld.unit_dimension = {
                     Unit_Dimension.L: 1,
                     Unit_Dimension.M: 1,
                     Unit_Dimension.T: -2,
                     Unit_Dimension.I: -1
-                    }
+                }
 
             # Set geometry to thetaMode until cylindrical geometry is
             # properly defined in the openPMD standard.
