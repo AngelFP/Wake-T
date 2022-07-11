@@ -154,22 +154,26 @@ class Tracker():
             obj_next = self.objects_to_track[i_next]
             dt_next = dt_objects[i_next]
             t_next = t_next_objects[i_next]
+            t_current = t_objects[i_next]
 
             # If the next time of the object is beyond `t_final`, the tracking
             # is finished.
             if np.float32(t_next) > np.float32(self.t_final):
                 break
 
+            # Advance tracking time.
+            self.t_tracking = t_next
+
             # If next object is a ParticleBunch, update it.
             if isinstance(obj_next, ParticleBunch):
                 obj_next.evolve(
-                    self.fields, self.t_tracking, dt_next, self.bunch_pusher)
+                    self.fields, t_current, dt_next, self.bunch_pusher)
                 # Update the time step if set to `'auto'`.
                 if obj_next in self.auto_dt_bunches:
                     dt_objects[i_next] = self.auto_dt_bunch_f(obj_next)
                 # Determine if this was the last push.
                 final_push = np.float32(t_next) == np.float32(self.t_final)
-                # Determine is next push brings the bunch beyond `t_final`.
+                # Determine if next push brings the bunch beyond `t_final`.
                 next_push_beyond_final_time = (
                     t_next + dt_objects[i_next] > self.t_final)
                 # Make sure the last push of the bunch advances it to exactly
@@ -187,9 +191,6 @@ class Tracker():
 
             # Advance current time of the update object.
             t_objects[i_next] += dt_next
-
-            # Advance tracking time.
-            self.t_tracking = t_next
 
             # Update progress bar.
             progress_bar.update(self.t_tracking*ct.c - progress_bar.n)
