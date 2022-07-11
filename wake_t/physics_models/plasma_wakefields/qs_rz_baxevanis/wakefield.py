@@ -116,13 +116,16 @@ class Quasistatic2DWakefield(NumericalField):
         # Cell-centered in 'r' and node centered in 'z'.
         fld_position = [0.5, 0.]
         fld_names = ['E', 'B', 'rho']
-        fld_comps = [['r', 'z'], ['t'], None]
+        fld_comps = [['r', 't', 'z'], ['r', 't', 'z'], None]
         fld_arrays = [
             [np.ascontiguousarray(self.E_r.T[2:-2, 2:-2]),
+             np.zeros((self.n_r, self.n_xi)),
              np.ascontiguousarray(self.E_z.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.B_t.T[2:-2, 2:-2])],
+            [np.zeros((self.n_r, self.n_xi)),
+             np.ascontiguousarray(self.B_t.T[2:-2, 2:-2]),
+             np.zeros((self.n_r, self.n_xi))],
             [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * self.n_p * (-ct.e)]
-            ]
+        ]
         if self.laser is not None:
             fld_names += ['a_mod', 'a_phase']
             fld_comps += [None, None]

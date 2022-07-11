@@ -180,15 +180,18 @@ class NonLinearColdFluidWakefield(NumericalField):
         # Cell-centered in 'r' and node centered in 'z'.
         fld_position = [0.5, 0.]
         fld_names = ['E', 'B', 'rho']
-        fld_comps = [['r', 'z'], ['t'], None]
+        fld_comps = [['r', 't', 'z'], ['r', 't', 'z'], None]
         # Need to make sure it is a contiguous array to prevent incorrect
         # openPMD output.
         fld_arrays = [
             [np.ascontiguousarray(self.E_r.T),
+             np.zeros((self.n_r, self.n_xi)),
              np.ascontiguousarray(self.E_z.T)],
-            [np.ascontiguousarray(self.B_t.T)],
+            [np.zeros((self.n_r, self.n_xi)),
+             np.ascontiguousarray(self.B_t.T),
+             np.zeros((self.n_r, self.n_xi))],
             [np.ascontiguousarray(self.n_fl.T) * self.current_n_p * (-ct.e)]
-            ]
+        ]
         if self.laser is not None:
             fld_names += ['a_mod', 'a_phase']
             fld_comps += [None, None]
