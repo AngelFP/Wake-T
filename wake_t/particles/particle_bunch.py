@@ -273,7 +273,7 @@ class ParticleBunch():
         dxi = xi_c - current_xi_c
         self.xi += dxi
 
-    def get_openpmd_diagnostics_data(self):
+    def get_openpmd_diagnostics_data(self, global_time):
         """
         Returns a dictionary with the necessary data to write the openPMD
         diagnostics of the particle bunch.
@@ -290,7 +290,7 @@ class ParticleBunch():
             'q': -ct.e,
             'm': ct.m_e,
             'name': self.name,
-            'z_off': self.prop_distance
+            'z_off': global_time * ct.c
         }
         return diag_dict
 

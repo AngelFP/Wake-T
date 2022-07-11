@@ -92,7 +92,7 @@ class OpenPMDDiagnostics():
 
         # Write particle diagnostics.
         for species in species_list:
-            diag_data = species.get_openpmd_diagnostics_data()
+            diag_data = species.get_openpmd_diagnostics_data(it.time)
             self._write_species(it, diag_data)
 
         # Write field diagnostics.
