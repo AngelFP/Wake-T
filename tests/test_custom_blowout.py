@@ -46,7 +46,7 @@ def test_custom_blowout_wakefield(make_plots=False):
 
     bunch_params = analyze_bunch(bunch)
     rel_ene_sp = bunch_params['rel_ene_spread']
-    assert approx(rel_ene_sp, rel=1e-10) == 0.21192531095086517
+    assert approx(rel_ene_sp, rel=1e-10) == 0.21192488237458038
 
     if make_plots:
         # Analyze bunch evolution.
