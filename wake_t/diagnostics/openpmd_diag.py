@@ -272,7 +272,7 @@ class OpenPMDDiagnostics():
                     Unit_Dimension.T: -3,
                     Unit_Dimension.I: -1
                 }
-            if field == 'B':
+            elif field == 'B':
                 fld.unit_dimension = {
                     Unit_Dimension.M: 1,
                     Unit_Dimension.T: -2,
