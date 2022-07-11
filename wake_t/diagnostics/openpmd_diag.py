@@ -265,26 +265,32 @@ class OpenPMDDiagnostics():
                 fld[SCALAR].set_attribute(
                     'position', wf_data[field]['position'])
 
-            if field in ['E', 'W']:
+            if field == 'E':
                 fld.unit_dimension = {
                     Unit_Dimension.L: 1,
                     Unit_Dimension.M: 1,
                     Unit_Dimension.T: -3,
                     Unit_Dimension.I: -1
-                    }
+                }
+            if field == 'B':
+                fld.unit_dimension = {
+                    Unit_Dimension.M: 1,
+                    Unit_Dimension.T: -2,
+                    Unit_Dimension.I: -1
+                }
             elif field in ['rho', 'chi']:
                 fld.unit_dimension = {
                     Unit_Dimension.L: -3,
                     Unit_Dimension.T: 1,
                     Unit_Dimension.I: 1
-                    }
+                }
             elif field == 'a':
                 fld.unit_dimension = {
                     Unit_Dimension.L: 1,
                     Unit_Dimension.M: 1,
                     Unit_Dimension.T: -2,
                     Unit_Dimension.I: -1
-                    }
+                }
 
             # Set geometry to thetaMode until cylindrical geometry is
             # properly defined in the openPMD standard.
