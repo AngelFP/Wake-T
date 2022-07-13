@@ -321,7 +321,7 @@ class ParticleBunch():
             default 'rk4'.
         """
 
-        if self.prop_distance < self.z_injection:
+        if (np.amax(self.xi) + self.prop_distance) < self.z_injection:
             fields = []
 
         if pusher == 'rk4':
