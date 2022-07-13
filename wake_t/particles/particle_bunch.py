@@ -321,8 +321,9 @@ class ParticleBunch():
             default 'rk4'.
         """
 
-        if (np.amax(self.xi) + self.prop_distance) < self.z_injection:
-            fields = []
+        if self.z_injection is not None:
+            if (np.amax(self.xi) + self.prop_distance) < self.z_injection:
+                fields = []
 
         if pusher == 'rk4':
             apply_rk4_pusher(self, fields, t, dt)
