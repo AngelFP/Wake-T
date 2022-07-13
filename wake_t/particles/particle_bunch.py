@@ -18,7 +18,8 @@ class ParticleBunch():
 
     def __init__(self, q, x=None, y=None, xi=None, px=None, py=None, pz=None,
                  bunch_matrix=None, matrix_type='standard', gamma_ref=None,
-                 tags=None, prop_distance=0, t_flight=0, name=None):
+                 tags=None, prop_distance=0, t_flight=0, z_injection=None,
+                 name=None):
         """
         Initialize particle bunch.
 
@@ -73,6 +74,9 @@ class ParticleBunch():
         t_flight : float
             Time of flight of the bunch along the beamline.
 
+        z_injection: float (in meters)
+            Particles have a ballistic motion for z<z_injection.
+
         name : str
             Name of the particle bunch. Used for species identification
             in openPMD diagnostics.
@@ -96,6 +100,7 @@ class ParticleBunch():
         self.tags = tags
         self.prop_distance = prop_distance
         self.t_flight = t_flight
+        self.z_injection = z_injection
         self.x_ref = 0
         self.theta_ref = 0
         self.set_name(name)
@@ -315,6 +320,10 @@ class ParticleBunch():
             The particle pusher to use. Either 'rk4' or 'boris'. By
             default 'rk4'.
         """
+
+        if self.prop_distance < self.z_injection:
+            fields = []
+
         if pusher == 'rk4':
             apply_rk4_pusher(self, fields, t, dt)
         elif pusher == 'boris':
