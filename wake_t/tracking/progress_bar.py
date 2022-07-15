@@ -1,7 +1,7 @@
 """Defines a progress bar to be used by the Tracker."""
 
 from tqdm import tqdm
-
+import sys
 
 def get_progress_bar(description, total_length):
     """Get progress bar for the tracker.
@@ -23,6 +23,8 @@ def get_progress_bar(description, total_length):
         desc=description,
         total=total_length,
         unit='m',
-        bar_format=l_bar + "{bar}" + r_bar
+        bar_format=l_bar + "{bar}" + r_bar,
+        file=sys.stdout,
+        dynamic_ncols=True
     )
     return progress_bar
