@@ -1,6 +1,13 @@
 """Defines a progress bar to be used by the Tracker."""
 
+import sys
+import warnings
+
 from tqdm import tqdm
+
+
+# Avoid showing clamping warnings from the progress bar.
+warnings.filterwarnings('ignore', '.*clamping.*', )
 
 
 def get_progress_bar(description, total_length):
@@ -23,6 +30,7 @@ def get_progress_bar(description, total_length):
         desc=description,
         total=total_length,
         unit='m',
-        bar_format=l_bar + "{bar}" + r_bar
+        bar_format=l_bar + "{bar}" + r_bar,
+        file=sys.stdout
     )
     return progress_bar
