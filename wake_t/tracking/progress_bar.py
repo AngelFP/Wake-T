@@ -3,6 +3,7 @@
 from tqdm import tqdm
 import sys
 
+
 def get_progress_bar(description, total_length):
     """Get progress bar for the tracker.
 
