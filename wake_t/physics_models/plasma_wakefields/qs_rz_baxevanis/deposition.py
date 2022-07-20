@@ -10,7 +10,7 @@ from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial()
-def deposit_plasma_particles(z, r, w, z_min, r_min, nz, nr, dz, dr,
+def deposit_plasma_particles(z_cell, r, w, z_min, r_min, nz, nr, dz, dr,
                              deposition_array, p_shape='cubic'):
     """
     Deposit the the weight of a 1D slice of plasma particles into a 2D
@@ -18,8 +18,8 @@ def deposit_plasma_particles(z, r, w, z_min, r_min, nz, nr, dz, dr,
 
     Parameters:
     -----------
-    z : float
-        Current longitudinal position of the plasma slice.
+    z_cell : float
+        Index of the current longitudinal position of the plasma slice.
 
     r : array
         Arrays containing the radial coordinates of the
@@ -53,18 +53,17 @@ def deposit_plasma_particles(z, r, w, z_min, r_min, nz, nr, dz, dr,
     """
     if p_shape == 'linear':
         return deposit_plasma_particles_linear(
-            z, r, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
+            z_cell, r, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
     elif p_shape == 'cubic':
         return deposit_plasma_particles_cubic(
-            z, r, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
+            z_cell, r, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
 
 
 @njit_serial
-def deposit_plasma_particles_linear(z, r, q, z_min, r_min, nz, nr, dz, dr,
+def deposit_plasma_particles_linear(z_cell, r, q, z_min, r_min, nz, nr, dz, dr,
                                     deposition_array):
     """ Calculate charge distribution assuming linear particle shape. """
 
-    z_max = z_min + (nz - 1) * dz
     r_max = nr * dr
 
     # Loop over particles.
@@ -74,10 +73,9 @@ def deposit_plasma_particles_linear(z, r, q, z_min, r_min, nz, nr, dz, dr,
         w_i = q[i]
 
         # Deposit only if particle is within field boundaries.
-        if z >= z_min and z <= z_max and r_i <= r_max:
+        if r_i <= r_max:
             # Positions of the particles in cell units.
             r_cell = (r_i - r_min) / dr
-            z_cell = (z - z_min) / dz
 
             # Indices of lowest cell in which the particle will deposit charge.
             ir_cell = min(int(math.ceil(r_cell)) + 1, nr + 2)
@@ -117,11 +115,10 @@ def deposit_plasma_particles_linear(z, r, q, z_min, r_min, nz, nr, dz, dr,
 
 
 @njit_serial
-def deposit_plasma_particles_cubic(z, r, q, z_min, r_min, nz, nr, dz, dr,
+def deposit_plasma_particles_cubic(z_cell, r, q, z_min, r_min, nz, nr, dz, dr,
                                    deposition_array):
     """ Calculate charge distribution assuming cubic particle shape. """
 
-    z_max = z_min + (nz - 1) * dz
     r_max = nr * dr
 
     # Loop over particles.
@@ -131,10 +128,9 @@ def deposit_plasma_particles_cubic(z, r, q, z_min, r_min, nz, nr, dz, dr,
         w_i = q[i]
 
         # Deposit only if particle is within field boundaries.
-        if z >= z_min and z <= z_max and r_i <= r_max:
+        if r_i <= r_max:
             # Positions of the particle in cell units.
             r_cell = (r_i - r_min) / dr
-            z_cell = (z - z_min) / dz
 
             # Indices of lowest cell in which the particle will deposit charge.
             ir_cell = min(int(math.ceil(r_cell)), nr + 2)
