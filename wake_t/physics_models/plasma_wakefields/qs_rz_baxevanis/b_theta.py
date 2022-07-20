@@ -121,7 +121,7 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
     k : int
         Index that determines the slice of b_theta where the values will
-        be filled in (the index is k-2 due to the guard cells in the array).
+        be filled in (the index is k+2 due to the guard cells in the array).
 
     """
     # Calculate a_i and b_i, as well as a_0 and the sorted particle indices.
@@ -131,7 +131,7 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     # Calculate fields at r_fld
     n_part = r.shape[0]
     n_points = r_fld.shape[0]
-    b_theta_mesh = b_theta[k-2]
+    b_theta_mesh = b_theta[k+2]
     i_last = 0
     for j in range(n_points):
         r_j = r_fld[j]

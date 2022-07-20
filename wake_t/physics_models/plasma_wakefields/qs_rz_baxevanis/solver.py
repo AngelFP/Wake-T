@@ -261,14 +261,14 @@ def calculate_with_ab5(
     """
     # Loop from the right to the left of the domain.
     for step in range(n_xi):
-        i = -1 - step
-        xi = xi_fld[i]
+        slice_i = n_xi - step - 1
+        xi = xi_fld[slice_i]
 
         # Calculate fields at the position of the particles and
         # calculate/deposit psi, b_t_bar, rho and chi at the current slice
         # of the grid.
         calculate_and_deposit_plasma_column(
-            i, xi, r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
+            slice_i, xi, r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
             r_max_plasma, dr_p, parabolic_coefficient,
             a2_pp, nabla_a2_pp, b_t_0_pp, b_t_pp,
             psi_pp, dr_psi_pp, dxi_psi_pp,
@@ -276,7 +276,7 @@ def calculate_with_ab5(
             xi_fld, r_fld, dxi, dr, n_xi, n_r,
             max_gamma, p_shape)
 
-        if step < n_xi-1:
+        if slice_i > 0:
             # Evolve plasma to next xi step.
             evolve_plasma_ab5(
                 dxi, r_pp, pr_pp, gamma_pp,
@@ -336,14 +336,14 @@ def calculate_with_rk4(
     """
     # Loop from the right to the left of the domain.
     for step in range(n_xi):
-        i = -1 - step
-        xi = xi_fld[i]
+        slice_i = n_xi - step - 1
+        xi = xi_fld[slice_i]
 
         # Calculate fields at the position of the particles and
         # calculate/deposit psi, b_t_bar, rho and chi at the current slice
         # of the grid.
         calculate_and_deposit_plasma_column(
-            i, xi, r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
+            slice_i, xi, r_pp, pr_pp, pz_pp, gamma_pp, q_pp,
             r_max_plasma, dr_p, parabolic_coefficient,
             a2_1, nabla_a2_1, b_t_0_1, b_t_1,
             psi_1, dr_psi_1, dxi_psi_1,
@@ -351,7 +351,7 @@ def calculate_with_rk4(
             xi_fld, r_fld, dxi, dr, n_xi, n_r,
             max_gamma, p_shape)
 
-        if step < n_xi-1:
+        if slice_i > 0:
             # Evolve plasma to next xi step.
             evolve_plasma_rk4(
                 dxi, dr, xi, r_pp, pr_pp, gamma_pp, q_pp,
@@ -452,9 +452,9 @@ def calculate_and_deposit_plasma_column(
     # Deposit rho and chi of plasma column
     w_rho = q_pp / (dr * r_pp * (1 - pz_pp/gamma_pp))
     w_chi = w_rho / gamma_pp
-    deposit_plasma_particles(xi, r_pp, w_rho, xi_fld[0], r_fld[0], n_xi, n_r,
+    deposit_plasma_particles(i, r_pp, w_rho, xi_fld[0], r_fld[0], n_xi, n_r,
                              dxi, dr, rho, p_shape=p_shape)
-    deposit_plasma_particles(xi, r_pp, w_chi, xi_fld[0], r_fld[0], n_xi, n_r,
+    deposit_plasma_particles(i, r_pp, w_chi, xi_fld[0], r_fld[0], n_xi, n_r,
                              dxi, dr, chi, p_shape=p_shape)
 
 

@@ -200,7 +200,7 @@ def calculate_psi(r_fld, r, q, idx, r_max, pc, psi, k):
 
     k : int
         Index that determines the slice of psi where the values will
-        be filled in (the index is k-2 due to the guard cells in the array).
+        be filled in (the index is k+2 due to the guard cells in the array).
 
     """
     # Initialize arrays with values of psi and sums at plasma particles.
@@ -224,7 +224,7 @@ def calculate_psi(r_fld, r, q, idx, r_max, pc, psi, k):
 
     # Initialize array for psi at r_fld locations.
     n_points = r_fld.shape[0]
-    psi_slice = psi[k-2]
+    psi_slice = psi[k+2]
 
     # Calculate fields at r_fld.
     i_last = 0
