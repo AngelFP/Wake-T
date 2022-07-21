@@ -229,10 +229,6 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
     a_old = np.zeros((nz + 2, nr), dtype=np.complex128)
     a = np.zeros((nz + 2, nr), dtype=np.complex128)
 
-    # a_new is a 2 x nr array to store new values of a. a_new[0] = a_new[j+1]
-    # and a_new[1] = a_new[j+2].
-    a_new = np.zeros((2, nr), dtype=np.complex128)
-
     # Declaration of the 4 vectors used for solving the tridiagonal system.
     d_upper = np.zeros(nr - 1, dtype=np.complex128)
     d_lower = np.zeros(nr - 1, dtype=np.complex128)
@@ -249,6 +245,10 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
     k0p = k0 / kp
 
     for n in range(0, nt):
+        # a_new is a 2 x nr array to store new values of a.
+        # a_new[0] is equivalent to a_new[j+1] and a_new[1] to a_new[j+2].
+        a_new = np.zeros((2, nr), dtype=np.complex128)
+
         # Getting the phases of the envelope at the radius.
         phases = np.angle(a[:, 0])
 
