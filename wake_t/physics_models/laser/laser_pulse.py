@@ -62,6 +62,9 @@ class LaserPulse():
             every time `evolve` is called. All these time steps are therefore
             computed using the same `chi`.
         """
+        if nt < 1:
+            raise ValueError(
+                'Number of laser envelope substeps cannot be smaller than 1.')
         solver_params = {
             'zmin': xi_min,
             'zmax': xi_max,
