@@ -153,6 +153,11 @@ class PlasmaStage():
             using a laser envelope model. If False, the pulse envelope stays
             unchanged throughout the computation.
 
+        laser_envelope_substeps : int
+            Number of substeps of the laser envelope solver per `dz_fields`.
+            The time step of the envelope solver is therefore
+            `dz_fields / c / laser_envelope_substeps`.
+
         r_max : float
             Maximum radial position up to which plasma wakefield will be
             calculated.
