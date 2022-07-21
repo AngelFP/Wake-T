@@ -128,7 +128,7 @@ class LaserPulse():
 
         # Update arrays and step count.
         self.a_env_old[:] = a_env_old[0: -2]
-        self.a_env = a_env[0: -2]
+        self.a_env[:] = a_env[0: -2]
         self.n_steps += 1
 
     def get_group_velocity(self, n_p):
