@@ -11,13 +11,14 @@ from wake_t.fields.numerical_field import NumericalField
 class Quasistatic2DWakefield(NumericalField):
 
     def __init__(self, density_function, laser=None, laser_evolution=True,
-                 r_max=None, xi_min=None, xi_max=None, n_r=100,
-                 n_xi=100, ppc=2, dz_fields=None, r_max_plasma=None,
-                 parabolic_coefficient=0., p_shape='cubic', max_gamma=10,
-                 plasma_pusher='rk4'):
+                 laser_envelope_substeps=1, r_max=None, xi_min=None,
+                 xi_max=None, n_r=100, n_xi=100, ppc=2, dz_fields=None,
+                 r_max_plasma=None, parabolic_coefficient=0., p_shape='cubic',
+                 max_gamma=10, plasma_pusher='rk4'):
         self.density_function = density_function
         self.laser = laser
         self.laser_evolution = laser_evolution
+        self.laser_envelope_substeps = laser_envelope_substeps
         self.r_max = r_max
         self.xi_min = xi_min
         self.xi_max = xi_max
@@ -44,7 +45,7 @@ class Quasistatic2DWakefield(NumericalField):
         if self.laser is not None:
             self.laser.set_envelope_solver_params(
                 self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
-                self.dt_update)
+                self.dt_update, self.laser_envelope_substeps)
             self.laser.initialize_envelope()
 
     def _evolve_properties(self, bunches):

@@ -62,6 +62,9 @@ class LaserPulse():
             every time `evolve` is called. All these time steps are therefore
             computed using the same `chi`.
         """
+        if nt < 1:
+            raise ValueError(
+                'Number of laser envelope substeps cannot be smaller than 1.')
         solver_params = {
             'zmin': xi_min,
             'zmax': xi_max,
@@ -128,7 +131,7 @@ class LaserPulse():
 
         # Update arrays and step count.
         self.a_env_old[:] = a_env_old[0: -2]
-        self.a_env = a_env[0: -2]
+        self.a_env[:] = a_env[0: -2]
         self.n_steps += 1
 
     def get_group_velocity(self, n_p):
