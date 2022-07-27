@@ -22,7 +22,7 @@ class NonLinearColdFluidWakefield(NumericalField):
         self.xi_max = xi_max
         self.n_r = n_r
         self.n_xi = n_xi
-        self.dz_fields = xi_max - xi_min if dz_fields is None else dz_fields
+        dz_fields = xi_max - xi_min if dz_fields is None else dz_fields
         self.beam_wakefields = beam_wakefields
         self.p_shape = p_shape
         # If a laser is included, make sure it is evolved for the whole
@@ -71,19 +71,17 @@ class NonLinearColdFluidWakefield(NumericalField):
         dr = self.r_max / self.n_r / s_d
         r = np.linspace(dr/2, self.r_max/s_d-dr/2, self.n_r)
 
-        # Currently, only one bunch supported
-        bunch = bunches[0]
-        x = bunch.x
-        y = bunch.y
-        xi = bunch.xi
-        q = bunch.q
-
         # Get charge distribution and remove guard cells.
         beam_hist = np.zeros((self.n_xi+4, self.n_r+4))
-        deposit_3d_distribution(
-            xi/s_d, x/s_d, y/s_d, q/ct.e, self.xi_min/s_d, r[0],
-            self.n_xi, self.n_r, dz, dr, beam_hist, p_shape=self.p_shape,
-            use_ruyten=True)
+        for bunch in bunches:
+            x = bunch.x
+            y = bunch.y
+            xi = bunch.xi
+            q = bunch.q
+            deposit_3d_distribution(
+                xi/s_d, x/s_d, y/s_d, q/ct.e, self.xi_min/s_d, r[0],
+                self.n_xi, self.n_r, dz, dr, beam_hist, p_shape=self.p_shape,
+                use_ruyten=True)
         beam_hist = beam_hist[2:-2, 2:-2]
 
         n = np.arange(self.n_r)
@@ -184,11 +182,11 @@ class NonLinearColdFluidWakefield(NumericalField):
         # Need to make sure it is a contiguous array to prevent incorrect
         # openPMD output.
         fld_arrays = [
-            [np.ascontiguousarray(self.E_r.T),
+            [np.ascontiguousarray(self.E_r[2:-2, 2:-2].T),
              np.zeros((self.n_r, self.n_xi)),
-             np.ascontiguousarray(self.E_z.T)],
+             np.ascontiguousarray(self.E_z[2:-2, 2:-2].T)],
             [np.zeros((self.n_r, self.n_xi)),
-             np.ascontiguousarray(self.B_t.T),
+             np.ascontiguousarray(self.B_t[2:-2, 2:-2].T),
              np.zeros((self.n_r, self.n_xi))],
             [np.ascontiguousarray(self.n_fl.T) * self.current_n_p * (-ct.e)]
         ]
