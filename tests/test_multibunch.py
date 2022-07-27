@@ -46,7 +46,7 @@ def test_multibunch_plasma_simulation(plot=False):
         xi_max=20e-6, xi_min=-120e-6, r_max=70e-6, n_xi=280, n_r=70)
 
     # Do tracking.
-    output = plasma.track([driver, witness], opmd_diag=True)
+    output = plasma.track([driver, witness])
 
     # Analyze evolution.
     driver_params = analyze_bunch_list(output[0])
