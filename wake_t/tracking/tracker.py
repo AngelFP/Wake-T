@@ -97,7 +97,9 @@ class Tracker():
             self.objects_to_track.append('diags')
             self.dt_diags = self.t_final/self.n_diags
             self.dt_objects.append(self.dt_diags)
-            self.bunch_list = [[]] * len(bunches)
+            self.bunch_list = []
+            for bunch in bunches:
+                self.bunch_list.append([])
 
         # Initialize tracking time.
         self.t_tracking = 0.
