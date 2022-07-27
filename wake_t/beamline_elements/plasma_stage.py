@@ -256,7 +256,7 @@ class PlasmaStage():
         # Make sure `bunches` is a list.
         if not isinstance(bunches, list):
             bunches = [bunches]
-        
+
         if not isinstance(self.dt_bunch, list):
             dt_bunch = [self.dt_bunch] * len(bunches)
         else:
