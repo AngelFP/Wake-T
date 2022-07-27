@@ -213,7 +213,6 @@ class PlasmaStage():
             `gamma=1.`, `pr=pz=0.`). By default `max_gamma=10`.
 
         """
-
         self.length = length
         self.density = self._get_density_profile(density)
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
@@ -223,14 +222,15 @@ class PlasmaStage():
         self.name = name
         self.external_fields = external_fields
 
-    def track(self, bunch, out_initial=False, opmd_diag=False, diag_dir=None):
+    def track(self, bunches=[], out_initial=False, opmd_diag=False,
+              diag_dir=None):
         """
         Track bunch through plasma stage.
 
         Parameters:
         -----------
-        bunch : ParticleBunch
-            Particle bunch to be tracked.
+        bunches : ParticleBunch or list of ParticleBunch
+            Particle bunches to be tracked.
 
         out_initial : bool
             Determines whether the initial bunch should be included in the
@@ -253,6 +253,14 @@ class PlasmaStage():
         A list of size 'n_out' containing the bunch distribution at each step.
 
         """
+        # Make sure `bunches` is a list.
+        if not isinstance(bunches, list):
+            bunches = [bunches]
+
+        if not isinstance(self.dt_bunch, list):
+            dt_bunch = [self.dt_bunch] * len(bunches)
+        else:
+            dt_bunch = self.dt_bunches
 
         # Create diagnostics instance.
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
@@ -266,8 +274,8 @@ class PlasmaStage():
         # Create tracker.
         tracker = Tracker(
             t_final=self.length/ct.c,
-            bunches=[bunch],
-            dt_bunches=[self.dt_bunch],
+            bunches=bunches,
+            dt_bunches=dt_bunch,
             fields=fields,
             n_diags=self.n_out,
             opmd_diags=opmd_diag,

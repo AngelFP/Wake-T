@@ -23,7 +23,7 @@ from .plasma_particles import PlasmaParticles
 from wake_t.utilities.numba import njit_serial
 
 
-def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
+def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
                          n_r, n_xi, ppc, n_p, r_max_plasma=None,
                          parabolic_coefficient=0., p_shape='cubic',
                          max_gamma=10., plasma_pusher='rk4'):
@@ -127,13 +127,15 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
 
     # Beam source. This code is needed while no proper support particle
     # beams as input is implemented.
-    b_t_0 = calculate_beam_source_from_particles(
-        *beam_part, n_p, n_r, n_xi, r_fld[0], xi_fld[0], dr, dxi, p_shape)
+    b_t_beam = np.zeros((n_xi+4, n_r+4))
+    for bunch in bunches:
+        calculate_beam_source(bunch, n_p, n_r, n_xi, r_fld[0], xi_fld[0],
+                              dr, dxi, p_shape, b_t_beam)
 
     # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
     # chi on a grid.
     evolve_plasma_and_calculate_fields(
-        pp, a2, nabla_a2, b_t_0, psi, b_t_bar, rho, chi,
+        pp, a2, nabla_a2, b_t_beam, psi, b_t_bar, rho, chi,
         xi_fld, r_fld, dxi, dr, n_xi, n_r,
         max_gamma, p_shape, plasma_pusher)
 
@@ -141,7 +143,7 @@ def calculate_wakefields(laser_a2, beam_part, r_max, xi_min, xi_max,
     dxi_psi, dr_psi = np.gradient(psi[2:-2, 2:-2], dxi, dr, edge_order=2)
     E_z[2:-2, 2:-2] = -dxi_psi
     W_r[2:-2, 2:-2] = -dr_psi
-    B_theta = b_t_bar + b_t_0
+    B_theta = b_t_bar + b_t_beam
     E_r = W_r + B_theta
     return rho, chi, E_r, E_z, B_theta, xi_fld, r_fld
 
@@ -479,8 +481,8 @@ def update_gamma_and_pz(gamma, pz, pr, a2, psi):
         pz[i] = (1 + pr[i]**2 + a2[i] - (1+psi[i])**2) / (2 * (1+psi[i]))
 
 
-def calculate_beam_source_from_particles(
-        x, y, xi, q, n_p, n_r, n_xi, r_min, xi_min, dr, dxi, p_shape):
+def calculate_beam_source(
+        bunch, n_p, n_r, n_xi, r_min, xi_min, dr, dxi, p_shape, b_t):
     """
     Return a (nz+4, nr+4) array with the azimuthal magnetic field
     from a particle distribution. This is Eq. (18) in the original paper.
@@ -490,12 +492,12 @@ def calculate_beam_source_from_particles(
     s_d = ge.plasma_skin_depth(n_p / 1e6)
 
     # Get and normalize particle coordinate arrays.
-    xi_n = xi / s_d
-    x_n = x / s_d
-    y_n = y / s_d
+    xi_n = bunch.xi / s_d
+    x_n = bunch.x / s_d
+    y_n = bunch.y / s_d
 
     # Calculate particle weights.
-    w = - q / ct.e / (2 * np.pi * dr * dxi * s_d ** 3 * n_p)
+    w = - bunch.q / ct.e / (2 * np.pi * dr * dxi * s_d ** 3 * n_p)
 
     # Obtain charge distribution (using cubic particle shape by default).
     q_dist = np.zeros((n_xi + 4, n_r + 4))
@@ -505,23 +507,20 @@ def calculate_beam_source_from_particles(
     # Remove guard cells.
     q_dist = q_dist[2:-2, 2:-2]
 
-    # Allovate magnetic field array.
-    b_t = np.zeros((n_xi+4, n_r+4))
-
     # Radial position of grid points.
     r_grid_g = (0.5 + np.arange(n_r)) * dr
 
     # At each grid cell, calculate integral only until cell center by
     # assuming that half the charge is evenly distributed within the cell
-    # (i.e., substract half the charge)
+    # (i.e., subtract half the charge)
     subs = q_dist / 2
 
-    # At the first grid point along r, subtstact an additonal 1/4 of the
+    # At the first grid point along r, subtract an additional 1/4 of the
     # charge. This comes from assuming that the density has to be zero on axis.
     subs[:, 0] += q_dist[:, 0]/4
 
     # Calculate field by integration.
-    b_t[2:-2, 2:-2] = (
+    b_t[2:-2, 2:-2] += (
         (np.cumsum(q_dist, axis=1) - subs) * dr / np.abs(r_grid_g))
 
     return b_t

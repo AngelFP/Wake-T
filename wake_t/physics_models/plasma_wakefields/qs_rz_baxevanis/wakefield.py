@@ -64,16 +64,9 @@ class Quasistatic2DWakefield(NumericalField):
         else:
             a_env = np.zeros((self.n_xi, self.n_r))
 
-        # Currently, only one bunch supported
-        bunch = bunches[0]
-        x = bunch.x
-        y = bunch.y
-        xi = bunch.xi
-        q = bunch.q
-
         # Calculate plasma wakefields
         rho, chi, E_r, E_z, B_t, xi_arr, r_arr = calculate_wakefields(
-            a_env, [x, y, xi, q], self.r_max, self.xi_min, self.xi_max,
+            a_env, bunches, self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, n_p, r_max_plasma=self.r_max_plasma,
             parabolic_coefficient=parabolic_coefficient,
             p_shape=self.p_shape, max_gamma=self.max_gamma,
