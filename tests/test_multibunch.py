@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from pytest import approx
 
 from wake_t import PlasmaStage
 from wake_t.utilities.bunch_generation import get_matched_bunch
@@ -52,8 +53,10 @@ def test_multibunch_plasma_simulation(plot=False):
     witness_params = analyze_bunch_list(output[1])
 
     # Assert final parameters are correct.
-    assert driver_params['avg_ene'][-1] == 1700.3283476837953
-    assert witness_params['avg_ene'][-1] == 627.3163042861495
+    final_energy_driver = driver_params['avg_ene'][-1]
+    final_energy_witness = witness_params['avg_ene'][-1]
+    assert approx(final_energy_driver, rel=1e-10) == 1700.3283476837953
+    assert approx(final_energy_witness, rel=1e-10) == 627.3163042861495
 
     if plot:
         z = driver_params['prop_dist'] * 1e2
