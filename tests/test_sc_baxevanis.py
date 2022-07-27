@@ -4,7 +4,7 @@ import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 from wake_t.utilities.bunch_generation import get_gaussian_bunch_from_size
 from wake_t.physics_models.plasma_wakefields.qs_rz_baxevanis.solver import (
-    calculate_beam_source_from_particles)
+    calculate_beam_source)
 
 
 def test_sc_gaussian_beam(show=False):
@@ -58,9 +58,10 @@ def test_sc_gaussian_beam(show=False):
             r_fld = np.linspace(dr / 2, r_max - dr / 2, n_r)
             z_fld = np.linspace(z_min, z_max, n_z)
 
-            b_theta_grid = calculate_beam_source_from_particles(
-                bunch.x, bunch.y, bunch.xi, bunch.q, n_p, n_r, n_z,
-                r_fld[0], z_fld[0], dr, dz, p_shape)
+            b_theta_grid = np.zeros((n_z+4, n_r+4))
+            calculate_beam_source(
+                bunch, n_p, n_r, n_z,
+                r_fld[0], z_fld[0], dr, dz, p_shape, b_theta_grid)
 
             # Remove guard cells.
             b_theta_grid = b_theta_grid[2:-2, 2:-2]
