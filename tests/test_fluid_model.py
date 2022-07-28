@@ -9,6 +9,8 @@ from wake_t.diagnostics import analyze_bunch_list
 
 
 def test_fluid_model(plot=False):
+    """Test the 1D fluid wakefield model."""
+    # Set numpy random seed to get reproducible results.
     np.random.seed(0)
 
     # Create laser driver.
