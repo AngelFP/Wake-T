@@ -33,8 +33,7 @@ def test_fluid_model(plot=False):
         r_max=200e-6,  xi_min=40e-6, xi_max=120e-6, n_r=200, n_xi=200)
 
     # Do tracking.
-    opmd_diag = True  # Set to True to activate openPMD output.
-    bunch_list = plasma.track(bunch, out_initial=True, opmd_diag=opmd_diag)
+    bunch_list = plasma.track(bunch)
 
     # Analyze bunch evolution.
     params_evolution = analyze_bunch_list(bunch_list)
