@@ -158,6 +158,11 @@ class PlasmaStage():
             The time step of the envelope solver is therefore
             `dz_fields / c / laser_envelope_substeps`.
 
+        laser_envelope_subgrid : int
+            Number of substeps of the laser envelope solver per `dz`.
+            The number of grid points in `z` of the envelope solver is
+            `n_xi * laser_envelope_subgrid`
+
         r_max : float
             Maximum radial position up to which plasma wakefield will be
             calculated.
