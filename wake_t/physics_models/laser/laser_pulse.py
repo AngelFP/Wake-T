@@ -11,6 +11,7 @@ Authors: Angel Ferran Pousa, Remi Lehe, Manuel Kirchen, Pierre Pelletier.
 import numpy as np
 import scipy.constants as ct
 from scipy.special import genlaguerre, binom
+from scipy.ndimage import zoom
 
 from .envelope_solver import evolve_envelope
 
@@ -137,11 +138,7 @@ class LaserPulse():
 
         # adapt chi in case of nsubgrid > 1
         if self.nsubgrid > 1:
-            chi_new = np.zeros((2 * chi.shape[0], chi.shape[1]))
-            chi_new[::2] = chi
-            chi_new[1:-1:2] = chi[:-1] + np.diff(chi, axis=0) / 2.0
-            chi_new[-1] = chi_new[-2]
-            chi = chi_new
+            chi = zoom(chi, zoom=(self.nsubgrid, 1))
 
         # Compute evolution.
         a_env_old, a_env = evolve_envelope(
