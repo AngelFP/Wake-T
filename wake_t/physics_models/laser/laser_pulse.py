@@ -117,7 +117,10 @@ class LaserPulse():
 
     def get_envelope(self):
         """Get the current laser envelope array."""
-        return self.a_env[::self.nsubgrid]
+        if self.nsubgrid > 1:
+            return self.a_env[::self.nsubgrid]
+        else:
+            return self.a_env
 
     def evolve(self, chi, n_p):
         """
