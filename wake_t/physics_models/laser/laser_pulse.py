@@ -138,7 +138,7 @@ class LaserPulse():
 
         # adapt chi in case of nsubgrid > 1
         if self.nsubgrid > 1:
-            chi = zoom(chi, zoom=(self.nsubgrid, 1))
+            chi = zoom(chi, zoom=(self.nsubgrid, 1), order=1)
 
         # Compute evolution.
         a_env_old, a_env = evolve_envelope(
