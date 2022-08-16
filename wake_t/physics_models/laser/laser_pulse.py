@@ -11,6 +11,7 @@ Authors: Angel Ferran Pousa, Remi Lehe, Manuel Kirchen, Pierre Pelletier.
 import numpy as np
 import scipy.constants as ct
 from scipy.special import genlaguerre, binom
+from scipy.ndimage import zoom
 
 from .envelope_solver import evolve_envelope
 
@@ -33,13 +34,14 @@ class LaserPulse():
         self.solver_params = None
         self.init_outside_plasma = False
         self.n_steps = 0
+        self.nsubgrid = 1
 
     def __add__(self, pulse_2):
         """Overload the add operator to allow summing of laser pulses."""
         return SummedPulse(self, pulse_2)
 
     def set_envelope_solver_params(self, xi_min, xi_max, r_max, nz, nr, dt,
-                                   nt=1):
+                                   nt=1, nsubgrid=1):
         """
         Set the parameters for the laser envelope solver.
 
@@ -61,15 +63,25 @@ class LaserPulse():
             therefore dt/nt, so that the laser effectively advances by `dt`
             every time `evolve` is called. All these time steps are therefore
             computed using the same `chi`.
+        nsubgrid : int
+            Number of substeps of the laser envelope solver per `dz`.
+            The number of grid points in `z` of the envelope solver is
+            effectively `nz * nsubgrid`
+
         """
         if nt < 1:
             raise ValueError(
                 'Number of laser envelope substeps cannot be smaller than 1.')
+        if nsubgrid < 1:
+            raise ValueError(
+                'Number of laser envelope subgrid steps cannot be smaller than 1.')
+        else:
+            self.nsubgrid = nsubgrid
         solver_params = {
             'zmin': xi_min,
             'zmax': xi_max,
             'rmax': r_max,
-            'nz': nz,
+            'nz': nz * nsubgrid,
             'nr': nr,
             'nt': nt,
             'dt': dt / nt
@@ -105,7 +117,10 @@ class LaserPulse():
 
     def get_envelope(self):
         """Get the current laser envelope array."""
-        return self.a_env
+        if self.nsubgrid > 1:
+            return self.a_env[::self.nsubgrid]
+        else:
+            return self.a_env
 
     def evolve(self, chi, n_p):
         """
@@ -123,6 +138,10 @@ class LaserPulse():
 
         # Determine if laser starts evolution outside plasma.
         start_outside_plasma = (self.n_steps == 0 and self.init_outside_plasma)
+
+        # adapt chi in case of nsubgrid > 1
+        if self.nsubgrid > 1:
+            chi = zoom(chi, zoom=(self.nsubgrid, 1), order=1)
 
         # Compute evolution.
         a_env_old, a_env = evolve_envelope(
