@@ -13,144 +13,7 @@ from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial()
-def L(sign, k, dr):
-    """
-    Calculation of L_k^{+-}. Change wrt Benedetti - 2018: in Wake-T we use cell
-    -centered nodes in the rho direction.
-
-    Parameters
-    ----------
-    sign : int
-        1, 0 or -1, which defines the +, 0, - symbol respectively.
-    k : int
-        The rho grid coordinate: 0<=k<=Np-1.
-    dr : float
-        Rho step size.
-    nr : int
-        Amount of grid points in the rho direction.
-
-    """
-    if sign == 0:
-        return -2 / dr ** 2
-    return (1 + sign * 1 / (2 * (k + 0.5))) / dr ** 2
-
-
-@njit_serial()
-def C(sign, k, k0p, dt, dz, dr):
-    """
-    Calculate Equation (8) from Benedetti - 2018.
-
-    Parameters
-    ----------
-    sign : int
-        1 or -1, which is the + or - respectively in Equation (8).
-    k : int
-        The rho grid coordinate: 0<=k<=Np-1.
-    k0p : float
-        k0/kp, laser wave number divided by the plasma skin depth.
-    dt : float
-        Tau step size.
-    dz : float
-        Zeta step size.
-    dr : float
-        Rho step size.
-
-    """
-    return (L(0, k, dr) / 2 + sign * 1j * k0p / dt
-            - sign * 3 / 2 * 1 / (dt * dz) - 1 / dt ** 2)
-
-
-@njit_serial()
-def D(th, th1, th2, dz):
-    """
-    Calculate D in Equation (6) from Benedetti - 2018
-    To account for the 'jumps' in the theta function,
-    we use the phase of the envelope at the radius.
-
-    Parameters
-    ----------
-    th : float
-        Phase of the envelope at the radius, z=j.
-    th1 : float
-        Phase of the envelope at the radius, z=j+1.
-    th2 : float
-        Phase of the envelope at the radius, z=j+2.
-    dz : float
-        Zeta step size.
-
-    """
-    # phase difference between adjacent points j, j+1, j+2
-    d_theta1 = th1 - th
-    d_theta2 = th2 - th1
-
-    # checking for phase jumps
-    if d_theta1 < -1.5 * np.pi:
-        d_theta1 += 2 * np.pi
-    if d_theta2 < -1.5 * np.pi:
-        d_theta2 += 2 * np.pi
-    if d_theta1 > 1.5 * np.pi:
-        d_theta1 -= 2 * np.pi
-    if d_theta2 > 1.5 * np.pi:
-        d_theta2 -= 2 * np.pi
-
-    return 1.5 * d_theta1 / dz - 0.5 * d_theta2 / dz
-
-
-@njit_serial()
-def rhs(a_old, a, a_new, chi, j, dz, k, dr, nr, dt, k0p, th, th1, th2):
-    """
-    The right-hand side of equation 7 in Benedetti, 2018.
-
-    Parameters
-    ----------
-    a_old : array
-        The array of the values of â at former time step. Dimension: (nz+2)*nr
-    a : array
-        The array of the values of â at current time step. Dimension: (nz+2)*nr
-    a_new : array
-        The array of the values of â at next time step, at z=j+1 and z=j+2.
-        Dimension: 2*nr.
-    chi : array
-        The array of the values of the plasma susceptibility. Dimension: nz*nr
-    j : int
-        The zeta grid coordinate: 0<=j<nz.
-    dz : float
-        Zeta step size.
-    k : int
-        The rho grid coordinate: 0<=k<nr.
-    dr : float
-        Rho step size.
-    nr : int
-        Amount of points in the rho direction.
-    dt : float
-        Tau step size.
-    k0p : float
-        k0/kp, laser wave number divided by the plasma skin depth.
-    th : float
-        Phase of the envelope at the radius, z=j.
-    th1 : float
-        Phase of the envelope at the radius, z=j+1.
-    th2 : float
-        Phase of the envelope at the radius, z=j+2.
-
-    """
-    sol = (- 2 / dt ** 2 * a[j, k]
-           - (C(-1, k, k0p, dt, dz, dr)
-              - chi[j, k] / 2
-              - 1j / dt * D(th, th1, th2, dz)) * a_old[j, k]
-           - 2 * np.exp(1j * (th - th1)) / (dz * dt)
-           * (a_new[0, k] - a_old[j + 1, k])
-           + np.exp(1j * (th - th2)) / (2 * dz * dt)
-           * (a_new[1, k] - a_old[j + 2, k]))
-    if k + 1 < nr:
-        sol -= L(1, k, dr) / 2 * a_old[j, k + 1]
-    if k > 0:
-        sol -= L(-1, k, dr) / 2 * a_old[j, k - 1]
-    return sol
-
-
-@njit_serial()
-def TDMA(a, b, c, d):
+def TDMA(a, b, c, d, p):
     """TriDiagonal Matrix Algorithm: solve a linear system Ax=b,
     where A is a tridiagonal matrix. Source:
     https://stackoverflow.com/questions/8733015/tridiagonal-matrix-algorithm-
@@ -169,9 +32,8 @@ def TDMA(a, b, c, d):
 
     """
     n = len(d)
-    w = np.zeros(n - 1, dtype=np.complex128)
-    g = np.zeros(n, dtype=np.complex128)
-    p = np.zeros(n, dtype=np.complex128)
+    w = np.empty(n - 1, dtype=np.complex128)
+    g = np.empty(n, dtype=np.complex128)
 
     w[0] = c[0] / b[0]  # MAKE SURE THAT b[0]!=0
     g[0] = d[0] / b[0]
@@ -183,7 +45,6 @@ def TDMA(a, b, c, d):
     p[n - 1] = g[n - 1]
     for i in range(n - 1, 0, -1):
         p[i - 1] = g[i - 1] - w[i - 1] * p[i]
-    return p
 
 
 @njit_serial()
@@ -225,31 +86,48 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
         at that time.
 
     """
-    # Add 2 rows of ghost points in the zeta direction.
-    a_old = np.zeros((nz + 2, nr), dtype=np.complex128)
-    a = np.zeros((nz + 2, nr), dtype=np.complex128)
+    # Preallocate arrays. a_old and a include 2 ghost cells in the z direction.
+    a_old = np.empty((nz + 2, nr), dtype=np.complex128)
+    a = np.empty((nz + 2, nr), dtype=np.complex128)
+    rhs = np.empty(nr, dtype=np.complex128)
 
-    # Declaration of the 4 vectors used for solving the tridiagonal system.
-    d_upper = np.zeros(nr - 1, dtype=np.complex128)
-    d_lower = np.zeros(nr - 1, dtype=np.complex128)
-    d_main = np.zeros(nr, dtype=np.complex128)
-    sol = np.zeros(nr, dtype=np.complex128)
-
+    # Fill in a and a_old arrays.
     a_old[0:-2] = aold
     a[0:-2] = a0
+    a_old[-2:] = 0.
+    a[-2:] = 0.
 
+    # Calculate step sizes.
     dz = (zmax - zmin) * kp / (nz - 1)
     dr = rmax * kp / nr
     dt = dt * ct.c * kp
 
-    k0p = k0 / kp
+    # Precalculate common fractions.
+    inv_dt = 1 / dt
+    inv_dr = 1 / dr
+    inv_dz = 1 / dz
+    inv_dzdt = inv_dt * inv_dz
+    k0_over_kp = k0 / kp
 
-    for n in range(0, nt):
-        # a_new is a 2 x nr array to store new values of a.
-        # a_new[0] is equivalent to a_new[j+1] and a_new[1] to a_new[j+2].
-        a_new = np.zeros((2, nr), dtype=np.complex128)
+    # Calculate C^+ and C^- [Eq. (8)].
+    C_minus = (-2. * inv_dr ** 2. * 0.5 - 1j * k0_over_kp * inv_dt
+               + 1.5 * inv_dzdt - inv_dt ** 2.)
+    C_plus = (-2. * inv_dr ** 2. * 0.5 + 1j * k0_over_kp * inv_dt
+              -  1.5 * inv_dzdt - inv_dt ** 2.)
 
-        # Getting the phases of the envelope at the radius.
+    # Calculate L^+ and L^-. Change wrt Benedetti - 2018: in Wake-T we use
+    # cell-centered nodes in the radial direction.
+    L_base = 1. / (2. * (np.arange(nr) + 0.5))
+    L_minus_over_2 = (1. - L_base) * inv_dr ** 2. * 0.5
+    L_plus_over_2 = (1. + L_base) * inv_dr ** 2. * 0.5
+
+    # Loop over time iterations.
+    for n in range(nt):
+        # a_new_jp1 is equivalent to a_new[j+1] and a_new_jp2 to a_new[j+2].
+        a_new_jp1 = np.zeros(nr, dtype=np.complex128)
+        a_new_jp2 = np.zeros(nr, dtype=np.complex128)
+
+        # Getting the phase of the envelope on axis.
         phases = np.angle(a[:, 0])
 
         # If laser starts outside plasma, make chi^{n-1} = 0.
@@ -260,31 +138,57 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
 
         # Loop over z.
         for j in range(nz - 1, -1, -1):
-            th = phases[j]
-            th1 = phases[j + 1]
-            th2 = phases[j + 2]
+            # Calculate phase differences between adjacent points.
+            d_theta1 = phases[j + 1] - phases[j]
+            d_theta2 = phases[j + 2] - phases[j + 1]
 
-            # Fill the vectors according to the numerical scheme.
-            for k in range(0, nr):
-                sol[k] = rhs(a_old, a, a_new, chi_nm1, j, dz, k, dr, nr, dt,
-                             k0p, th, th1, th2)
-                d_main[k] = (C(1, k, k0p, dt, dz, dr)
-                             - chi[j, k] / 2
-                             + 1j / dt * D(th, th1, th2, dz))
-                if k < nr - 1:
-                    d_upper[k] = L(1, k, dr) / 2
-                if k > 0:
-                    d_lower[k - 1] = L(-1, k, dr) / 2
-            # Update a_old at j+2 with the current value of a at j+2.
+            # Prevent phase jumps bigger than 1.5*pi.
+            if d_theta1 < -1.5 * np.pi:
+                d_theta1 += 2 * np.pi
+            if d_theta2 < -1.5 * np.pi:
+                d_theta2 += 2 * np.pi
+            if d_theta1 > 1.5 * np.pi:
+                d_theta1 -= 2 * np.pi
+            if d_theta2 > 1.5 * np.pi:
+                d_theta2 -= 2 * np.pi
+
+            # Calculate D factor [Eq. (6)].
+            D_jkn = (1.5 * d_theta1 - 0.5 * d_theta2) * inv_dz
+
+            # Calculate right-hand side of Eq (7).
+            for k in range(nr):
+                rhs[k] = (
+                    - 2 * inv_dt ** 2 * a[j, k]
+                    - ((C_minus - chi_nm1[j, k] * 0.5 - 1j * inv_dt * D_jkn)
+                       * a_old[j, k])
+                    - (2 * np.exp(-1j * d_theta1) * inv_dzdt
+                       * (a_new_jp1[k] - a_old[j + 1, k]))
+                    + (0.5 * np.exp(-1j * (d_theta2 + d_theta1)) * inv_dzdt
+                       * (a_new_jp2[k] - a_old[j + 2, k]))
+                    - L_plus_over_2[k] * a_old[j, k + 1] * (k + 1 < nr)
+                    - L_minus_over_2[k] * a_old[j, k - 1] * (k > 0)
+                )
+
+            # Calculate diagonals.
+            d_main = C_plus - chi[j] * 0.5 + 1j * inv_dt * D_jkn
+            d_upper = L_plus_over_2[:nr - 1]
+            d_lower = L_minus_over_2[1:nr]
+
+            # Update a_old and a at j+2 with the current values of a a_new.
             a_old[j + 2] = a[j + 2]
-            # This frees up space to replace a[j+2] by the a_new[1] value.
-            a[j + 2] = a_new[1]
-            # Now we can shift the a_new[0] value to a_new[1], and calculate
-            # the solution vector.
-            a_new[1] = a_new[0]
-            a_new[0] = TDMA(d_lower, d_main, d_upper, sol)
+            a[j + 2] = a_new_jp2
+
+            # Shift a_new[j+1] to a_new[j+2] in preparation for the next
+            # iteration.
+            a_new_jp2[:] = a_new_jp1
+
+            # Compute a_new at the current j using the TDMA method and store
+            # result in a_new_jp1 to use it in the next iteration.
+            TDMA(d_lower, d_main, d_upper, rhs, a_new_jp1)
+
         # When the left of the computational domain is reached, paste the last
         # few values in the a_old and a arrays.
         a_old[0:2] = a[0:2]
-        a[0:2] = a_new
+        a[0] = a_new_jp1
+        a[1] = a_new_jp2
     return a_old, a
