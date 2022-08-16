@@ -74,7 +74,9 @@ class LaserPulse():
                 'Number of laser envelope substeps cannot be smaller than 1.')
         if nsubgrid < 1:
             raise ValueError(
-                'Number of laser envelope subgrid steps cannot be smaller than 1.')
+                'Number of laser envelope subgrid steps cannot be '
+                'smaller than 1.'
+            )
         else:
             self.nsubgrid = nsubgrid
         solver_params = {
@@ -118,7 +120,7 @@ class LaserPulse():
     def get_envelope(self):
         """Get the current laser envelope array."""
         if self.nsubgrid > 1:
-            return self.a_env[::self.nsubgrid]
+            return zoom(self.a_env, zoom=(1. / self.nsubgrid, 1), order=1)
         else:
             return self.a_env
 
