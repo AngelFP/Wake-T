@@ -113,7 +113,7 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
     C_minus = (-2. * inv_dr ** 2. * 0.5 - 1j * k0_over_kp * inv_dt
                + 1.5 * inv_dzdt - inv_dt ** 2.)
     C_plus = (-2. * inv_dr ** 2. * 0.5 + 1j * k0_over_kp * inv_dt
-              -  1.5 * inv_dzdt - inv_dt ** 2.)
+              - 1.5 * inv_dzdt - inv_dt ** 2.)
 
     # Calculate L^+ and L^-. Change wrt Benedetti - 2018: in Wake-T we use
     # cell-centered nodes in the radial direction.
