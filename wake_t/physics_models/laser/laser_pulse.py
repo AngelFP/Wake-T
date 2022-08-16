@@ -120,7 +120,7 @@ class LaserPulse():
     def get_envelope(self):
         """Get the current laser envelope array."""
         if self.nsubgrid > 1:
-            return self.a_env[::self.nsubgrid]
+            return zoom(self.a_env, zoom=(1. / self.nsubgrid, 1), order=1)
         else:
             return self.a_env
 
