@@ -29,7 +29,6 @@ class LaserPulse():
             Laser wavelength in units of m.
         """
         self.l_0 = l_0
-        self.a_env_old = None
         self.a_env = None
         self.solver_params = None
         self.init_outside_plasma = False
@@ -114,7 +113,10 @@ class LaserPulse():
             r = np.linspace(dr/2, r_max-dr/2, nr)
             ZZ, RR = np.meshgrid(z, r, indexing='ij')
             self.a_env = self.envelope_function(ZZ, RR, 0.)
-            self.a_env_old = self.envelope_function(ZZ, RR, -dt*ct.c)
+            self._a_env_old = np.zeros((nz + 2, nr), dtype=np.complex128)
+            self._a_env = np.zeros((nz + 2, nr), dtype=np.complex128)
+            self._a_env[0:-2] = self.a_env
+            self._a_env_old[0:-2] = self.envelope_function(ZZ, RR, -dt*ct.c)
             self.init_outside_plasma = True
 
     def get_envelope(self):
@@ -146,13 +148,12 @@ class LaserPulse():
             chi = zoom(chi, zoom=(self.nsubgrid, 1), order=1)
 
         # Compute evolution.
-        a_env_old, a_env = evolve_envelope(
-            self.a_env, self.a_env_old, chi, k_0, k_p, **self.solver_params,
+        evolve_envelope(
+            self._a_env, self._a_env_old, chi, k_0, k_p, **self.solver_params,
             start_outside_plasma=start_outside_plasma)
 
         # Update arrays and step count.
-        self.a_env_old[:] = a_env_old[0: -2]
-        self.a_env[:] = a_env[0: -2]
+        self.a_env[:] = self._a_env[0: -2]
         self.n_steps += 1
 
     def get_group_velocity(self, n_p):
