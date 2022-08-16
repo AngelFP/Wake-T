@@ -12,7 +12,7 @@ import scipy.constants as ct
 from wake_t.utilities.numba import njit_serial
 
 
-@njit_serial()
+@njit_serial(fastmath=True)
 def TDMA(a, b, c, d, p):
     """TriDiagonal Matrix Algorithm: solve a linear system Ax=b,
     where A is a tridiagonal matrix. Source:
@@ -47,7 +47,7 @@ def TDMA(a, b, c, d, p):
         p[i - 1] = g[i - 1] - w[i - 1] * p[i]
 
 
-@njit_serial()
+@njit_serial(fastmath=True)
 def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
                     start_outside_plasma=False):
     """
