@@ -74,7 +74,9 @@ class LaserPulse():
                 'Number of laser envelope substeps cannot be smaller than 1.')
         if nsubgrid < 1:
             raise ValueError(
-                'Number of laser envelope subgrid steps cannot be smaller than 1.')
+                'Number of laser envelope subgrid steps cannot be '
+                'smaller than 1.'
+            )
         else:
             self.nsubgrid = nsubgrid
         solver_params = {
