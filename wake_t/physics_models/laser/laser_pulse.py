@@ -61,10 +61,12 @@ class LaserPulse():
             therefore dt/nt, so that the laser effectively advances by `dt`
             every time `evolve` is called. All these time steps are therefore
             computed using the same `chi`.
-        nsubgrid : int
-            Number of substeps of the laser envelope solver per `dz`.
-            The number of grid points in `z` of the envelope solver is
-            effectively `nz * nsubgrid`
+        subgrid_nz, subgrid_nr : int, optional
+            If specified, run laser envelope solver in a subgrid of resolution
+            (subgrid_nz, subgrid_nr), which is different than the size of the
+            plasma grid (nz, nr). Linear interpolation is used to transform
+            the plasma susceptibility into the laser envelope grid, and to
+            transform the laser envelope into the plasma grid.
 
         """
         if nt < 1:
