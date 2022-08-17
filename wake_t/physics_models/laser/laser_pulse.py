@@ -11,9 +11,9 @@ Authors: Angel Ferran Pousa, Remi Lehe, Manuel Kirchen, Pierre Pelletier.
 import numpy as np
 import scipy.constants as ct
 from scipy.special import genlaguerre, binom
-from scipy.ndimage import zoom
 
 from .envelope_solver import evolve_envelope
+from wake_t.fields.interpolation import interpolate_rz_field
 
 
 class LaserPulse():
@@ -33,14 +33,13 @@ class LaserPulse():
         self.solver_params = None
         self.init_outside_plasma = False
         self.n_steps = 0
-        self.nsubgrid = 1
 
     def __add__(self, pulse_2):
         """Overload the add operator to allow summing of laser pulses."""
         return SummedPulse(self, pulse_2)
 
     def set_envelope_solver_params(self, xi_min, xi_max, r_max, nz, nr, dt,
-                                   nt=1, nsubgrid=1):
+                                   nt=1, subgrid_nz=None, subgrid_nr=None):
         """
         Set the parameters for the laser envelope solver.
 
@@ -71,19 +70,21 @@ class LaserPulse():
         if nt < 1:
             raise ValueError(
                 'Number of laser envelope substeps cannot be smaller than 1.')
-        if nsubgrid < 1:
-            raise ValueError(
-                'Number of laser envelope subgrid steps cannot be '
-                'smaller than 1.'
-            )
-        else:
-            self.nsubgrid = nsubgrid
+
+        # Determine whether to run laser envelope in a subgrid.
+        self.use_subgrid = subgrid_nz is not None or subgrid_nr is not None
+        if self.use_subgrid:
+            subgrid_nz = nz if subgrid_nz is None else subgrid_nz
+            subgrid_nr = nr if subgrid_nr is None else subgrid_nr
+            self.__create_laser_subgrid(
+                nz, nr, subgrid_nz, subgrid_nr, xi_max, xi_min, r_max)
+
         solver_params = {
             'zmin': xi_min,
             'zmax': xi_max,
             'rmax': r_max,
-            'nz': nz * nsubgrid,
-            'nr': nr,
+            'nz': subgrid_nz if self.use_subgrid else nz,
+            'nr': subgrid_nr if self.use_subgrid else nr,
             'nt': nt,
             'dt': dt / nt
         }
@@ -112,19 +113,16 @@ class LaserPulse():
             z = np.linspace(z_min, z_max, nz)
             r = np.linspace(dr/2, r_max-dr/2, nr)
             ZZ, RR = np.meshgrid(z, r, indexing='ij')
-            self.a_env = self.envelope_function(ZZ, RR, 0.)
-            self._a_env_old = np.zeros((nz + 2, nr), dtype=np.complex128)
-            self._a_env = np.zeros((nz + 2, nr), dtype=np.complex128)
-            self._a_env[0:-2] = self.a_env
-            self._a_env_old[0:-2] = self.envelope_function(ZZ, RR, -dt*ct.c)
+            self.__a_env_old = np.zeros((nz + 2, nr), dtype=np.complex128)
+            self.__a_env = np.zeros((nz + 2, nr), dtype=np.complex128)
+            self.__a_env[0:-2] = self.envelope_function(ZZ, RR, 0.)
+            self.__a_env_old[0:-2] = self.envelope_function(ZZ, RR, -dt*ct.c)
+            self.__update_output_envelope()
             self.init_outside_plasma = True
 
     def get_envelope(self):
         """Get the current laser envelope array."""
-        if self.nsubgrid > 1:
-            return zoom(self.a_env, zoom=(1. / self.nsubgrid, 1), order=1)
-        else:
-            return self.a_env
+        return self.a_env
 
     def evolve(self, chi, n_p):
         """
@@ -143,17 +141,17 @@ class LaserPulse():
         # Determine if laser starts evolution outside plasma.
         start_outside_plasma = (self.n_steps == 0 and self.init_outside_plasma)
 
-        # adapt chi in case of nsubgrid > 1
-        if self.nsubgrid > 1:
-            chi = zoom(chi, zoom=(self.nsubgrid, 1), order=1)
+        # If needed, interpolate chi to subgrid.
+        if self.use_subgrid:
+            chi = self.__interpolate_chi_to_subgrid(chi)
 
         # Compute evolution.
         evolve_envelope(
-            self._a_env, self._a_env_old, chi, k_0, k_p, **self.solver_params,
-            start_outside_plasma=start_outside_plasma)
+            self.__a_env, self.__a_env_old, chi, k_0, k_p,
+            **self.solver_params, start_outside_plasma=start_outside_plasma)
 
         # Update arrays and step count.
-        self.a_env[:] = self._a_env[0: -2]
+        self.__update_output_envelope()
         self.n_steps += 1
 
     def get_group_velocity(self, n_p):
@@ -177,6 +175,85 @@ class LaserPulse():
     def envelope_function(self, xi, r, z_pos):
         """Return the complex envelope of the laser pulse."""
         return np.zeros_like(r)
+
+    def __create_laser_subgrid(self, nz, nr, subgrid_nz, subgrid_nr, xi_max,
+                               xi_min, r_max):
+        """
+        Create the parameters needed to run the laser envelope in a subgrid.
+        """
+        # Grid spacing and minimum radius of the main grid.
+        dr = r_max / nr
+        dz = (xi_max - xi_min) / (nz - 1)
+        grid_r_min = dr / 2
+        grid_r_max = r_max - dr / 2
+
+        # Grid spacing and minimum radius of the subgrid.
+        subgrid_dr = r_max / subgrid_nr
+        subgrid_dz = (xi_max - xi_min) / (subgrid_nz - 1)
+        subgrid_r_min = subgrid_dr / 2
+        subgrid_r_max = r_max - subgrid_dr / 2
+
+        # Store parameters in dictionary.
+        self.subgrid_params = {
+            'grid': {
+                'nz': nz,
+                'nr': nr,
+                'z_min': xi_min,
+                'r_min': grid_r_min,
+                'dr': dr,
+                'dz': dz,
+                'z': np.linspace(xi_min, xi_max, nz),
+                'r': np.linspace(grid_r_min, grid_r_max, nr),
+            },
+            'subgrid': {
+                'nz': subgrid_nz,
+                'nr': subgrid_nr,
+                'z_min': xi_min,
+                'r_min': subgrid_r_min,
+                'dr': subgrid_dr,
+                'dz': subgrid_dz,
+                'z': np.linspace(xi_min, xi_max, subgrid_nz),
+                'r': np.linspace(subgrid_r_min, subgrid_r_max, subgrid_nr),
+                'chi': np.zeros((subgrid_nz, subgrid_nr))
+            }
+        }
+
+    def __update_output_envelope(self):
+        """ Update the publicly-accessible laser envelope array. """
+        # If running on a subgrid, interpolate envelope array to main grid.
+        if self.use_subgrid:
+            if self.a_env is None:
+                nz = self.subgrid_params['grid']['nz']
+                nr = self.subgrid_params['grid']['nr']
+                self.a_env = np.zeros((nz, nr), dtype=np.complex128)
+            z_min = self.subgrid_params['subgrid']['z_min']
+            r_min = self.subgrid_params['subgrid']['r_min']
+            dz = self.subgrid_params['subgrid']['dz']
+            dr = self.subgrid_params['subgrid']['dr']
+            z_f = self.subgrid_params['grid']['z']
+            r_f = self.subgrid_params['grid']['r']
+            interpolate_rz_field(
+                self.__a_env[0:-2], z_min, r_min, dz, dr, z_f, r_f, self.a_env)
+        # Otherwise, simply remove guard cells.
+        else:
+            if self.a_env is None:
+                nz = self.solver_params['nz']
+                nr = self.solver_params['nr']
+                self.a_env = np.zeros((nz, nr), dtype=np.complex128)
+            self.a_env[:] = self.__a_env[0: -2]
+
+    def __interpolate_chi_to_subgrid(self, chi):
+        """ Interpolate the plasma susceptibility to the envelope subgrid. """
+        z_min = self.subgrid_params['grid']['z_min']
+        r_min = self.subgrid_params['grid']['r_min']
+        dz = self.subgrid_params['grid']['dz']
+        dr = self.subgrid_params['grid']['dr']
+        subgrid_chi = self.subgrid_params['subgrid']['chi']
+        z_f = self.subgrid_params['subgrid']['z']
+        r_f = self.subgrid_params['subgrid']['r']
+        interpolate_rz_field(
+            chi, z_min, r_min, dz, dr, z_f, r_f, subgrid_chi)
+        return subgrid_chi
 
 
 class SummedPulse(LaserPulse):
