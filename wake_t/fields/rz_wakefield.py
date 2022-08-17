@@ -11,7 +11,8 @@ class RZWakefield(NumericalField):
     """Base class for plasma wakefields in r-z geometry"""
 
     def __init__(self, density_function, laser=None, laser_evolution=True,
-                 laser_envelope_substeps=1, laser_envelope_subgrid=1,
+                 laser_envelope_substeps=1, laser_envelope_subgrid_nz=None,
+                 laser_envelope_subgrid_nr=None,
                  r_max=None, xi_min=None, xi_max=None, n_r=100, n_xi=100,
                  dz_fields=None, model_name=''):
         """Initialize wakefield.
@@ -67,7 +68,8 @@ class RZWakefield(NumericalField):
         self.laser = laser
         self.laser_evolution = laser_evolution
         self.laser_envelope_substeps = laser_envelope_substeps
-        self.laser_envelope_subgrid = laser_envelope_subgrid
+        self.laser_envelope_subgrid_nz = laser_envelope_subgrid_nz
+        self.laser_envelope_subgrid_nr = laser_envelope_subgrid_nr
         self.r_max = r_max
         self.xi_min = xi_min
         self.xi_max = xi_max
@@ -90,7 +92,8 @@ class RZWakefield(NumericalField):
             self.laser.set_envelope_solver_params(
                 self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
                 self.dt_update, self.laser_envelope_substeps,
-                self.laser_envelope_subgrid)
+                self.laser_envelope_subgrid_nz,
+                self.laser_envelope_subgrid_nr)
             self.laser.initialize_envelope()
 
         # Initialize field arrays
