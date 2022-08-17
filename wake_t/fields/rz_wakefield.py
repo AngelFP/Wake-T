@@ -32,10 +32,13 @@ class RZWakefield(NumericalField):
             Number of substeps of the laser envelope solver per `dz_fields`.
             The time step of the envelope solver is therefore
             `dz_fields / c / laser_envelope_substeps`.
-        laser_envelope_subgrid : int
-            Number of substeps of the laser envelope solver per `dz`.
-            The number of grid points in `z` of the envelope solver is
-            `n_xi * laser_envelope_subgrid`
+        laser_envelope_subgrid_nxi, laser_envelope_subgrid_nr : int, optional
+            If given, the laser envelope will run in a grid of size
+            (`laser_envelope_subgrid_nxi`, `laser_envelope_subgrid_nr`) instead
+            of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
+            coarser) grid than the plasma wake. It is not necessary to specify
+            both parameters. If one of them is not given, the resolution of
+            the plasma grid with be used for that direction.
         r_max : float
             Maximum radial position up to which plasma wakefield will be
             calculated.
