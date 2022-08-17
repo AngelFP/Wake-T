@@ -32,27 +32,45 @@ def interpolate_rz_field(fld, z_min, r_min, dz, dr, z_new, r_new, fld_new):
         array should be (`nz_new`, `nr_new`), here `nz_new` and `nr_new` are
         the length of `z_new` and `r_new`, respectively.
     """
+    # Get size of original array.
     nz, nr = fld.shape
+
+    # Iterate in z.
     for i in range(z_new.shape[0]):
+        # z value at which to evaluate the array by interpolation.
         z_i = z_new[i]
 
+        # Position of z_i in cell units.
         z_i_cell = (z_i - z_min) / dz
+
+        # Lower and upper cells in z.
         iz_lower = int(math.floor(z_i_cell))
         iz_upper = iz_lower + 1
+
+        # Linear interpolation coefficients in z.
         dz_u = iz_upper - z_i_cell
         dz_l = z_i_cell - iz_lower
 
+        # Make sure iz_upper does not go beyond boundaries.
         iz_upper = min(iz_upper, nz - 1)
 
+        # Iterate in r.
         for j in range(r_new.shape[0]):
+            # r value at which to evaluate the array by interpolation.
             r_j = r_new[j]
 
+            # Position of r_i in cell units.
             r_j_cell = (r_j - r_min) / dr
+
+            # Lower and upper cells in r.
             jr_lower = max(int(math.floor(r_j_cell)), 0)
             jr_upper = jr_lower + 1
+
+            # Linear interpolation coefficients in r.
             dr_u = jr_upper - r_j_cell
             dr_l = 1 - dr_u
 
+            # Make sure jz_upper does not go beyond boundaries.
             jr_upper = min(jr_lower + 1, nr-1)
 
             # Get field value at each bounding cell.
