@@ -61,6 +61,11 @@ def interpolate_rz_field(fld, z_min, r_min, dz, dr, z_new, r_new, fld_new):
             fld_ul = fld[iz_upper, jr_lower]
             fld_uu = fld[iz_upper, jr_upper]
 
+            # If evaluating beyond the last value in r, extrapolate linearly.
+            if jr_lower == jr_upper:
+                fld_lu += fld_lu - fld[iz_lower, jr_upper-1]
+                fld_uu += fld_uu - fld[iz_upper, jr_upper-1]
+
             # Interpolate in z.
             fld_z_1 = dz_u*fld_ll + dz_l*fld_ul
             fld_z_2 = dz_u*fld_lu + dz_l*fld_uu
