@@ -109,9 +109,9 @@ class PlasmaStage():
             The time step of the envelope solver is therefore
             `dz_fields / c / laser_envelope_substeps`.
 
-        laser_envelope_subgrid_nxi, laser_envelope_subgrid_nr : int, optional
+        laser_envelope_nxi, laser_envelope_nr : int, optional
             If given, the laser envelope will run in a grid of size
-            (`laser_envelope_subgrid_nxi`, `laser_envelope_subgrid_nr`) instead
+            (`laser_envelope_nxi`, `laser_envelope_nr`) instead
             of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
             coarser) grid than the plasma wake. It is not necessary to specify
             both parameters. If one of them is not given, the resolution of
@@ -171,9 +171,9 @@ class PlasmaStage():
             The time step of the envelope solver is therefore
             `dz_fields / c / laser_envelope_substeps`.
 
-        laser_envelope_subgrid_nxi, laser_envelope_subgrid_nr : int, optional
+        laser_envelope_nxi, laser_envelope_nr : int, optional
             If given, the laser envelope will run in a grid of size
-            (`laser_envelope_subgrid_nxi`, `laser_envelope_subgrid_nr`) instead
+            (`laser_envelope_nxi`, `laser_envelope_nr`) instead
             of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
             coarser) grid than the plasma wake. It is not necessary to specify
             both parameters. If one of them is not given, the resolution of
