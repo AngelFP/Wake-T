@@ -115,10 +115,10 @@ class LaserPulse():
             z = np.linspace(z_min, z_max, nz)
             r = np.linspace(dr/2, r_max-dr/2, nr)
             ZZ, RR = np.meshgrid(z, r, indexing='ij')
-            self.__a_env_old = np.zeros((nz + 2, nr), dtype=np.complex128)
-            self.__a_env = np.zeros((nz + 2, nr), dtype=np.complex128)
-            self.__a_env[0:-2] = self.envelope_function(ZZ, RR, 0.)
-            self.__a_env_old[0:-2] = self.envelope_function(ZZ, RR, -dt*ct.c)
+            self._a_env_old = np.zeros((nz + 2, nr), dtype=np.complex128)
+            self._a_env = np.zeros((nz + 2, nr), dtype=np.complex128)
+            self._a_env[0:-2] = self.envelope_function(ZZ, RR, 0.)
+            self._a_env_old[0:-2] = self.envelope_function(ZZ, RR, -dt*ct.c)
             self.__update_output_envelope()
             self.init_outside_plasma = True
 
@@ -149,7 +149,7 @@ class LaserPulse():
 
         # Compute evolution.
         evolve_envelope(
-            self.__a_env, self.__a_env_old, chi, k_0, k_p,
+            self._a_env, self._a_env_old, chi, k_0, k_p,
             **self.solver_params, start_outside_plasma=start_outside_plasma)
 
         # Update arrays and step count.
@@ -235,14 +235,14 @@ class LaserPulse():
             z_f = self.subgrid_params['grid']['z']
             r_f = self.subgrid_params['grid']['r']
             interpolate_rz_field(
-                self.__a_env[0:-2], z_min, r_min, dz, dr, z_f, r_f, self.a_env)
+                self._a_env[0:-2], z_min, r_min, dz, dr, z_f, r_f, self.a_env)
         # Otherwise, simply remove guard cells.
         else:
             if self.a_env is None:
                 nz = self.solver_params['nz']
                 nr = self.solver_params['nr']
                 self.a_env = np.zeros((nz, nr), dtype=np.complex128)
-            self.a_env[:] = self.__a_env[0: -2]
+            self.a_env[:] = self._a_env[0: -2]
 
     def __interpolate_chi_to_subgrid(self, chi):
         """ Interpolate the plasma susceptibility to the envelope subgrid. """
