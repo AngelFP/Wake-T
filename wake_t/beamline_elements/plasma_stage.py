@@ -104,6 +104,19 @@ class PlasmaStage():
             using a laser envelope model. If False, the pulse envelope stays
             unchanged throughout the computation.
 
+        laser_envelope_substeps : int
+            Number of substeps of the laser envelope solver per `dz_fields`.
+            The time step of the envelope solver is therefore
+            `dz_fields / c / laser_envelope_substeps`.
+
+        laser_envelope_nxi, laser_envelope_nr : int, optional
+            If given, the laser envelope will run in a grid of size
+            (`laser_envelope_nxi`, `laser_envelope_nr`) instead
+            of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
+            coarser) grid than the plasma wake. It is not necessary to specify
+            both parameters. If one of them is not given, the resolution of
+            the plasma grid with be used for that direction.
+
         beam_wakefields : bool
             Whether to take into account beam-driven wakefields (False by
             default). This should be set to True for any beam-driven case or
@@ -157,6 +170,14 @@ class PlasmaStage():
             Number of substeps of the laser envelope solver per `dz_fields`.
             The time step of the envelope solver is therefore
             `dz_fields / c / laser_envelope_substeps`.
+
+        laser_envelope_nxi, laser_envelope_nr : int, optional
+            If given, the laser envelope will run in a grid of size
+            (`laser_envelope_nxi`, `laser_envelope_nr`) instead
+            of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
+            coarser) grid than the plasma wake. It is not necessary to specify
+            both parameters. If one of them is not given, the resolution of
+            the plasma grid with be used for that direction.
 
         r_max : float
             Maximum radial position up to which plasma wakefield will be

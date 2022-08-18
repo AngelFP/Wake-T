@@ -11,9 +11,10 @@ class RZWakefield(NumericalField):
     """Base class for plasma wakefields in r-z geometry"""
 
     def __init__(self, density_function, laser=None, laser_evolution=True,
-                 laser_envelope_substeps=1, r_max=None, xi_min=None,
-                 xi_max=None, n_r=100, n_xi=100, dz_fields=None,
-                 model_name=''):
+                 laser_envelope_substeps=1, laser_envelope_nxi=None,
+                 laser_envelope_nr=None,
+                 r_max=None, xi_min=None, xi_max=None, n_r=100, n_xi=100,
+                 dz_fields=None, model_name=''):
         """Initialize wakefield.
 
         Parameters
@@ -31,6 +32,13 @@ class RZWakefield(NumericalField):
             Number of substeps of the laser envelope solver per `dz_fields`.
             The time step of the envelope solver is therefore
             `dz_fields / c / laser_envelope_substeps`.
+        laser_envelope_nxi, laser_envelope_nr : int, optional
+            If given, the laser envelope will run in a grid of size
+            (`laser_envelope_nxi`, `laser_envelope_nr`) instead
+            of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
+            coarser) grid than the plasma wake. It is not necessary to specify
+            both parameters. If one of them is not given, the resolution of
+            the plasma grid with be used for that direction.
         r_max : float
             Maximum radial position up to which plasma wakefield will be
             calculated.
@@ -63,6 +71,8 @@ class RZWakefield(NumericalField):
         self.laser = laser
         self.laser_evolution = laser_evolution
         self.laser_envelope_substeps = laser_envelope_substeps
+        self.laser_envelope_nxi = laser_envelope_nxi
+        self.laser_envelope_nr = laser_envelope_nr
         self.r_max = r_max
         self.xi_min = xi_min
         self.xi_max = xi_max
@@ -84,7 +94,9 @@ class RZWakefield(NumericalField):
         if self.laser is not None:
             self.laser.set_envelope_solver_params(
                 self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
-                self.dt_update, self.laser_envelope_substeps)
+                self.dt_update, self.laser_envelope_substeps,
+                self.laser_envelope_nxi,
+                self.laser_envelope_nr)
             self.laser.initialize_envelope()
 
         # Initialize field arrays

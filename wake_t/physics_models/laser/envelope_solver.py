@@ -48,7 +48,7 @@ def TDMA(a, b, c, d, p):
 
 
 @njit_serial(fastmath=True)
-def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
+def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
                     start_outside_plasma=False):
     """
     Solve the 2D envelope equation
@@ -87,15 +87,7 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
 
     """
     # Preallocate arrays. a_old and a include 2 ghost cells in the z direction.
-    a_old = np.empty((nz + 2, nr), dtype=np.complex128)
-    a = np.empty((nz + 2, nr), dtype=np.complex128)
     rhs = np.empty(nr, dtype=np.complex128)
-
-    # Fill in a and a_old arrays.
-    a_old[0:-2] = aold
-    a[0:-2] = a0
-    a_old[-2:] = 0.
-    a[-2:] = 0.
 
     # Calculate step sizes.
     dz = (zmax - zmin) * kp / (nz - 1)
@@ -191,4 +183,3 @@ def evolve_envelope(a0, aold, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
         a_old[0:2] = a[0:2]
         a[0] = a_new_jp1
         a[1] = a_new_jp2
-    return a_old, a
