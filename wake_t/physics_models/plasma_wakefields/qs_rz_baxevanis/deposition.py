@@ -1,29 +1,28 @@
 """
-This module contains the methods for depositing the weights of a particle
-distribution on a regular grid.
-
-The deposition method is based on an adaptation of the same algorithm that is
-implemented in FBPIC (https://github.com/fbpic/fbpic).
+This module contains the methods for depositing the weights of a 1D slice
+of plasma particles in a 2D r-z grid.
 
 """
 
 import math
-import numpy as np
 
 from wake_t.utilities.numba import njit_serial
 
 
-def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
-                            deposition_array, p_shape='cubic',
-                            use_ruyten=False):
+@njit_serial()
+def deposit_plasma_particles(z_cell, r, w, z_min, r_min, nz, nr, dz, dr,
+                             deposition_array, p_shape='cubic'):
     """
-    Deposit the the weight of each particle of a 3D distribution into a 2D
-    grid (cylindrical symmetry).
+    Deposit the the weight of a 1D slice of plasma particles into a 2D
+    r-z grid.
 
     Parameters:
     -----------
-    z, x, y : arrays
-        Arrays containing the longitudinal and transverse coordinates of the
+    z_cell : float
+        Index of the current longitudinal position of the plasma slice.
+
+    r : array
+        Arrays containing the radial coordinates of the
         particles.
 
     w : array
@@ -53,58 +52,30 @@ def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
 
     """
     if p_shape == 'linear':
-        return deposit_3d_distribution_linear(
-            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array,
-            use_ruyten)
+        return deposit_plasma_particles_linear(
+            z_cell, r, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
     elif p_shape == 'cubic':
-        return deposit_3d_distribution_cubic(
-            z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array,
-            use_ruyten)
-    else:
-        err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
-                      "Possible values are 'linear' or 'cubic'.")
-        raise ValueError(err_string)
+        return deposit_plasma_particles_cubic(
+            z_cell, r, w, z_min, r_min, nz, nr, dz, dr, deposition_array)
 
 
 @njit_serial
-def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                                   deposition_array, use_ruyten=False):
+def deposit_plasma_particles_linear(z_cell, r, q, z_min, r_min, nz, nr, dz, dr,
+                                    deposition_array):
     """ Calculate charge distribution assuming linear particle shape. """
 
-    # Precalculate particle shape coefficients needed to satisfy charge
-    # density conservation during deposition (see work by W.M. Ruyten
-    # https://doi.org/10.1006/jcph.1993.1070).
-    if use_ruyten:
-        # Calculate the nr + 1 coefficients, where the first one is applied
-        # to the particles located below the first grid point along r.
-        ruyten_coef = np.zeros(nr + 1)
-        r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
-        cell_volume = np.pi * dz * (
-                (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
-        cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
-        cell_number = np.arange(nr) + 1
-        ruyten_coef[1:] = 6. / cell_number * (
-                np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 1. / 24)
-
-    z_max = z_min + (nz - 1) * dz
     r_max = nr * dr
 
     # Loop over particles.
-    for i in range(z.shape[0]):
+    for i in range(r.shape[0]):
         # Get particle components.
-        x_i = x[i]
-        y_i = y[i]
-        z_i = z[i]
+        r_i = r[i]
         w_i = q[i]
 
-        # Calculate radius.
-        r_i = math.sqrt(x_i ** 2 + y_i ** 2)
-
         # Deposit only if particle is within field boundaries.
-        if z_i >= z_min and z_i <= z_max and r_i <= r_max:
+        if r_i <= r_max:
             # Positions of the particles in cell units.
             r_cell = (r_i - r_min) / dr
-            z_cell = (z_i - z_min) / dz
 
             # Indices of lowest cell in which the particle will deposit charge.
             ir_cell = min(int(math.ceil(r_cell)) + 1, nr + 2)
@@ -136,63 +107,30 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             rsl_0 = 1. - u_r
             rsl_1 = u_r
 
-            if use_ruyten:
-                # Get corresponding coefficient for corrected shape factor.
-                ir = min(int(math.ceil(r_cell)), nr)
-                rc = ruyten_coef[ir]
-                # Apply correction.
-                rsl_0 += rc * (1. - u_r) * u_r
-                rsl_1 -= rc * (1. - u_r) * u_r
-
             # Add contribution of particle to charge distribution.
             deposition_array[iz_cell + 0, ir_cell + 0] += zsl_0 * rsl_0 * w_i
             deposition_array[iz_cell + 0, ir_cell + 1] += zsl_0 * rsl_1 * w_i
             deposition_array[iz_cell + 1, ir_cell + 0] += zsl_1 * rsl_0 * w_i
             deposition_array[iz_cell + 1, ir_cell + 1] += zsl_1 * rsl_1 * w_i
 
-    return
-
 
 @njit_serial
-def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
-                                  deposition_array, use_ruyten=False):
+def deposit_plasma_particles_cubic(z_cell, r, q, z_min, r_min, nz, nr, dz, dr,
+                                   deposition_array):
     """ Calculate charge distribution assuming cubic particle shape. """
 
-    # Precalculate particle shape coefficients needed to satisfy charge
-    # density conservation during deposition (see work by W.M. Ruyten
-    # https://doi.org/10.1006/jcph.1993.1070).
-    if use_ruyten:
-        # Calculate the nr + 1 coefficients, where the first one is applied
-        # to the particles located below the first grid point along r.
-        ruyten_coef = np.zeros(nr + 1)
-        r_grid = (np.arange(nr) + 0.5) * dr  # Assumes cell-centered in r.
-        cell_volume = np.pi * dz * (
-                (r_grid + 0.5 * dr) ** 2 - (r_grid - 0.5 * dr) ** 2)
-        cell_volume_norm = cell_volume / (2 * np.pi * dr ** 2 * dz)
-        cell_number = np.arange(nr) + 1
-        ruyten_coef[1:] = 6. / cell_number * (
-                np.cumsum(cell_volume_norm) - 0.5 * cell_number ** 2 - 0.125)
-        ruyten_coef[1] = 6.*(cell_volume_norm[0] - 0.5 - 239./(15*2**7))
-
-    z_max = z_min + (nz - 1) * dz
     r_max = nr * dr
 
     # Loop over particles.
-    for i in range(z.shape[0]):
+    for i in range(r.shape[0]):
         # Get particle components.
-        x_i = x[i]
-        y_i = y[i]
-        z_i = z[i]
+        r_i = r[i]
         w_i = q[i]
 
-        # Calculate radius.
-        r_i = math.sqrt(x_i ** 2 + y_i ** 2)
-
         # Deposit only if particle is within field boundaries.
-        if z_i >= z_min and z_i <= z_max and r_i <= r_max:
+        if r_i <= r_max:
             # Positions of the particle in cell units.
             r_cell = (r_i - r_min) / dr
-            z_cell = (z_i - z_min) / dz
 
             # Indices of lowest cell in which the particle will deposit charge.
             ir_cell = min(int(math.ceil(r_cell)), nr + 2)
@@ -216,14 +154,6 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             rsc_1 = inv_6 * (3. * u_r**3 - 6. * u_r**2 + 4.)
             rsc_2 = inv_6 * (3. * v_r**3 - 6. * v_r**2 + 4.)
             rsc_3 = inv_6 * u_r ** 3
-
-            if use_ruyten:
-                # Get corresponding coefficient for corrected shape factor.
-                ir = min(int(math.ceil(r_cell)), nr)
-                rc = ruyten_coef[ir]
-                # Add correction.
-                rsc_1 += rc*v_r*u_r
-                rsc_2 -= rc*v_r*u_r
 
             # Force all charge to be deposited within boundaries.
             # Below axis:
@@ -280,5 +210,3 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
             deposition_array[iz_cell + 3, ir_cell + 1] += zsc_3 * rsc_1 * w_i
             deposition_array[iz_cell + 3, ir_cell + 2] += zsc_3 * rsc_2 * w_i
             deposition_array[iz_cell + 3, ir_cell + 3] += zsc_3 * rsc_3 * w_i
-
-    return

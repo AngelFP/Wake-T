@@ -5,13 +5,14 @@ import scipy.constants as ct
 from scipy.stats import truncnorm
 import aptools.plasma_accel.general_equations as ge
 import aptools.data_handling.reading as dr
+from aptools.data_handling.utilities import get_available_species
 
 from wake_t.particles.particle_bunch import ParticleBunch
 
 
 def get_gaussian_bunch_from_twiss(
         en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
-        x_off=0, y_off=0, theta_x=0, theta_y=0, name=None):
+        x_off=0, y_off=0, theta_x=0, theta_y=0, name=None, dist_ene='gauss'):
     """
     Creates a 6D Gaussian particle bunch with the specified Twiss parameters.
 
@@ -67,6 +68,8 @@ def get_gaussian_bunch_from_twiss(
 
     name: str
         Name of the particle bunch.
+    dist_ene: str
+        Form of energy distribution. Can be Gaussian 'gauss' or Uniform 'uniform'
 
     Returns:
     --------
@@ -104,7 +107,10 @@ def get_gaussian_bunch_from_twiss(
     yp = s_yp*(p_y*u_y + np.sqrt(1-np.square(p_y))*v_y)
     # Create longitudinal distributions (truncated at -3 and 3 sigma in xi)
     xi = truncnorm.rvs(-3, 3, loc=xi_c, scale=s_z, size=n_part)
-    pz = np.random.normal(ene, ene_sp_abs, n_part)
+    if dist_ene=='uniform':
+        pz = np.random.uniform(ene-ene_sp_abs/2, ene+ene_sp_abs/2, n_part)
+    else:
+        pz = np.random.normal(ene, ene_sp_abs, n_part)
     # Change from slope to momentum and apply offset
     px = xp*pz + p_x_off
     py = yp*pz + p_y_off
@@ -115,7 +121,7 @@ def get_gaussian_bunch_from_twiss(
 
 def get_gaussian_bunch_from_size(
         en_x, en_y, s_x, s_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0,
-        y_off=0, theta_x=0, theta_y=0, name=None):
+        y_off=0, theta_x=0, theta_y=0, name=None, dist_ene='gauss'):
     """
     Creates a Gaussian bunch with the specified emitance and spot size. It is
     assumed to be on its waist (alpha_x = alpha_y = 0)
@@ -177,12 +183,12 @@ def get_gaussian_bunch_from_size(
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_x, b_y, ene,
                                          ene_sp, s_t, xi_c, q_tot, n_part,
                                          x_off, y_off, theta_x, theta_y,
-                                         name=name)
+                                         name=name, dist_ene=dist_ene)
 
 
 def get_matched_bunch(
         en_x, en_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0, y_off=0,
-        theta_x=0, theta_y=0, n_p=None, k_x=None, name=None):
+        theta_x=0, theta_y=0, n_p=None, k_x=None, name=None, dist_ene='gauss'):
     """
     Creates a Gaussian bunch matched to the plasma focusing fields.
 
@@ -245,10 +251,11 @@ def get_matched_bunch(
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_m, b_m, ene,
                                          ene_sp, s_t, xi_c, q_tot, n_part,
                                          x_off, y_off, theta_x, theta_y,
-                                         name=name)
+                                         name=name, dist_ene=dist_ene)
 
 
 def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
+<<<<<<< HEAD
                   **kwargs):
     if code_name == 'openpmd':
         #Check if species_name is given, read it via openpmd or guess is as the default bunch.name in wake-t
@@ -267,10 +274,74 @@ def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
                 print("Openpmd-viewer not installed. Guess species name as default wake-t bunch.name")
                 species_name = 'elec_bunch_0'
             kwargs['species_name']=species_name
+=======
+                  species_name=None, **kwargs):
+    """Get particle bunch from file.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the file containing the particle distribution.
+    code_name : str
+        Name of the code from which the particle distribution originates.
+        Possible values are 'astra', 'csrtrack' and 'openpmd'.
+    preserve_prop_dist : bool, optional
+        Whether to preserve the average longitudinal position of the
+        distribution in the `prop_distance` parameter of the `ParticleBunch`,
+        by default False.
+    name : str, optional
+        Name to assign to the ParticleBunch, by default None. If None, when
+        reading a particle species from an `openPMD` file, the `name` is set
+        to the original name of the species. For other data formats, the
+        default name `elec_bunch_i` will be assigned, where `i`>=0 is an
+        integer that is increased for each unnamed `ParticleBunch` that is
+        generated.
+    species_name : str, optional
+        Name of the particle species to be read from an `openpmd` file.
+        Required only when more than one particle species is present in the
+        file.
+
+    Other Parameters
+    ----------------
+    **kwargs : dict
+        Other parameters to be passed to
+        `aptools.data_handling.reading.read_beam`.
+
+    Returns
+    -------
+    ParticleBunch
+        A ParticleBunch with the distribution from the specified file.
+    """
+    # If reading from an openPMD file, use the right `name` and `species_name`.
+    if code_name == 'openpmd':
+        if species_name is None:
+            available_species = get_available_species(file_path)
+            n_species = len(available_species)
+            if n_species == 0:
+                raise ValueError(
+                    "No particle species found in '{}'".format(file_path)
+                )
+            elif n_species == 1:
+                species_name = available_species[0]
+            else:
+                raise ValueError(
+                    'More than one particle species is available in' +
+                    "'{}'. ".format(file_path) +
+                    'Please specify a `species_name`. ' +
+                    'Available species are: ' + str(available_species)
+                )
+        kwargs['species_name'] = species_name
+        if name is None:
+            name = species_name
+    # Read particle species.
+>>>>>>> 888e1d5692bf9b6e32caa3d5457a4daa56ac35d8
     x, y, z, px, py, pz, q = dr.read_beam(code_name, file_path, **kwargs)
+    # Center in z.
     z_avg = np.average(z, weights=q)
     xi = z - z_avg
+    # Create ParticleBunch
     bunch = ParticleBunch(q, x, y, xi, px, py, pz, name=name)
+    # Preserve `z_avg` as the initial propagation distance of the bunch.
     if preserve_prop_dist:
         bunch.prop_distance = z_avg
     return bunch

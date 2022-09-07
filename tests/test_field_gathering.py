@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.constants as ct
 from wake_t.particles.interpolation import (
     gather_field_cyl_linear, gather_main_fields_cyl_linear)
 from wake_t.utilities.bunch_generation import get_matched_bunch
@@ -72,17 +73,31 @@ def test_gather_main_fields_cyl_linear():
     y_part = np.zeros_like(x_part)
     z_part = Z.flatten()
 
-    # Gather field
-    wx_part, wy_part, ez_part = gather_main_fields_cyl_linear(
-        f, f, z_min, z_max, r_min+dr/2, r_max, dz, dr, x_part, y_part, z_part)
+    # Preallocate field arrays
+    n_part = x_part.shape[0]
+    ex = np.zeros(n_part)
+    ey = np.zeros(n_part)
+    ez = np.zeros(n_part)
+    bx = np.zeros(n_part)
+    by = np.zeros(n_part)
+    bz = np.zeros(n_part)
 
-    wx_part = np.reshape(wx_part, (n_z, n_r))
-    wy_part = np.reshape(wy_part, (n_z, n_r))
-    ez_part = np.reshape(ez_part, (n_z, n_r))
+    # Gather field
+    gather_main_fields_cyl_linear(
+        f, f, f, z_min, z_max, r_min+dr/2, r_max, dz, dr,
+        x_part, y_part, z_part, ex, ey, ez, bx, by, bz)
+
+    ex = np.reshape(ex, (n_z, n_r))
+    ey = np.reshape(ey, (n_z, n_r))
+    ez = np.reshape(ez, (n_z, n_r))
+    bx = np.reshape(bx, (n_z, n_r))
+    by = np.reshape(by, (n_z, n_r))
+    bz = np.reshape(bz, (n_z, n_r))
 
     # Check
-    np.testing.assert_array_almost_equal(wx_part, f[2:-2, 2:-2])
-    np.testing.assert_array_almost_equal(ez_part, f[2:-2, 2:-2])
+    np.testing.assert_array_almost_equal(ex, f[2:-2, 2:-2])
+    np.testing.assert_array_almost_equal(ez, f[2:-2, 2:-2])
+    np.testing.assert_array_almost_equal(by, f[2:-2, 2:-2])
 
 
 def test_gather_main_fields_cyl_linear_at_bunch():
@@ -123,15 +138,18 @@ def test_gather_main_fields_cyl_linear_at_bunch():
     f = np.zeros((n_z+4, n_r+4))
     f[2:-2, 2:-2] = np.sin(R/r_max-1) * np.sin(Z/z_max-1)
 
+    # Get preallocated field arrays
+    ex, ey, ez, bx, by, bz = bunch.get_field_arrays()
+    
     # Gather field
-    wx_part, wy_part, ez_part = gather_main_fields_cyl_linear(
-        f, f, z_min, z_max, r_min+dr/2, r_max, dz, dr,
-        bunch.x, bunch.y, bunch.xi)
+    gather_main_fields_cyl_linear(
+        f, f, f, z_min, z_max, r_min+dr/2, r_max, dz, dr,
+        bunch.x, bunch.y, bunch.xi, ex, ey, ez, bx, by, bz)
 
     # Check
-    np.testing.assert_almost_equal(np.sum(wx_part), 15.709780320676144)
-    np.testing.assert_almost_equal(np.sum(wy_part), -75.57014220169886)
-    np.testing.assert_almost_equal(np.sum(ez_part), 6798.124201568496)
+    np.testing.assert_almost_equal(np.sum(ex / ct.c + by), 15.709780373078333)
+    np.testing.assert_almost_equal(np.sum(ey / ct.c - bx), -75.57014245377374)
+    np.testing.assert_almost_equal(np.sum(ez), 6798.124201568496)
 
 
 if __name__ == '__main__':
