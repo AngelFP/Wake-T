@@ -76,7 +76,7 @@ def get_gaussian_bunch_from_twiss(
     A ParticleBunch object.
 
     """
-
+    
     # Calculate necessary values
     n_part = int(n_part)
     ene_sp = ene_sp/100
@@ -108,6 +108,7 @@ def get_gaussian_bunch_from_twiss(
     # Create longitudinal distributions (truncated at -3 and 3 sigma in xi)
     xi = truncnorm.rvs(-3, 3, loc=xi_c, scale=s_z, size=n_part)
     if dist_ene=='uniform':
+        print("uniform energy distribution")
         pz = np.random.uniform(ene-ene_sp_abs/2, ene+ene_sp_abs/2, n_part)
     else:
         pz = np.random.normal(ene, ene_sp_abs, n_part)
