@@ -100,8 +100,8 @@ class RZWakefield(NumericalField):
             self.laser.set_envelope_solver_params(
                 self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
                 self.dt_update, self.laser_envelope_substeps,
-                self.laser_envelope_nxi,
-                self.laser_envelope_nr)
+                self.laser_envelope_nxi, self.laser_envelope_nr,
+                self.laser_envelope_use_phase)
             self.laser.initialize_envelope()
 
         # Initialize field arrays
