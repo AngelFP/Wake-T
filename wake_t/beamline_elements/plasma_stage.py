@@ -180,6 +180,11 @@ class PlasmaStage():
             both parameters. If one of them is not given, the resolution of
             the plasma grid with be used for that direction.
 
+        laser_envelope_use_phase : bool
+            Determines whether to take into account the terms related to the
+            longitudinal derivative of the complex phase in the envelope
+            solver.
+
         r_max : float
             Maximum radial position up to which plasma wakefield will be
             calculated.

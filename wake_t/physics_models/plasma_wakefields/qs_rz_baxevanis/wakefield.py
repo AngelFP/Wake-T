@@ -9,7 +9,8 @@ class Quasistatic2DWakefield(RZWakefield):
 
     def __init__(self, density_function, laser=None, laser_evolution=True,
                  laser_envelope_substeps=1, laser_envelope_nxi=None,
-                 laser_envelope_nr=None, r_max=None, xi_min=None,
+                 laser_envelope_nr=None, laser_envelope_use_phase=True,
+                 r_max=None, xi_min=None,
                  xi_max=None, n_r=100, n_xi=100, ppc=2, dz_fields=None,
                  r_max_plasma=None, parabolic_coefficient=0., p_shape='cubic',
                  max_gamma=10, plasma_pusher='rk4'):
@@ -27,6 +28,7 @@ class Quasistatic2DWakefield(RZWakefield):
             laser_envelope_substeps=laser_envelope_substeps,
             laser_envelope_nxi=laser_envelope_nxi,
             laser_envelope_nr=laser_envelope_nr,
+            laser_envelope_use_phase=laser_envelope_use_phase,
             r_max=r_max,
             xi_min=xi_min,
             xi_max=xi_max,
