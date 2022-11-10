@@ -126,7 +126,7 @@ class RZWakefield(NumericalField):
         self.b_t[:] = 0.
         self._calculate_wakefield(bunches)
 
-    def _calculate_wakefield(bunches):
+    def _calculate_wakefield(self, bunches):
         """To be implemented by the subclasses."""
         raise NotImplementedError
 
