@@ -6,6 +6,7 @@ import scipy.constants as ct
 import wake_t.physics_models.plasma_wakefields as wf
 from wake_t.diagnostics import OpenPMDDiagnostics
 from wake_t.tracking.tracker import Tracker
+from wake_t.fields.base import Field
 
 
 wakefield_models = {
@@ -35,7 +36,7 @@ class PlasmaStage():
         density : float
             Plasma density in units of m^{-3}.
 
-        wakefield_model : str
+        wakefield_model : str or Field
             Wakefield model to be used. Possible values are 'blowout',
             'custom_blowout', 'focusing_blowout', 'cold_fluid_1d' and
             'quasistatic_2d'. If `None`, no wakefields will be computed.
@@ -330,6 +331,8 @@ class PlasmaStage():
         """ Initialize and return corresponding wakefield model. """
         if model is None:
             return None
+        elif isinstance(model, Field):
+            return model
         elif model in wakefield_models:
             return wakefield_models[model](self.density, **model_params)
         else:
