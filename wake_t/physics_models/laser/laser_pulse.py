@@ -13,6 +13,7 @@ import scipy.constants as ct
 from scipy.special import genlaguerre, binom
 
 from .envelope_solver import evolve_envelope
+from .envelope_solver_non_centered import evolve_envelope_non_centered
 from wake_t.fields.interpolation import interpolate_rz_field
 
 
@@ -31,7 +32,6 @@ class LaserPulse():
         self.l_0 = l_0
         self.a_env = None
         self.solver_params = None
-        self.init_outside_plasma = False
         self.n_steps = 0
 
     def __add__(self, pulse_2):
@@ -124,9 +124,7 @@ class LaserPulse():
             self._a_env_old = np.zeros((nz + 2, nr), dtype=np.complex128)
             self._a_env = np.zeros((nz + 2, nr), dtype=np.complex128)
             self._a_env[0:-2] = self.envelope_function(ZZ, RR, 0.)
-            self._a_env_old[0:-2] = self.envelope_function(ZZ, RR, -dt*ct.c)
             self.__update_output_envelope()
-            self.init_outside_plasma = True
 
     def get_envelope(self):
         """Get the current laser envelope array."""
@@ -146,17 +144,19 @@ class LaserPulse():
         k_0 = 2*np.pi / self.l_0
         k_p = np.sqrt(ct.e**2 * n_p / (ct.m_e*ct.epsilon_0)) / ct.c
 
-        # Determine if laser starts evolution outside plasma.
-        start_outside_plasma = (self.n_steps == 0 and self.init_outside_plasma)
-
         # If needed, interpolate chi to subgrid.
         if self.use_subgrid:
             chi = self.__interpolate_chi_to_subgrid(chi)
 
         # Compute evolution.
-        evolve_envelope(
-            self._a_env, self._a_env_old, chi, k_0, k_p,
-            **self.solver_params, start_outside_plasma=start_outside_plasma)
+        if self.n_steps == 0:
+            evolve_envelope_non_centered(
+                self._a_env, self._a_env_old, chi, k_0, k_p,
+                **self.solver_params)
+        else:
+            evolve_envelope(
+                self._a_env, self._a_env_old, chi, k_0, k_p,
+                **self.solver_params)
 
         # Update arrays and step count.
         self.__update_output_envelope()
