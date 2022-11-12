@@ -10,46 +10,13 @@ import numpy as np
 import scipy.constants as ct
 
 from wake_t.utilities.numba import njit_serial
+from .tdma import TDMA
 
 
 @njit_serial(fastmath=True)
-def TDMA(a, b, c, d, p):
-    """TriDiagonal Matrix Algorithm: solve a linear system Ax=b,
-    where A is a tridiagonal matrix. Source:
-    https://stackoverflow.com/questions/8733015/tridiagonal-matrix-algorithm-
-    tdma-aka-thomas-algorithm-using-python-with-nump
-
-    Parameters
-    ----------
-    a : array
-        Lower diagonal of A. Dimension: nr-1.
-    b : array
-        Main diagonal of A. Dimension: nr.
-    c : array
-        Upper diagonal of A. Dimension: nr-1.
-    d : array
-        Solution vector. Dimension: nr.
-
-    """
-    n = len(d)
-    w = np.empty(n - 1, dtype=np.complex128)
-    g = np.empty(n, dtype=np.complex128)
-
-    w[0] = c[0] / b[0]  # MAKE SURE THAT b[0]!=0
-    g[0] = d[0] / b[0]
-
-    for i in range(1, n - 1):
-        w[i] = c[i] / (b[i] - a[i - 1] * w[i - 1])
-    for i in range(1, n):
-        g[i] = (d[i] - a[i - 1] * g[i - 1]) / (b[i] - a[i - 1] * w[i - 1])
-    p[n - 1] = g[n - 1]
-    for i in range(n - 1, 0, -1):
-        p[i - 1] = g[i - 1] - w[i - 1] * p[i]
-
-
-@njit_serial(fastmath=True)
-def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
-                    start_outside_plasma=False, use_phase=True):
+def evolve_envelope(
+        a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
+        use_phase=True):
     """
     Solve the 2D envelope equation
     (\nabla_tr^2+2i*k0/kp*d/dt+2*d^2/(dzdt)-d^2/dt^2)â = chi*â
@@ -80,10 +47,6 @@ def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
         Tau step size.
     nt : int
         Number of tau steps.
-    start_outside_plasma : bool
-        If `True`, it indicates that the laser is outside of the plasma at
-        `t=-dt`. This will then force the plasma susceptibility to be zero
-        at that time.
     use_phase : bool
         Determines whether to take into account the terms related to the
         longitudinal derivative of the complex phase.
@@ -128,13 +91,7 @@ def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
 
         # Getting the phase of the envelope on axis.
         if use_phase:
-            phases = np.angle(a[:, 0])
-
-        # If laser starts outside plasma, make chi^{n-1} = 0.
-        if start_outside_plasma and n == 0:
-            chi_nm1 = 0. * chi
-        else:
-            chi_nm1 = chi
+            phases = np.angle(a[:, 0])         
 
         # Loop over z.
         for j in range(nz - 1, -1, -1):
@@ -161,15 +118,17 @@ def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
             for k in range(nr):
                 rhs[k] = (
                     - 2 * inv_dt ** 2 * a[j, k]
-                    - ((C_minus - chi_nm1[j, k] * 0.5 - 1j * inv_dt * D_jkn)
-                       * a_old[j, k])
+                    - ((C_minus - chi[j, k] * 0.5 - 1j * inv_dt * D_jkn)
+                    * a_old[j, k])
                     - (2 * np.exp(-1j * d_theta1) * inv_dzdt
-                       * (a_new_jp1[k] - a_old[j + 1, k]))
+                    * (a_new_jp1[k] - a_old[j + 1, k]))
                     + (0.5 * np.exp(-1j * (d_theta2 + d_theta1)) * inv_dzdt
-                       * (a_new_jp2[k] - a_old[j + 2, k]))
-                    - L_plus_over_2[k] * a_old[j, k + 1] * (k + 1 < nr)
-                    - L_minus_over_2[k] * a_old[j, k - 1] * (k > 0)
+                    * (a_new_jp2[k] - a_old[j + 2, k]))
                 )
+                if k > 0:
+                    rhs[k] -= L_minus_over_2[k] * a_old[j, k - 1]
+                if k + 1 < nr:
+                    rhs[k] -= L_plus_over_2[k] * a_old[j, k + 1]
 
             # Calculate diagonals.
             d_main = C_plus - chi[j] * 0.5 + 1j * inv_dt * D_jkn
