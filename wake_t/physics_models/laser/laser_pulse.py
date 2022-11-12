@@ -39,7 +39,8 @@ class LaserPulse():
         return SummedPulse(self, pulse_2)
 
     def set_envelope_solver_params(self, xi_min, xi_max, r_max, nz, nr, dt,
-                                   nt=1, subgrid_nz=None, subgrid_nr=None):
+                                   nt=1, subgrid_nz=None, subgrid_nr=None,
+                                   use_phase=True):
         """
         Set the parameters for the laser envelope solver.
 
@@ -67,6 +68,10 @@ class LaserPulse():
             plasma grid (nz, nr). Linear interpolation is used to transform
             the plasma susceptibility into the laser envelope grid, and to
             transform the laser envelope into the plasma grid.
+        use_phase : bool
+            Determines whether to take into account the terms related to the
+            longitudinal derivative of the complex phase in the envelope
+            solver.
 
         """
         if nt < 1:
@@ -88,7 +93,8 @@ class LaserPulse():
             'nz': subgrid_nz if self.use_subgrid else nz,
             'nr': subgrid_nr if self.use_subgrid else nr,
             'nt': nt,
-            'dt': dt / nt
+            'dt': dt / nt,
+            'use_phase': use_phase
         }
         if self.a_env is not None and solver_params != self.solver_params:
             raise ValueError(

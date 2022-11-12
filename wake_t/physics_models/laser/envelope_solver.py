@@ -49,7 +49,7 @@ def TDMA(a, b, c, d, p):
 
 @njit_serial(fastmath=True)
 def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
-                    start_outside_plasma=False):
+                    start_outside_plasma=False, use_phase=True):
     """
     Solve the 2D envelope equation
     (\nabla_tr^2+2i*k0/kp*d/dt+2*d^2/(dzdt)-d^2/dt^2)â = chi*â
@@ -84,6 +84,9 @@ def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
         If `True`, it indicates that the laser is outside of the plasma at
         `t=-dt`. This will then force the plasma susceptibility to be zero
         at that time.
+    use_phase : bool
+        Determines whether to take into account the terms related to the
+        longitudinal derivative of the complex phase.
 
     """
     # Preallocate arrays. a_old and a include 2 ghost cells in the z direction.
@@ -100,6 +103,10 @@ def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
     inv_dz = 1 / dz
     inv_dzdt = inv_dt * inv_dz
     k0_over_kp = k0 / kp
+
+    # Initialize phase difference
+    d_theta1 = 0.
+    d_theta2 = 0.
 
     # Calculate C^+ and C^- [Eq. (8)].
     C_minus = (-2. * inv_dr ** 2. * 0.5 - 1j * k0_over_kp * inv_dt
@@ -120,7 +127,8 @@ def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
         a_new_jp2 = np.zeros(nr, dtype=np.complex128)
 
         # Getting the phase of the envelope on axis.
-        phases = np.angle(a[:, 0])
+        if use_phase:
+            phases = np.angle(a[:, 0])
 
         # If laser starts outside plasma, make chi^{n-1} = 0.
         if start_outside_plasma and n == 0:
@@ -130,19 +138,21 @@ def evolve_envelope(a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
 
         # Loop over z.
         for j in range(nz - 1, -1, -1):
-            # Calculate phase differences between adjacent points.
-            d_theta1 = phases[j + 1] - phases[j]
-            d_theta2 = phases[j + 2] - phases[j + 1]
 
-            # Prevent phase jumps bigger than 1.5*pi.
-            if d_theta1 < -1.5 * np.pi:
-                d_theta1 += 2 * np.pi
-            if d_theta2 < -1.5 * np.pi:
-                d_theta2 += 2 * np.pi
-            if d_theta1 > 1.5 * np.pi:
-                d_theta1 -= 2 * np.pi
-            if d_theta2 > 1.5 * np.pi:
-                d_theta2 -= 2 * np.pi
+            # Calculate phase differences between adjacent points.
+            if use_phase:
+                d_theta1 = phases[j + 1] - phases[j]
+                d_theta2 = phases[j + 2] - phases[j + 1]
+
+                # Prevent phase jumps bigger than 1.5*pi.
+                if d_theta1 < -1.5 * np.pi:
+                    d_theta1 += 2 * np.pi
+                if d_theta2 < -1.5 * np.pi:
+                    d_theta2 += 2 * np.pi
+                if d_theta1 > 1.5 * np.pi:
+                    d_theta1 -= 2 * np.pi
+                if d_theta2 > 1.5 * np.pi:
+                    d_theta2 -= 2 * np.pi
 
             # Calculate D factor [Eq. (6)].
             D_jkn = (1.5 * d_theta1 - 0.5 * d_theta2) * inv_dz

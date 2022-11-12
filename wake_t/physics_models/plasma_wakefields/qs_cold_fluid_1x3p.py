@@ -11,7 +11,8 @@ from wake_t.fields.rz_wakefield import RZWakefield
 class NonLinearColdFluidWakefield(RZWakefield):
     def __init__(self, density_function, laser=None, laser_evolution=True,
                  laser_envelope_substeps=1, laser_envelope_nxi=None,
-                 laser_envelope_nr=None, r_max=None, xi_min=None,
+                 laser_envelope_nr=None, laser_envelope_use_phase=True,
+                 r_max=None, xi_min=None,
                  xi_max=None, n_r=100, n_xi=100, dz_fields=None,
                  beam_wakefields=False, p_shape='linear'):
         self.beam_wakefields = beam_wakefields
@@ -23,6 +24,7 @@ class NonLinearColdFluidWakefield(RZWakefield):
             laser_envelope_substeps=laser_envelope_substeps,
             laser_envelope_nxi=laser_envelope_nxi,
             laser_envelope_nr=laser_envelope_nr,
+            laser_envelope_use_phase=laser_envelope_use_phase,
             r_max=r_max,
             xi_min=xi_min,
             xi_max=xi_max,

@@ -12,7 +12,7 @@ class RZWakefield(NumericalField):
 
     def __init__(self, density_function, laser=None, laser_evolution=True,
                  laser_envelope_substeps=1, laser_envelope_nxi=None,
-                 laser_envelope_nr=None,
+                 laser_envelope_nr=None, laser_envelope_use_phase=True,
                  r_max=None, xi_min=None, xi_max=None, n_r=100, n_xi=100,
                  dz_fields=None, model_name=''):
         """Initialize wakefield.
@@ -39,6 +39,10 @@ class RZWakefield(NumericalField):
             coarser) grid than the plasma wake. It is not necessary to specify
             both parameters. If one of them is not given, the resolution of
             the plasma grid with be used for that direction.
+        laser_envelope_use_phase : bool
+            Determines whether to take into account the terms related to the
+            longitudinal derivative of the complex phase in the envelope
+            solver.
         r_max : float
             Maximum radial position up to which plasma wakefield will be
             calculated.
@@ -73,6 +77,7 @@ class RZWakefield(NumericalField):
         self.laser_envelope_substeps = laser_envelope_substeps
         self.laser_envelope_nxi = laser_envelope_nxi
         self.laser_envelope_nr = laser_envelope_nr
+        self.laser_envelope_use_phase = laser_envelope_use_phase
         self.r_max = r_max
         self.xi_min = xi_min
         self.xi_max = xi_max
@@ -95,8 +100,8 @@ class RZWakefield(NumericalField):
             self.laser.set_envelope_solver_params(
                 self.xi_min, self.xi_max, self.r_max, self.n_xi, self.n_r,
                 self.dt_update, self.laser_envelope_substeps,
-                self.laser_envelope_nxi,
-                self.laser_envelope_nr)
+                self.laser_envelope_nxi, self.laser_envelope_nr,
+                self.laser_envelope_use_phase)
             self.laser.initialize_envelope()
 
         # Initialize field arrays
@@ -126,7 +131,7 @@ class RZWakefield(NumericalField):
         self.b_t[:] = 0.
         self._calculate_wakefield(bunches)
 
-    def _calculate_wakefield(bunches):
+    def _calculate_wakefield(self, bunches):
         """To be implemented by the subclasses."""
         raise NotImplementedError
 
