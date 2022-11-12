@@ -116,7 +116,6 @@ class LaserPulse():
             r_max = self.solver_params['rmax']
             nz = self.solver_params['nz']
             nr = self.solver_params['nr']
-            dt = self.solver_params['dt']
             dr = r_max / nr
             z = np.linspace(z_min, z_max, nz)
             r = np.linspace(dr/2, r_max-dr/2, nr)

@@ -91,7 +91,7 @@ def evolve_envelope(
 
         # Getting the phase of the envelope on axis.
         if use_phase:
-            phases = np.angle(a[:, 0])         
+            phases = np.angle(a[:, 0])
 
         # Loop over z.
         for j in range(nz - 1, -1, -1):
@@ -119,11 +119,11 @@ def evolve_envelope(
                 rhs[k] = (
                     - 2 * inv_dt ** 2 * a[j, k]
                     - ((C_minus - chi[j, k] * 0.5 - 1j * inv_dt * D_jkn)
-                    * a_old[j, k])
+                       * a_old[j, k])
                     - (2 * np.exp(-1j * d_theta1) * inv_dzdt
-                    * (a_new_jp1[k] - a_old[j + 1, k]))
+                       * (a_new_jp1[k] - a_old[j + 1, k]))
                     + (0.5 * np.exp(-1j * (d_theta2 + d_theta1)) * inv_dzdt
-                    * (a_new_jp2[k] - a_old[j + 2, k]))
+                       * (a_new_jp2[k] - a_old[j + 2, k]))
                 )
                 if k > 0:
                     rhs[k] -= L_minus_over_2[k] * a_old[j, k - 1]
