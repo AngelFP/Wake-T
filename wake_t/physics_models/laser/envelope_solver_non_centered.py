@@ -72,9 +72,9 @@ def evolve_envelope_non_centered(
     d_theta2 = 0.
 
     # Calculate C^+ and C^- [Eq. (8)].
-    C_minus = (-2. * inv_dr ** 2. * 0.5 - 2 * 1j * k0_over_kp * inv_dt
+    C_minus = (-2. * inv_dr ** 2. * 0.5 - 2j * k0_over_kp * inv_dt
                + 3 * inv_dzdt)
-    C_plus = (-2. * inv_dr ** 2. * 0.5 + 2 * 1j * k0_over_kp * inv_dt
+    C_plus = (-2. * inv_dr ** 2. * 0.5 + 2j * k0_over_kp * inv_dt
               - 3 * inv_dzdt)
 
     # Calculate L^+ and L^-. Change wrt Benedetti - 2018: in Wake-T we use
@@ -117,7 +117,7 @@ def evolve_envelope_non_centered(
             # Calculate right-hand side of Eq (7).
             for k in range(nr):
                 rhs[k] = (
-                    - (C_minus - chi[j, k] * 0.5 - 2 * 1j * inv_dt * D_jkn)
+                    - (C_minus - chi[j, k] * 0.5 - 2j * inv_dt * D_jkn)
                     * a[j, k]
                     - (4 * np.exp(-1j * d_theta1) * inv_dzdt
                        * (a_new_jp1[k] - a[j + 1, k]))
@@ -130,7 +130,7 @@ def evolve_envelope_non_centered(
                     rhs[k] -= L_plus_over_2[k] * a[j, k + 1]
 
             # Calculate diagonals.
-            d_main = C_plus - chi[j] * 0.5 + 2 * 1j * inv_dt * D_jkn
+            d_main = C_plus - chi[j] * 0.5 + 2j * inv_dt * D_jkn
             d_upper = L_plus_over_2[:nr - 1]
             d_lower = L_minus_over_2[1:nr]
 
