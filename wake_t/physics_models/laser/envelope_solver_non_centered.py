@@ -1,7 +1,7 @@
 """
-This module contains the envelope solver. This module is strongly based on the
-paper 'An accurate and efficient laser-envelope solver for the modeling of
-laser-plasma accelerators', written by C Benedetti et al in 2018.
+This module contains a non-centered (in time) version of the envelope solver
+described in 'An accurate and efficient laser-envelope solver for the modeling
+of laser-plasma accelerators', written by C Benedetti et al in 2018.
 
 Authors: Wilbert den Hertog, Ángel Ferran Pousa, Carlo Benedetti
 """
@@ -14,11 +14,11 @@ from .tdma import TDMA
 
 
 @njit_serial(fastmath=True)
-def evolve_envelope(
+def evolve_envelope_non_centered(
         a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
         use_phase=True):
     """
-    Solve the 2D envelope equation
+    Solve the 2D envelope equation using a non-centered time discretization.
     (\nabla_tr^2+2i*k0/kp*d/dt+2*d^2/(dzdt)-d^2/dt^2)â = chi*â
 
     Parameters
@@ -72,10 +72,10 @@ def evolve_envelope(
     d_theta2 = 0.
 
     # Calculate C^+ and C^- [Eq. (8)].
-    C_minus = (-2. * inv_dr ** 2. * 0.5 - 1j * k0_over_kp * inv_dt
-               + 1.5 * inv_dzdt - inv_dt ** 2.)
-    C_plus = (-2. * inv_dr ** 2. * 0.5 + 1j * k0_over_kp * inv_dt
-              - 1.5 * inv_dzdt - inv_dt ** 2.)
+    C_minus = (-2. * inv_dr ** 2. * 0.5 - 2j * k0_over_kp * inv_dt
+               + 3 * inv_dzdt)
+    C_plus = (-2. * inv_dr ** 2. * 0.5 + 2j * k0_over_kp * inv_dt
+              - 3 * inv_dzdt)
 
     # Calculate L^+ and L^-. Change wrt Benedetti - 2018: in Wake-T we use
     # cell-centered nodes in the radial direction.
@@ -117,21 +117,20 @@ def evolve_envelope(
             # Calculate right-hand side of Eq (7).
             for k in range(nr):
                 rhs[k] = (
-                    - 2 * inv_dt ** 2 * a[j, k]
-                    - ((C_minus - chi[j, k] * 0.5 - 1j * inv_dt * D_jkn)
-                       * a_old[j, k])
-                    - (2 * np.exp(-1j * d_theta1) * inv_dzdt
-                       * (a_new_jp1[k] - a_old[j + 1, k]))
-                    + (0.5 * np.exp(-1j * (d_theta2 + d_theta1)) * inv_dzdt
-                       * (a_new_jp2[k] - a_old[j + 2, k]))
+                    - (C_minus - chi[j, k] * 0.5 - 2j * inv_dt * D_jkn)
+                    * a[j, k]
+                    - (4 * np.exp(-1j * d_theta1) * inv_dzdt
+                       * (a_new_jp1[k] - a[j + 1, k]))
+                    + (1 * np.exp(-1j * (d_theta2 + d_theta1)) * inv_dzdt
+                       * (a_new_jp2[k] - a[j + 2, k]))
                 )
                 if k > 0:
-                    rhs[k] -= L_minus_over_2[k] * a_old[j, k - 1]
+                    rhs[k] -= L_minus_over_2[k] * a[j, k - 1]
                 if k + 1 < nr:
-                    rhs[k] -= L_plus_over_2[k] * a_old[j, k + 1]
+                    rhs[k] -= L_plus_over_2[k] * a[j, k + 1]
 
             # Calculate diagonals.
-            d_main = C_plus - chi[j] * 0.5 + 1j * inv_dt * D_jkn
+            d_main = C_plus - chi[j] * 0.5 + 2j * inv_dt * D_jkn
             d_upper = L_plus_over_2[:nr - 1]
             d_lower = L_minus_over_2[1:nr]
 
