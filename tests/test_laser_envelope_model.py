@@ -77,7 +77,7 @@ def test_gaussian_laser_in_vacuum(plot=False):
 
     # Check that solution hasn't changed.
     a_mod = np.abs(a_env)
-    assert_almost_equal(np.sum(a_mod), 7500.380279033873, decimal=10)
+    assert_almost_equal(np.sum(a_mod), 7500.380522059235, decimal=10)
 
     # Make plots.
     if plot:
@@ -175,7 +175,7 @@ def test_gaussian_laser_in_vacuum_with_subgrid(plot=False):
 
     # Check that solution hasn't changed.
     a_mod = np.abs(a_env)
-    assert_almost_equal(np.sum(a_mod), 7500.120030707864, decimal=10)
+    assert_almost_equal(np.sum(a_mod), 7500.120208299948, decimal=10)
 
     # Make plots.
     if plot:
