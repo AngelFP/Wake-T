@@ -1,7 +1,7 @@
 """
-This module contains the envelope solver. This module is strongly based on the
-paper 'An accurate and efficient laser-envelope solver for the modeling of
-laser-plasma accelerators', written by C Benedetti et al in 2018.
+This module contains a non-centered (in time) version of the envelope solver
+described in 'An accurate and efficient laser-envelope solver for the modeling
+of laser-plasma accelerators', written by C Benedetti et al in 2018.
 
 Authors: Wilbert den Hertog, Ángel Ferran Pousa, Carlo Benedetti
 """
