@@ -116,7 +116,7 @@ def evolve_envelope_non_centered(
 
             # Calculate right-hand side of Eq (7).
             for k in range(nr):
-                rhs[k] = (
+                rhs_k = (
                     - (C_minus - chi[j, k] * 0.5 - 2j * inv_dt * D_jkn)
                     * a[j, k]
                     - (4 * np.exp(-1j * d_theta1) * inv_dzdt
@@ -125,9 +125,10 @@ def evolve_envelope_non_centered(
                        * (a_new_jp2[k] - a[j + 2, k]))
                 )
                 if k > 0:
-                    rhs[k] -= L_minus_over_2[k] * a[j, k - 1]
+                    rhs_k -= L_minus_over_2[k] * a[j, k - 1]
                 if k + 1 < nr:
-                    rhs[k] -= L_plus_over_2[k] * a[j, k + 1]
+                    rhs_k -= L_plus_over_2[k] * a[j, k + 1]
+                rhs[k] = rhs_k
 
             # Calculate diagonals.
             d_main = C_plus - chi[j] * 0.5 + 2j * inv_dt * D_jkn

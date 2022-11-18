@@ -116,7 +116,7 @@ def evolve_envelope(
 
             # Calculate right-hand side of Eq (7).
             for k in range(nr):
-                rhs[k] = (
+                rhs_k = (
                     - 2 * inv_dt ** 2 * a[j, k]
                     - ((C_minus - chi[j, k] * 0.5 - 1j * inv_dt * D_jkn)
                        * a_old[j, k])
@@ -126,9 +126,10 @@ def evolve_envelope(
                        * (a_new_jp2[k] - a_old[j + 2, k]))
                 )
                 if k > 0:
-                    rhs[k] -= L_minus_over_2[k] * a_old[j, k - 1]
+                    rhs_k -= L_minus_over_2[k] * a_old[j, k - 1]
                 if k + 1 < nr:
-                    rhs[k] -= L_plus_over_2[k] * a_old[j, k + 1]
+                    rhs_k -= L_plus_over_2[k] * a_old[j, k + 1]
+                rhs[k] = rhs_k
 
             # Calculate diagonals.
             d_main = C_plus - chi[j] * 0.5 + 1j * inv_dt * D_jkn
