@@ -37,9 +37,14 @@ def TDMA(a, b, c, d, p):
     g[0] = d[0] / b[0]
 
     for i in range(1, n - 1):
-        w[i] = c[i] / (b[i] - a[i - 1] * w[i - 1])
-    for i in range(1, n):
-        g[i] = (d[i] - a[i - 1] * g[i - 1]) / (b[i] - a[i - 1] * w[i - 1])
-    p[n - 1] = g[n - 1]
+        a_im1 = a[i - 1]
+        inv_coef = 1. / (b[i] - a_im1 * w[i - 1])
+        g[i] = (d[i] - a_im1 * g[i - 1]) * inv_coef
+        w[i] = c[i] * inv_coef
+
+    g[-1] = (d[-1] - a[-2] * g[-2]) / (b[-1] - a[-2] * w[-2])
+
+    # Fill in output array.
+    p[-1] = g[-1]
     for i in range(n - 1, 0, -1):
         p[i - 1] = g[i - 1] - w[i - 1] * p[i]
