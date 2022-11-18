@@ -130,6 +130,7 @@ def evolve_envelope(
                 if k + 1 < nr:
                     rhs_k -= L_plus_over_2[k] * a_old[j, k + 1]
                 rhs[k] = rhs_k
+
             # Calculate diagonals.
             d_main = C_plus - chi[j] * 0.5 + 1j * inv_dt * D_jkn
             d_upper = L_plus_over_2[:nr - 1]
