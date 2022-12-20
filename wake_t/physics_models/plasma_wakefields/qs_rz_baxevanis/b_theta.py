@@ -307,7 +307,7 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
         Then b_N can be determined by imposing b_0 = 0:
 
-            b_0 = K_1 * b_N + T_1 = 0 <=> b_N = - T_1 / K_1
+            b_0 = K_1 * (b_N - b_N_guess) + T_1 = 0 <=> b_N = - T_1 / K_1 + b_N_guess
 
     """
 
