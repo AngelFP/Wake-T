@@ -284,8 +284,8 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
         Write a_im1 and b_im1 as linear system of b_N:
 
-            a_im1 = K_i * b_N + T_i
-            b_im1 = U_i * b_N + P_i
+            a_im1 = K_i * (b_N - b_N_guess) + T_i
+            b_im1 = U_i * (b_N - b_N_guess) + P_i
 
 
         Where (im1 stands for subindex i-1):
@@ -303,94 +303,101 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             K_Np1 = 0
             U_Np1 = 1
             T_Np1 = 0
-            P_Np1 = 0
+            P_Np1 = b_N_guess
 
         Then b_N can be determined by imposing b_0 = 0:
 
             b_0 = K_1 * b_N + T_1 = 0 <=> b_N = - T_1 / K_1
 
     """
-    n_part = r.shape[0]
 
-    # Preallocate arrays
-    K = np.zeros(n_part+1)
-    U = np.zeros(n_part+1)
-    T = np.zeros(n_part+1)
-    P = np.zeros(n_part+1)
+    b_N_guess = 0.
 
-    # Initial conditions at i = N+1
-    K_ip1 = 0.
-    U_ip1 = 1.
-    T_ip1 = 0.
-    P_ip1 = 0.
-    K[-1] = K_ip1
-    U[-1] = U_ip1
-    T[-1] = T_ip1
-    P[-1] = P_ip1
+    for b_N_iter in range(2):
 
-    # Sort particles
+        n_part = r.shape[0]
 
-    # Iterate over particles
-    for i_sort in range(n_part):
-        i = idx[-1-i_sort]
-        r_i = r[i]
-        pr_i = pr[i]
-        q_i = q[i]
-        gamma_i = gamma[i]
-        psi_i = psi[i]
-        dr_psi_i = dr_psi[i]
-        dxi_psi_i = dxi_psi[i]
-        b_theta_0_i = b_theta_0[i]
-        nabla_a2_i = nabla_a2[i]
+        # Preallocate arrays
+        K = np.zeros(n_part+1)
+        U = np.zeros(n_part+1)
+        T = np.zeros(n_part+1)
+        P = np.zeros(n_part+1)
 
-        a = 1. + psi_i
-        a2 = a * a
-        a3 = a2 * a
-        b = 1. / (r_i * a)
-        c = 1. / (r_i * a2)
-        pr_i2 = pr_i * pr_i
+        # Initial conditions at i = N+1
+        K_ip1 = 0.
+        U_ip1 = 1.
+        T_ip1 = 0.
+        P_ip1 = b_N_guess
+        K[-1] = K_ip1
+        U[-1] = U_ip1
+        T[-1] = T_ip1
+        P[-1] = P_ip1
 
-        A_i = q_i * b
-        B_i = q_i * (- (gamma_i * dr_psi_i) * c
-                     + (pr_i2 * dr_psi_i) / (r_i * a3)
-                     + (pr_i * dxi_psi_i) * c
-                     + pr_i2 / (r_i * r_i * a2)
-                     + b_theta_0_i * b
-                     + nabla_a2_i * c * 0.5)
-        C_i = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
+        # Sort particles
 
-        l_i = (1. - 0.5 * q_i / a)
-        m_i = -0.5 * q_i / (a*r_i**2)
-        n_i = 0.5 * q_i/a * r_i ** 2
-        o_i = (1. + 0.5 * q_i / a)
+        # Iterate over particles
+        for i_sort in range(n_part):
+            i = idx[-1-i_sort]
+            r_i = r[i]
+            pr_i = pr[i]
+            q_i = q[i]
+            gamma_i = gamma[i]
+            psi_i = psi[i]
+            dr_psi_i = dr_psi[i]
+            dxi_psi_i = dxi_psi[i]
+            b_theta_0_i = b_theta_0[i]
+            nabla_a2_i = nabla_a2[i]
 
-        K_i = l_i * K_ip1 + m_i * U_ip1
-        U_i = n_i * K_ip1 + o_i * U_ip1
-        T_i = l_i * T_ip1 + m_i * P_ip1 - 0.5 * B_i + 0.25 * A_i * C_i
-        P_i = n_i * T_ip1 + o_i * P_ip1 - r_i * (
-                C_i - 0.5 * B_i * r_i + 0.25 * A_i * C_i * r_i)
+            a = 1. + psi_i
+            a2 = a * a
+            a3 = a2 * a
+            b = 1. / (r_i * a)
+            c = 1. / (r_i * a2)
+            pr_i2 = pr_i * pr_i
 
-        K[i] = K_i
-        U[i] = U_i
-        T[i] = T_i
-        P[i] = P_i
+            A_i = q_i * b
+            B_i = q_i * (- (gamma_i * dr_psi_i) * c
+                         + (pr_i2 * dr_psi_i) / (r_i * a3)
+                         + (pr_i * dxi_psi_i) * c
+                         + pr_i2 / (r_i * r_i * a2)
+                         + b_theta_0_i * b
+                         + nabla_a2_i * c * 0.5)
+            C_i = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
 
-        K_ip1 = K_i
-        U_ip1 = U_i
-        T_ip1 = T_i
-        P_ip1 = P_i
+            l_i = (1. - 0.5 * q_i / a)
+            m_i = -0.5 * q_i / (a*r_i**2)
+            n_i = 0.5 * q_i/a * r_i ** 2
+            o_i = (1. + 0.5 * q_i / a)
 
-    # Calculate b_N.
-    b_N = - P_ip1 / U_ip1
+            K_i = l_i * K_ip1 + m_i * U_ip1
+            U_i = n_i * K_ip1 + o_i * U_ip1
+            T_i = l_i * T_ip1 + m_i * P_ip1 - 0.5 * B_i + 0.25 * A_i * C_i
+            P_i = n_i * T_ip1 + o_i * P_ip1 - r_i * (
+                    C_i - 0.5 * B_i * r_i + 0.25 * A_i * C_i * r_i)
 
-    # Calculate a_i and b_i as functions of b_N.
-    a_i = K * b_N + T
-    b_i = U * b_N + P
+            K[i] = K_i
+            U[i] = U_i
+            T[i] = T_i
+            P[i] = P_i
 
-    # Get a_0 (value on-axis) and make sure a_i and b_i only contain the values
-    # at the plasma particles.
-    a_0 = a_i[idx[0]]
-    a_i = np.delete(a_i, idx[0])
-    b_i = np.delete(b_i, idx[0])
+            K_ip1 = K_i
+            U_ip1 = U_i
+            T_ip1 = T_i
+            P_ip1 = P_i
 
+        # Calculate b_N - b_N_guess.
+        b_N_m_guess = - P_ip1 / U_ip1
+        # Calculate a_i and b_i as functions of b_N_m_guess.
+        a_i = K * b_N_m_guess + T
+        b_i = U * b_N_m_guess + P
+
+        #print(b_N_iter, "b_N:", b_N_m_guess + b_N_guess, "a_i ratio: ", a_i[1]/(K[1] * b_N_m_guess - T[1]), "b_i ratio", b_i[1]/(U[1] * b_N_m_guess - P[1]))
+
+        # Get a_0 (value on-axis) and make sure a_i and b_i only contain the values
+        # at the plasma particles.
+        a_0 = a_i[idx[0]]
+        a_i = np.delete(a_i, idx[0])
+        b_i = np.delete(b_i, idx[0])
+
+        b_N_guess += b_N_m_guess
     return a_i, b_i, a_0
