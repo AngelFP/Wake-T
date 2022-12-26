@@ -391,7 +391,7 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
         a_i = K * b_N_m_guess + T
         b_i = U * b_N_m_guess + P
 
-        #print(b_N_iter, "b_N:", b_N_m_guess + b_N_guess, "a_i ratio: ", a_i[1]/(K[1] * b_N_m_guess - T[1]), "b_i ratio", b_i[1]/(U[1] * b_N_m_guess - P[1]))
+        print(b_N_iter, "b_N:", b_N_m_guess + b_N_guess, "a_i ratio: ", a_i[idx[1]]/(K[idx[1]] * b_N_m_guess - T[idx[1]]), "b_i ratio", b_i[idx[1]]/(U[idx[1]] * b_N_m_guess - P[idx[1]]))
 
         # Get a_0 (value on-axis) and make sure a_i and b_i only contain the values
         # at the plasma particles.
