@@ -311,26 +311,50 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
     """
 
-    b_N_guess = 0.
+    n_part = r.shape[0]
 
-    for b_N_iter in range(2):
+    # Preallocate arrays
+    K = np.zeros(n_part)
+    U = np.zeros(n_part)
+    T = np.zeros(n_part)
+    P = np.zeros(n_part)
 
-        n_part = r.shape[0]
+    # Initial conditions at i = N
+    K_ip1 = 0.
+    U_ip1 = 1.
+    T_ip1 = 0.
+    P_ip1 = 0.
 
-        # Preallocate arrays
-        K = np.zeros(n_part)
-        U = np.zeros(n_part)
-        T = np.zeros(n_part)
-        P = np.zeros(n_part)
+    # Iterate over particles
+    for i_sort in range(n_part):
+        i = idx[-1-i_sort]
+        r_i = r[i]
+        q_i = q[i]
+        psi_i = psi[i]
 
-        # Initial conditions at i = N+1
-        K_ip1 = 0.
-        U_ip1 = 1.
-        T_ip1 = 0.
-        P_ip1 = b_N_guess
+        a = 1. + psi_i
+
+        l_i = (1. - 0.5 * q_i / a)
+        m_i = -0.5 * q_i / (a*r_i**2)
+        n_i = 0.5 * q_i/a * r_i ** 2
+        o_i = (1. + 0.5 * q_i / a)
+
+        K_i = l_i * K_ip1 + m_i * U_ip1
+        U_i = n_i * K_ip1 + o_i * U_ip1
+
+        K[i] = K_ip1
+        U[i] = U_ip1
+
+        K_ip1 = K_i
+        U_ip1 = U_i
+
+    ratio_precision = 0.5
+    i_start = 0
+
+    while i_start < n_part:
 
         # Iterate over particles
-        for i_sort in range(n_part):
+        for i_sort in range(i_start, n_part):
             i = idx[-1-i_sort]
             r_i = r[i]
             pr_i = pr[i]
@@ -363,33 +387,45 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             n_i = 0.5 * q_i/a * r_i ** 2
             o_i = (1. + 0.5 * q_i / a)
 
-            K_i = l_i * K_ip1 + m_i * U_ip1
-            U_i = n_i * K_ip1 + o_i * U_ip1
             T_i = l_i * T_ip1 + m_i * P_ip1 - 0.5 * B_i + 0.25 * A_i * C_i
             P_i = n_i * T_ip1 + o_i * P_ip1 - r_i * (
                     C_i - 0.5 * B_i * r_i + 0.25 * A_i * C_i * r_i)
 
-            K[i] = K_ip1
-            U[i] = U_ip1
             T[i] = T_ip1
             P[i] = P_ip1
 
-            K_ip1 = K_i
-            U_ip1 = U_i
             T_ip1 = T_i
             P_ip1 = P_i
 
-        # Calculate b_N - b_N_guess.
-        b_N_m_guess = - P_ip1 / U_ip1
-        # Calculate a_i and b_i as functions of b_N_m_guess.
-        a_i = K * b_N_m_guess + T
-        b_i = U * b_N_m_guess + P
+        # Calculate b_N_diff.
+        b_N_diff = - P_ip1 / U_ip1
 
-        #print(b_N_iter, "b_N:", b_N_m_guess + b_N_guess, "a_i ratio: ", a_i[idx[1]]/(K[idx[1]] * b_N_m_guess - T[idx[1]]), "b_i ratio", b_i[idx[1]]/(U[idx[1]] * b_N_m_guess - P[idx[1]]))
+        i_stop = n_part
 
-        # Get a_0 (value on-axis) and make sure a_i and b_i only contain the values
-        # at the plasma particles.
-        a_0 = K_ip1 * b_N_m_guess + T_ip1
+        # Calculate a_i and b_i as functions of b_N_diff.
+        for i_sort in range(i_start, n_part):
+            i = idx[-1-i_sort]
+            T_old = T[i]
+            P_old = P[i]
+            K_old = K[i] * b_N_diff
+            U_old = U[i] * b_N_diff
 
-        b_N_guess += b_N_m_guess
-    return a_i, b_i, a_0
+            if abs(T_old + K_old) >= ratio_precision * abs(T_old - K_old) and abs(P_old + U_old) >= ratio_precision * abs(P_old - U_old):
+                T[i] = T_old + K_old
+                P[i] = P_old + U_old
+            else:
+                i_stop = i_sort
+                break
+
+        #print(i_start, "b_N:", b_N_diff, "a_i ratio:",abs(T_old + K_old)/abs(T_old - K_old), "b_i ratio:", abs(P_old + U_old)/abs(P_old - U_old) )
+
+        if i_stop < n_part:
+            T_ip1 = T[idx[-1-i_stop]] + K[idx[-1-i_stop]] * b_N_diff
+            P_ip1 = P[idx[-1-i_stop]] + U[idx[-1-i_stop]] * b_N_diff
+        else:
+            T_ip1 = T_ip1 + K_ip1 * b_N_diff
+            P_ip1 = P_ip1 + U_ip1 * b_N_diff
+
+        i_start = i_stop
+
+    return T, P, T_ip1
