@@ -68,7 +68,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
         if i_sort < n_part - 1:
             r_ip1 = r[idx[i_sort+1]]
         else:
-            r_ip1 = r[i] * dr_p / 2
+            r_ip1 = r[i] + dr_p / 2
         r_right = (r_i + r_ip1) / 2
         b_theta_right = a_i[i] * r_right + b_i[i] / r_right
 
@@ -318,22 +318,16 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
         n_part = r.shape[0]
 
         # Preallocate arrays
-        K = np.zeros(n_part+1)
-        U = np.zeros(n_part+1)
-        T = np.zeros(n_part+1)
-        P = np.zeros(n_part+1)
+        K = np.zeros(n_part)
+        U = np.zeros(n_part)
+        T = np.zeros(n_part)
+        P = np.zeros(n_part)
 
         # Initial conditions at i = N+1
         K_ip1 = 0.
         U_ip1 = 1.
         T_ip1 = 0.
         P_ip1 = b_N_guess
-        K[-1] = K_ip1
-        U[-1] = U_ip1
-        T[-1] = T_ip1
-        P[-1] = P_ip1
-
-        # Sort particles
 
         # Iterate over particles
         for i_sort in range(n_part):
@@ -375,10 +369,10 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             P_i = n_i * T_ip1 + o_i * P_ip1 - r_i * (
                     C_i - 0.5 * B_i * r_i + 0.25 * A_i * C_i * r_i)
 
-            K[i] = K_i
-            U[i] = U_i
-            T[i] = T_i
-            P[i] = P_i
+            K[i] = K_ip1
+            U[i] = U_ip1
+            T[i] = T_ip1
+            P[i] = P_ip1
 
             K_ip1 = K_i
             U_ip1 = U_i
@@ -391,13 +385,11 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
         a_i = K * b_N_m_guess + T
         b_i = U * b_N_m_guess + P
 
-        print(b_N_iter, "b_N:", b_N_m_guess + b_N_guess, "a_i ratio: ", a_i[idx[1]]/(K[idx[1]] * b_N_m_guess - T[idx[1]]), "b_i ratio", b_i[idx[1]]/(U[idx[1]] * b_N_m_guess - P[idx[1]]))
+        #print(b_N_iter, "b_N:", b_N_m_guess + b_N_guess, "a_i ratio: ", a_i[idx[1]]/(K[idx[1]] * b_N_m_guess - T[idx[1]]), "b_i ratio", b_i[idx[1]]/(U[idx[1]] * b_N_m_guess - P[idx[1]]))
 
         # Get a_0 (value on-axis) and make sure a_i and b_i only contain the values
         # at the plasma particles.
-        a_0 = a_i[idx[0]]
-        a_i = np.delete(a_i, idx[0])
-        b_i = np.delete(b_i, idx[0])
+        a_0 = K_ip1 * b_N_m_guess + T_ip1
 
         b_N_guess += b_N_m_guess
     return a_i, b_i, a_0
