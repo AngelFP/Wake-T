@@ -277,15 +277,15 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
     The values of a_i and b_i are calculated, using Eqs. (26) and
     (27) from the paper of P. Baxevanis and G. Stupakov. In this algorithm,
-    Eq. (27) is inverted so that we calculate a_im1 and b_im1 as a function
-    of a_i and b_i. Therefore, we start the loop at the boundary and end up
+    Eq. (27) is inverted so that we calculate a_i and b_i as a function
+    of a_ip1 and b_ip1. Therefore, we start the loop at the boundary and end up
     on axis. This alternative method has shown to be more robust than
     `calculate_ai_bi_from_axis` to numerical precission issues.
 
-        Write a_im1 and b_im1 as linear system of b_N:
+        Write a_i and b_i as linear system of b_N_diff:
 
-            a_im1 = K_i * (b_N - b_N_guess) + T_i
-            b_im1 = U_i * (b_N - b_N_guess) + P_i
+            a_i = K_i * b_N_diff + T_i
+            b_i = U_i * b_N_diff + P_i
 
 
         Where (im1 stands for subindex i-1):
@@ -298,16 +298,21 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             P_i = ( A_i*r_i**3/2    * T_im1  +  (1 + A_i*r_i/2) * P_im1  -
                     r_i*(4*Ci - 2*Bi*r_i + Ai*Ci*r_i)/4 )
 
-        With initial conditions at i=N+1:
+        With initial conditions at i=N:
 
             K_Np1 = 0
             U_Np1 = 1
             T_Np1 = 0
-            P_Np1 = b_N_guess
+            P_Np1 = 0
 
-        Then b_N can be determined by imposing b_0 = 0:
+        Then b_N_diff can be determined by imposing b_0 = 0:
 
-            b_0 = K_1 * (b_N - b_N_guess) + T_1 = 0 <=> b_N = - T_1 / K_1 + b_N_guess
+            b_0 = U_0 * b_N_diff + P_0 = 0
+            <=> b_N_diff = - P_0 / U_0
+
+        If the precision of a_i and b_i becomes too low, then T_i and P_i are
+        recalculated with an initial guess equal to a_i and b_i, as well as a
+        new b_N_diff.
 
     """
 
@@ -325,7 +330,7 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     T_ip1 = 0.
     P_ip1 = 0.
 
-    # Iterate over particles
+    # Iterate over particles to get K_i and U_i
     for i_sort in range(n_part):
         i = idx[-1-i_sort]
         r_i = r[i]
@@ -348,12 +353,11 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
         K_ip1 = K_i
         U_ip1 = U_i
 
-    ratio_precision = 0.5
     i_start = 0
 
     while i_start < n_part:
 
-        # Iterate over particles
+        # Iterate over particles to get T_i and P_i
         for i_sort in range(i_start, n_part):
             i = idx[-1-i_sort]
             r_i = r[i]
@@ -402,7 +406,7 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
         i_stop = n_part
 
-        # Calculate a_i and b_i as functions of b_N_diff.
+        # Calculate a_i (in T_i) and b_i (in P_i) as functions of b_N_diff.
         for i_sort in range(i_start, n_part):
             i = idx[-1-i_sort]
             T_old = T[i]
@@ -410,14 +414,14 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             K_old = K[i] * b_N_diff
             U_old = U[i] * b_N_diff
 
-            if abs(T_old + K_old) >= ratio_precision * abs(T_old - K_old) and abs(P_old + U_old) >= ratio_precision * abs(P_old - U_old):
+            if i_sort == i_start or
+                abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
+                abs(P_old + U_old) >= 0.5 * abs(P_old - U_old):
                 T[i] = T_old + K_old
                 P[i] = P_old + U_old
             else:
                 i_stop = i_sort
                 break
-
-        #print(i_start, "b_N:", b_N_diff, "a_i ratio:",abs(T_old + K_old)/abs(T_old - K_old), "b_i ratio:", abs(P_old + U_old)/abs(P_old - U_old) )
 
         if i_stop < n_part:
             T_ip1 = T[idx[-1-i_stop]] + K[idx[-1-i_stop]] * b_N_diff
@@ -428,4 +432,5 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
         i_start = i_stop
 
+    # Return a_i (in T_i), b_i (in P_i) and a_0 (in T_ip1)
     return T, P, T_ip1
