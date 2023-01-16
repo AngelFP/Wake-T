@@ -414,9 +414,9 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             K_old = K[i] * b_N_diff
             U_old = U[i] * b_N_diff
 
-            if i_sort == i_start or
+            if (i_sort == i_start or
                 abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
-                abs(P_old + U_old) >= 0.5 * abs(P_old - U_old):
+                abs(P_old + U_old) >= 0.5 * abs(P_old - U_old)):
                 T[i] = T_old + K_old
                 P[i] = P_old + U_old
             else:
