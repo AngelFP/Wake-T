@@ -301,8 +301,8 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             U_old = U[i] * a_0_diff
 
             if (i_sort == i_start or i_sort == (n_part-1) or
-            abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
-            abs(P_old + U_old) >= 0.5 * abs(P_old - U_old)):
+                    abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
+                    abs(P_old + U_old) >= 0.5 * abs(P_old - U_old)):
                 # Calculate a_i and b_i as functions of a_0.
                 T[i] = T_old + K_old
                 P[i] = P_old + U_old
@@ -468,8 +468,8 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             U_old = U[i] * b_N_diff
 
             if (i_sort == i_start or
-            abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
-            abs(P_old + U_old) >= 0.5 * abs(P_old - U_old)):
+                    abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
+                    abs(P_old + U_old) >= 0.5 * abs(P_old - U_old)):
                 T[i] = T_old + K_old
                 P[i] = P_old + U_old
             else:
