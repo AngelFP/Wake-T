@@ -309,7 +309,7 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                     abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
                     abs(P_old + U_old) >= 0.5 * abs(P_old - U_old)):
                 # Calculate a_i and b_i as functions of a_0_diff.
-                # Store the result in T and P 
+                # Store the result in T and P
                 T[i] = T_old + K_old
                 P[i] = P_old + U_old
             else:
@@ -318,7 +318,7 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                 break
 
         if i_stop < n_part:
-            # Set T_im1 and T_im1 properly for the next iteration 
+            # Set T_im1 and T_im1 properly for the next iteration
             T_im1 = T[idx[i_stop-1]]
             P_im1 = P[idx[i_stop-1]]
 
