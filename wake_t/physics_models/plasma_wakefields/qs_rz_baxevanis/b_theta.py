@@ -300,20 +300,29 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             K_old = K[i] * a_0_diff
             U_old = U[i] * a_0_diff
 
+            # Test if precision is lost in the sum T_old + K_old.
+            # 0.5 ruffly corresponds to one lost bit of precision.
+            # Also pass test if this is the first number of this iteration
+            # to avoid an infinite loop or if this is the last number
+            # to computer as that is zero by construction
             if (i_sort == i_start or i_sort == (n_part-1) or
                     abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
                     abs(P_old + U_old) >= 0.5 * abs(P_old - U_old)):
-                # Calculate a_i and b_i as functions of a_0.
+                # Calculate a_i and b_i as functions of a_0_diff.
+                # Store the result in T and P 
                 T[i] = T_old + K_old
                 P[i] = P_old + U_old
             else:
+                # Stop this iteration, go to the next one
                 i_stop = i_sort
                 break
 
         if i_stop < n_part:
+            # Set T_im1 and T_im1 properly for the next iteration 
             T_im1 = T[idx[i_stop-1]]
             P_im1 = P[idx[i_stop-1]]
 
+        # Start the next iteration where this one stopped
         i_start = i_stop
 
     return T, P, a_0
