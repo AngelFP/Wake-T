@@ -301,7 +301,7 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             U_old = U[i] * a_0_diff
 
             # Test if precision is lost in the sum T_old + K_old.
-            # 0.5 ruffly corresponds to one lost bit of precision.
+            # 0.5 roughly corresponds to one lost bit of precision.
             # Also pass test if this is the first number of this iteration
             # to avoid an infinite loop or if this is the last number
             # to computer as that is zero by construction
