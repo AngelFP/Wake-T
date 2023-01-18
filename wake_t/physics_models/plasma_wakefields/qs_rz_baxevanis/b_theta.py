@@ -45,7 +45,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
 
     """
     # Calculate a_i and b_i, as well as a_0 and the sorted particle indices.
-    a_i, b_i, a_0 = calculate_ai_bi_from_edge(
+    a_i, b_i, a_0 = calculate_ai_bi_from_axis(
         r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2, idx)
 
     # Calculate field at particles as average between neighboring values.
@@ -68,7 +68,7 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
         if i_sort < n_part - 1:
             r_ip1 = r[idx[i_sort+1]]
         else:
-            r_ip1 = r[i] * dr_p / 2
+            r_ip1 = r[i] + dr_p / 2
         r_right = (r_i + r_ip1) / 2
         b_theta_right = a_i[i] * r_right + b_i[i] / r_right
 
@@ -125,7 +125,7 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
     """
     # Calculate a_i and b_i, as well as a_0 and the sorted particle indices.
-    a_i, b_i, a_0 = calculate_ai_bi_from_edge(
+    a_i, b_i, a_0 = calculate_ai_bi_from_axis(
         r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2, idx)
 
     # Calculate fields at r_fld
@@ -167,8 +167,8 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
         Write a_i and b_i as linear system of a_0:
 
-            a_i = K_i * a_0 + T_i
-            b_i = U_i * a_0 + P_i
+            a_i = K_i * a_0_diff + T_i
+            b_i = U_i * a_0_diff + P_i
 
 
         Where (im1 stands for subindex i-1):
@@ -190,7 +190,11 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
         Then a_0 can be determined by imposing a_N = 0:
 
-            a_N = K_N * a_0 + T_N = 0 <=> a_0 = - T_N / K_N
+            a_N = K_N * a_0_diff + T_N = 0 <=> a_0_diff = - T_N / K_N
+
+        If the precision of a_i and b_i becomes too low, then T_i and P_i are
+        recalculated with an initial guess equal to a_i and b_i, as well as a
+        new a_0_diff.
 
     """
     n_part = r.shape[0]
@@ -207,34 +211,18 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     T_im1 = 0.
     P_im1 = 0.
 
-    # Iterate over particles
+    a_0 = 0.
+
     for i_sort in range(n_part):
         i = idx[i_sort]
         r_i = r[i]
-        pr_i = pr[i]
         q_i = q[i]
-        gamma_i = gamma[i]
         psi_i = psi[i]
-        dr_psi_i = dr_psi[i]
-        dxi_psi_i = dxi_psi[i]
-        b_theta_0_i = b_theta_0[i]
-        nabla_a2_i = nabla_a2[i]
 
         a = 1. + psi_i
-        a2 = a * a
-        a3 = a2 * a
         b = 1. / (r_i * a)
-        c = 1. / (r_i * a2)
-        pr_i2 = pr_i * pr_i
 
         A_i = q_i * b
-        B_i = q_i * (- (gamma_i * dr_psi_i) * c
-                     + (pr_i2 * dr_psi_i) / (r_i * a3)
-                     + (pr_i * dxi_psi_i) * c
-                     + pr_i2 / (r_i * r_i * a2)
-                     + b_theta_0_i * b
-                     + nabla_a2_i * c * 0.5)
-        C_i = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
 
         l_i = (1. + 0.5 * A_i * r_i)
         m_i = 0.5 * A_i / r_i
@@ -243,27 +231,101 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
         K_i = l_i * K_im1 + m_i * U_im1
         U_i = n_i * K_im1 + o_i * U_im1
-        T_i = l_i * T_im1 + m_i * P_im1 + 0.5 * B_i + 0.25 * A_i * C_i
-        P_i = n_i * T_im1 + o_i * P_im1 + r_i * (
-                C_i - 0.5 * B_i * r_i - 0.25 * A_i * C_i * r_i)
 
         K[i] = K_i
         U[i] = U_i
-        T[i] = T_i
-        P[i] = P_i
 
         K_im1 = K_i
         U_im1 = U_i
-        T_im1 = T_i
-        P_im1 = P_i
 
-    # Calculate a_0.
-    a_0 = - T_im1 / K_im1
+    i_start = 0
 
-    # Calculate a_i and b_i as functions of a_0.
-    a_i = K * a_0 + T
-    b_i = U * a_0 + P
-    return a_i, b_i, a_0
+    while i_start < n_part:
+
+        # Iterate over particles
+        for i_sort in range(i_start, n_part):
+            i = idx[i_sort]
+            r_i = r[i]
+            pr_i = pr[i]
+            q_i = q[i]
+            gamma_i = gamma[i]
+            psi_i = psi[i]
+            dr_psi_i = dr_psi[i]
+            dxi_psi_i = dxi_psi[i]
+            b_theta_0_i = b_theta_0[i]
+            nabla_a2_i = nabla_a2[i]
+
+            a = 1. + psi_i
+            a2 = a * a
+            a3 = a2 * a
+            b = 1. / (r_i * a)
+            c = 1. / (r_i * a2)
+            pr_i2 = pr_i * pr_i
+
+            A_i = q_i * b
+            B_i = q_i * (- (gamma_i * dr_psi_i) * c
+                         + (pr_i2 * dr_psi_i) / (r_i * a3)
+                         + (pr_i * dxi_psi_i) * c
+                         + pr_i2 / (r_i * r_i * a2)
+                         + b_theta_0_i * b
+                         + nabla_a2_i * c * 0.5)
+            C_i = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
+
+            l_i = (1. + 0.5 * A_i * r_i)
+            m_i = 0.5 * A_i / r_i
+            n_i = -0.5 * A_i * r_i ** 3
+            o_i = (1. - 0.5 * A_i * r_i)
+
+            T_i = l_i * T_im1 + m_i * P_im1 + 0.5 * B_i + 0.25 * A_i * C_i
+            P_i = n_i * T_im1 + o_i * P_im1 + r_i * (
+                    C_i - 0.5 * B_i * r_i - 0.25 * A_i * C_i * r_i)
+
+            T[i] = T_i
+            P[i] = P_i
+
+            T_im1 = T_i
+            P_im1 = P_i
+
+        # Calculate a_0_diff.
+        a_0_diff = - T_im1 / K_im1
+        a_0 += a_0_diff
+
+        i_stop = n_part
+
+        # Calculate a_i (in T_i) and b_i (in P_i) as functions of a_0_diff.
+        for i_sort in range(i_start, n_part):
+            i = idx[i_sort]
+            T_old = T[i]
+            P_old = P[i]
+            K_old = K[i] * a_0_diff
+            U_old = U[i] * a_0_diff
+
+            # Test if precision is lost in the sum T_old + K_old.
+            # 0.5 roughly corresponds to one lost bit of precision.
+            # Also pass test if this is the first number of this iteration
+            # to avoid an infinite loop or if this is the last number
+            # to computer as that is zero by construction
+            if (i_sort == i_start or i_sort == (n_part-1) or
+                    abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
+                    abs(P_old + U_old) >= 0.5 * abs(P_old - U_old)):
+                # Calculate a_i and b_i as functions of a_0_diff.
+                # Store the result in T and P
+                T[i] = T_old + K_old
+                P[i] = P_old + U_old
+            else:
+                # Stop this iteration, go to the next one
+                i_stop = i_sort
+                break
+
+        if i_stop < n_part:
+            # Set T_im1 and T_im1 properly for the next iteration
+            T_im1 = T[idx[i_stop-1]]
+            P_im1 = P[idx[i_stop-1]]
+
+        # Start the next iteration where this one stopped
+        i_start = i_stop
+
+    return T, P, a_0
 
 
 @njit_serial()
@@ -277,15 +339,15 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
     The values of a_i and b_i are calculated, using Eqs. (26) and
     (27) from the paper of P. Baxevanis and G. Stupakov. In this algorithm,
-    Eq. (27) is inverted so that we calculate a_im1 and b_im1 as a function
-    of a_i and b_i. Therefore, we start the loop at the boundary and end up
+    Eq. (27) is inverted so that we calculate a_i and b_i as a function
+    of a_ip1 and b_ip1. Therefore, we start the loop at the boundary and end up
     on axis. This alternative method has shown to be more robust than
     `calculate_ai_bi_from_axis` to numerical precission issues.
 
-        Write a_im1 and b_im1 as linear system of b_N:
+        Write a_i and b_i as linear system of b_N_diff:
 
-            a_im1 = K_i * b_N + T_i
-            b_im1 = U_i * b_N + P_i
+            a_i = K_i * b_N_diff + T_i
+            b_i = U_i * b_N_diff + P_i
 
 
         Where (im1 stands for subindex i-1):
@@ -298,66 +360,46 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             P_i = ( A_i*r_i**3/2    * T_im1  +  (1 + A_i*r_i/2) * P_im1  -
                     r_i*(4*Ci - 2*Bi*r_i + Ai*Ci*r_i)/4 )
 
-        With initial conditions at i=N+1:
+        With initial conditions at i=N:
 
             K_Np1 = 0
             U_Np1 = 1
             T_Np1 = 0
             P_Np1 = 0
 
-        Then b_N can be determined by imposing b_0 = 0:
+        Then b_N_diff can be determined by imposing b_0 = 0:
 
-            b_0 = K_1 * b_N + T_1 = 0 <=> b_N = - T_1 / K_1
+            b_0 = U_0 * b_N_diff + P_0 = 0
+            <=> b_N_diff = - P_0 / U_0
+
+        If the precision of a_i and b_i becomes too low, then T_i and P_i are
+        recalculated with an initial guess equal to a_i and b_i, as well as a
+        new b_N_diff.
 
     """
+
     n_part = r.shape[0]
 
     # Preallocate arrays
-    K = np.zeros(n_part+1)
-    U = np.zeros(n_part+1)
-    T = np.zeros(n_part+1)
-    P = np.zeros(n_part+1)
+    K = np.zeros(n_part)
+    U = np.zeros(n_part)
+    T = np.zeros(n_part)
+    P = np.zeros(n_part)
 
-    # Initial conditions at i = N+1
+    # Initial conditions at i = N
     K_ip1 = 0.
     U_ip1 = 1.
     T_ip1 = 0.
     P_ip1 = 0.
-    K[-1] = K_ip1
-    U[-1] = U_ip1
-    T[-1] = T_ip1
-    P[-1] = P_ip1
 
-    # Sort particles
-
-    # Iterate over particles
+    # Iterate over particles to get K_i and U_i
     for i_sort in range(n_part):
         i = idx[-1-i_sort]
         r_i = r[i]
-        pr_i = pr[i]
         q_i = q[i]
-        gamma_i = gamma[i]
         psi_i = psi[i]
-        dr_psi_i = dr_psi[i]
-        dxi_psi_i = dxi_psi[i]
-        b_theta_0_i = b_theta_0[i]
-        nabla_a2_i = nabla_a2[i]
 
         a = 1. + psi_i
-        a2 = a * a
-        a3 = a2 * a
-        b = 1. / (r_i * a)
-        c = 1. / (r_i * a2)
-        pr_i2 = pr_i * pr_i
-
-        A_i = q_i * b
-        B_i = q_i * (- (gamma_i * dr_psi_i) * c
-                     + (pr_i2 * dr_psi_i) / (r_i * a3)
-                     + (pr_i * dxi_psi_i) * c
-                     + pr_i2 / (r_i * r_i * a2)
-                     + b_theta_0_i * b
-                     + nabla_a2_i * c * 0.5)
-        C_i = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
 
         l_i = (1. - 0.5 * q_i / a)
         m_i = -0.5 * q_i / (a*r_i**2)
@@ -366,31 +408,91 @@ def calculate_ai_bi_from_edge(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
         K_i = l_i * K_ip1 + m_i * U_ip1
         U_i = n_i * K_ip1 + o_i * U_ip1
-        T_i = l_i * T_ip1 + m_i * P_ip1 - 0.5 * B_i + 0.25 * A_i * C_i
-        P_i = n_i * T_ip1 + o_i * P_ip1 - r_i * (
-                C_i - 0.5 * B_i * r_i + 0.25 * A_i * C_i * r_i)
 
-        K[i] = K_i
-        U[i] = U_i
-        T[i] = T_i
-        P[i] = P_i
+        K[i] = K_ip1
+        U[i] = U_ip1
 
         K_ip1 = K_i
         U_ip1 = U_i
-        T_ip1 = T_i
-        P_ip1 = P_i
 
-    # Calculate b_N.
-    b_N = - P_ip1 / U_ip1
+    i_start = 0
 
-    # Calculate a_i and b_i as functions of b_N.
-    a_i = K * b_N + T
-    b_i = U * b_N + P
+    while i_start < n_part:
 
-    # Get a_0 (value on-axis) and make sure a_i and b_i only contain the values
-    # at the plasma particles.
-    a_0 = a_i[idx[0]]
-    a_i = np.delete(a_i, idx[0])
-    b_i = np.delete(b_i, idx[0])
+        # Iterate over particles to get T_i and P_i
+        for i_sort in range(i_start, n_part):
+            i = idx[-1-i_sort]
+            r_i = r[i]
+            pr_i = pr[i]
+            q_i = q[i]
+            gamma_i = gamma[i]
+            psi_i = psi[i]
+            dr_psi_i = dr_psi[i]
+            dxi_psi_i = dxi_psi[i]
+            b_theta_0_i = b_theta_0[i]
+            nabla_a2_i = nabla_a2[i]
 
-    return a_i, b_i, a_0
+            a = 1. + psi_i
+            a2 = a * a
+            a3 = a2 * a
+            b = 1. / (r_i * a)
+            c = 1. / (r_i * a2)
+            pr_i2 = pr_i * pr_i
+
+            A_i = q_i * b
+            B_i = q_i * (- (gamma_i * dr_psi_i) * c
+                         + (pr_i2 * dr_psi_i) / (r_i * a3)
+                         + (pr_i * dxi_psi_i) * c
+                         + pr_i2 / (r_i * r_i * a2)
+                         + b_theta_0_i * b
+                         + nabla_a2_i * c * 0.5)
+            C_i = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
+
+            l_i = (1. - 0.5 * q_i / a)
+            m_i = -0.5 * q_i / (a*r_i**2)
+            n_i = 0.5 * q_i/a * r_i ** 2
+            o_i = (1. + 0.5 * q_i / a)
+
+            T_i = l_i * T_ip1 + m_i * P_ip1 - 0.5 * B_i + 0.25 * A_i * C_i
+            P_i = n_i * T_ip1 + o_i * P_ip1 - r_i * (
+                    C_i - 0.5 * B_i * r_i + 0.25 * A_i * C_i * r_i)
+
+            T[i] = T_ip1
+            P[i] = P_ip1
+
+            T_ip1 = T_i
+            P_ip1 = P_i
+
+        # Calculate b_N_diff.
+        b_N_diff = - P_ip1 / U_ip1
+
+        i_stop = n_part
+
+        # Calculate a_i (in T_i) and b_i (in P_i) as functions of b_N_diff.
+        for i_sort in range(i_start, n_part):
+            i = idx[-1-i_sort]
+            T_old = T[i]
+            P_old = P[i]
+            K_old = K[i] * b_N_diff
+            U_old = U[i] * b_N_diff
+
+            if (i_sort == i_start or
+                    abs(T_old + K_old) >= 0.5 * abs(T_old - K_old) and
+                    abs(P_old + U_old) >= 0.5 * abs(P_old - U_old)):
+                T[i] = T_old + K_old
+                P[i] = P_old + U_old
+            else:
+                i_stop = i_sort
+                break
+
+        if i_stop < n_part:
+            T_ip1 = T[idx[-1-i_stop]] + K[idx[-1-i_stop]] * b_N_diff
+            P_ip1 = P[idx[-1-i_stop]] + U[idx[-1-i_stop]] * b_N_diff
+        else:
+            T_ip1 = T_ip1 + K_ip1 * b_N_diff
+            P_ip1 = P_ip1 + U_ip1 * b_N_diff
+
+        i_start = i_stop
+
+    # Return a_i (in T_i), b_i (in P_i) and a_0 (in T_ip1)
+    return T, P, T_ip1

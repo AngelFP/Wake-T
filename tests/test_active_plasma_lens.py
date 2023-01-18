@@ -64,7 +64,7 @@ def test_active_plasma_lens_with_wakefields():
     # Analyze and check results.
     bunch_params = analyze_bunch(bunch)
     gamma_x = bunch_params['gamma_x']
-    assert approx(gamma_x, rel=1e-10) == 77.32005041792752
+    assert approx(gamma_x, rel=1e-10) == 77.32004939154773
 
 
 if __name__ == '__main__':
