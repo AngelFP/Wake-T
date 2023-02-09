@@ -16,10 +16,41 @@ from wake_t.diagnostics import OpenPMDDiagnostics
 
 class TMElement():
     # TODO: fix backtracking issues.
-    """Defines an element to be tracked using transfer maps."""
+    """
+    Base class for all elements where the tracking is performed using
+    transfer maps. It can also be used to define an arbitrary element
+    that can be modeled with transfer maps of up to second order.
+    """
 
     def __init__(self, length=0, theta=0, k1=0, k2=0, gamma_ref=None,
                  csr_on=False, n_out=None, order=2):
+        """
+        Parameters
+        ----------
+        length : float
+            Length of the drift space in meters.
+        theta : float
+            Bending angle that a particle with an energy given by `gamma_ref`
+            would experience.
+        k1 : float
+            Normalized quadrupole strength in units of 1/m**2.
+        k2 : float
+            Normalized sextupole strength in units of 1/m**3.
+        gamma_ref : float, optional
+            Reference gamma (relativistic Lorentz factor) to be used for the
+            tracking. If not specified, the average gamma of the particle
+            bunch is used.
+        csr_on : bool
+            Whether to include CSR forces.
+        n_out : int
+            Number of times along the element in which the particle
+            distribution should be returned or written to file (if openpmd
+            diagnostics are activated).
+        order : int
+            Highest order of the transfer matrices. Possible values are `1` and
+            `2`.
+
+        """
         self.length = length
         self.theta = theta
         self.k1 = k1
@@ -190,8 +221,33 @@ class TMElement():
 
 
 class Drift(TMElement):
+    """
+    Defines a drift space where the tracking is performed by transfer matrices
+    up to second order.
+
+    """
     def __init__(self, length=0, gamma_ref=None, csr_on=False, n_out=None,
                  order=2):
+        """
+        Parameters
+        ----------
+        length : float
+            Length of the drift space in meters.
+        gamma_ref : float, optional
+            Reference gamma (relativistic Lorentz factor) to be used for the
+            tracking. If not specified, the average gamma of the particle
+            bunch is used.
+        csr_on : bool
+            Whether to include CSR forces.
+        n_out : int
+            Number of times along the element in which the particle
+            distribution should be returned or written to file (if openpmd
+            diagnostics are activated).
+        order : int
+            Highest order of the transfer matrices. Possible values are `1` and
+            `2`.
+
+        """
         super().__init__(length, 0, 0, 0, gamma_ref, csr_on, n_out, order)
         self.element_name = 'drift'
 
@@ -200,8 +256,36 @@ class Drift(TMElement):
 
 
 class Dipole(TMElement):
+    """
+    Defines a dipole where the tracking is performed by transfer matrices
+    up to second order.
+
+    """
     def __init__(self, length=0, theta=0, gamma_ref=None, csr_on=False,
                  n_out=None, order=2):
+        """
+        Parameters
+        ----------
+        length : float
+            Length of the drift space in meters.
+        theta : float
+            Bending angle that a particle with an energy given by `gamma_ref`
+            would experience.
+        gamma_ref : float, optional
+            Reference gamma (relativistic Lorentz factor) to be used for the
+            tracking. If not specified, the average gamma of the particle
+            bunch is used.
+        csr_on : bool
+            Whether to include CSR forces.
+        n_out : int
+            Number of times along the element in which the particle
+            distribution should be returned or written to file (if openpmd
+            diagnostics are activated).
+        order : int
+            Highest order of the transfer matrices. Possible values are `1` and
+            `2`.
+
+        """
         super().__init__(length, theta, 0, 0, gamma_ref, csr_on, n_out, order)
         self.element_name = 'dipole'
 
@@ -214,8 +298,35 @@ class Dipole(TMElement):
 
 
 class Quadrupole(TMElement):
+    """
+    Defines a quadrupole where the tracking is performed by transfer matrices
+    up to second order.
+
+    """
     def __init__(self, length=0, k1=0, gamma_ref=None, csr_on=False,
                  n_out=None, order=2):
+        """
+        Parameters
+        ----------
+        length : float
+            Length of the drift space in meters.
+        k1 : float
+            Normalized quadrupole strength in units of 1/m**2.
+        gamma_ref : float, optional
+            Reference gamma (relativistic Lorentz factor) to be used for the
+            tracking. If not specified, the average gamma of the particle
+            bunch is used.
+        csr_on : bool
+            Whether to include CSR forces.
+        n_out : int
+            Number of times along the element in which the particle
+            distribution should be returned or written to file (if openpmd
+            diagnostics are activated).
+        order : int
+            Highest order of the transfer matrices. Possible values are `1` and
+            `2`.
+
+        """
         super().__init__(length, 0, k1, 0, gamma_ref, csr_on, n_out, order)
         self.element_name = 'quadrupole'
 
@@ -225,8 +336,35 @@ class Quadrupole(TMElement):
 
 
 class Sextupole(TMElement):
+    """
+    Defines a sextupole where the tracking is performed by transfer matrices
+    up to second order.
+
+    """
     def __init__(self, length=0, k2=0, gamma_ref=None, csr_on=False,
                  n_out=None, order=2):
+        """
+        Parameters
+        ----------
+        length : float
+            Length of the drift space in meters.
+        k2 : float
+            Normalized sextupole strength in units of 1/m^3.
+        gamma_ref : float, optional
+            Reference gamma (relativistic Lorentz factor) to be used for the
+            tracking. If not specified, the average gamma of the particle
+            bunch is used.
+        csr_on : bool
+            Whether to include CSR forces.
+        n_out : int
+            Number of times along the element in which the particle
+            distribution should be returned or written to file (if openpmd
+            diagnostics are activated).
+        order : int
+            Highest order of the transfer matrices. Possible values are `1` and
+            `2`.
+
+        """
         super().__init__(length, 0, 0, k2, gamma_ref, csr_on, n_out, order)
         self.element_name = 'sextupole'
 
