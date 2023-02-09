@@ -8,7 +8,7 @@ class Beamline():
     def __init__(self, elements):
         self.elements = elements
 
-    def track(self, bunch, out_initial=True, opmd_diag=False, diag_dir=None):
+    def track(self, bunch, opmd_diag=False, diag_dir=None):
         """
         Track bunch through beamline.
 
@@ -16,11 +16,6 @@ class Beamline():
         -----------
         bunch : ParticleBunch
             Particle bunch to be tracked.
-
-        out_initial : bool
-            Determines whether the initial bunch should be included in the
-            output bunch list. This applies only at the beginning and not for
-            every beamline element.
 
         opmd_diag : bool or OpenPMDDiagnostics
             Determines whether to write simulation diagnostics to disk (i.e.
@@ -43,12 +38,6 @@ class Beamline():
         bunch_list = []
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
             opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
-        for i, element in enumerate(self.elements):
-            bunch_list.extend(
-                element.track(
-                    bunch,
-                    out_initial=out_initial and i == 0,
-                    opmd_diag=opmd_diag
-                    )
-                )
+        for element in self.elements:
+            bunch_list.extend(element.track(bunch, opmd_diag=opmd_diag))
         return bunch_list

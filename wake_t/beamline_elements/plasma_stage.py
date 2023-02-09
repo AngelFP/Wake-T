@@ -4,9 +4,8 @@ import numpy as np
 import scipy.constants as ct
 
 import wake_t.physics_models.plasma_wakefields as wf
-from wake_t.diagnostics import OpenPMDDiagnostics
-from wake_t.tracking.tracker import Tracker
 from wake_t.fields.base import Field
+from .field_element import FieldElement
 
 
 wakefield_models = {
@@ -18,7 +17,7 @@ wakefield_models = {
 }
 
 
-class PlasmaStage():
+class PlasmaStage(FieldElement):
 
     """ Generic class for defining a plasma acceleration stage. """
 
@@ -240,85 +239,22 @@ class PlasmaStage():
             `gamma=1.`, `pr=pz=0.`). By default `max_gamma=10`.
 
         """
-        self.length = length
         self.density = self._get_density_profile(density)
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
-        self.bunch_pusher = bunch_pusher
-        self.dt_bunch = dt_bunch
-        self.n_out = n_out
-        self.name = name
         self.external_fields = external_fields
-
-    def track(self, bunches=[], out_initial=False, opmd_diag=False,
-              diag_dir=None):
-        """
-        Track bunch through plasma stage.
-
-        Parameters:
-        -----------
-        bunches : ParticleBunch or list of ParticleBunch
-            Particle bunches to be tracked.
-
-        out_initial : bool
-            Determines whether the initial bunch should be included in the
-            output bunch list.
-
-        opmd_diag : bool or OpenPMDDiagnostics
-            Determines whether to write simulation diagnostics to disk (i.e.
-            particle distributions and fields). The output is written to
-            HDF5 files following the openPMD standard. The number of outputs
-            the `n_out` value. It is also possible to provide an already
-            existing OpenPMDDiagnostics instance instead of a boolean value.
-
-        diag_dir : str
-            Directory into which the openPMD output will be written. By default
-            this is a 'diags' folder in the current directory. Only needed if
-            `opmd_diag=True`.
-
-        Returns:
-        --------
-        A list of size 'n_out' containing the bunch distribution at each step.
-
-        """
-        # Make sure `bunches` is a list.
-        if not isinstance(bunches, list):
-            bunches = [bunches]
-
-        if not isinstance(self.dt_bunch, list):
-            dt_bunch = [self.dt_bunch] * len(bunches)
-        else:
-            dt_bunch = self.dt_bunches
-
-        # Create diagnostics instance.
-        if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
-            opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
-
         fields = []
         if self.wakefield is not None:
             fields.append(self.wakefield)
         fields.extend(self.external_fields)
-
-        # Create tracker.
-        tracker = Tracker(
-            t_final=self.length/ct.c,
-            bunches=bunches,
-            dt_bunches=dt_bunch,
+        super().__init__(
+            length=length,
+            dt_bunch=dt_bunch,
+            bunch_pusher=bunch_pusher,
+            n_out=n_out,
+            name=name,
             fields=fields,
-            n_diags=self.n_out,
-            opmd_diags=opmd_diag,
-            bunch_pusher=self.bunch_pusher,
-            auto_dt_bunch_f=self._get_optimized_dt,
-            section_name=self.name
+            auto_dt_bunch=self._get_optimized_dt
         )
-
-        # Do tracking.
-        bunch_list = tracker.do_tracking()
-
-        # If only tracking one bunch, do not return list of lists.
-        if len(bunch_list) == 1:
-            bunch_list = bunch_list[0]
-
-        return bunch_list
 
     def _get_density_profile(self, density):
         """ Get density profile function """
