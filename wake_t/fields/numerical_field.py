@@ -51,13 +51,13 @@ class NumericalField(Field):
         self,
         bunches: List[ParticleBunch]
     ) -> None:
-        """Update field to the next time step (`dt_update`).
+        """Update field to the next time step.
 
         Parameters
         ----------
         bunches : list
-            List of `ParticleBunch`es that can be used to recompute/update the
-            fields.
+            List of ``ParticleBunch``es that can be used to recompute/update
+            the fields.
         """
         if not self.initialized:
             self.initialize_properties(bunches)
