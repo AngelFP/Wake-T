@@ -12,6 +12,7 @@
 #
 import os
 import sys
+from datetime import date
 sys.path.insert(0, os.path.abspath('../..'))
 
 
@@ -21,7 +22,7 @@ from wake_t import __version__  # noqa: E402
 
 # -- Project information -----------------------------------------------------
 project = 'Wake-T'
-project_copyright = '2021, Ángel Ferran Pousa'
+project_copyright = '2019-%s, Ángel Ferran Pousa' % date.today().year
 author = 'Ángel Ferran Pousa'
 
 # The full version, including alpha/beta/rc tags
@@ -34,9 +35,14 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc', 'sphinx.ext.coverage', 'sphinx.ext.napoleon',
-    'sphinx_panels', 'sphinx_gallery.gen_gallery'
-    ]
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.coverage',
+    # 'sphinx.ext.intersphinx',
+    'sphinx_panels',
+    'sphinx_gallery.gen_gallery',
+    'numpydoc'
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -76,14 +82,26 @@ html_theme_options = {
             "url": "https://wake-t.slack.com/",
             "icon": "fab fa-slack",
         },
-    ],
+    ]
 }
 
 # Prevent panels extension from modifying page style.
 panels_add_bootstrap_css = False
 
-# Document __init__ class methods
-autoclass_content = 'both'
+# Do not show type hints.
+autodoc_typehints = 'none'
+
+# Do  not use numpydoc to generate autosummary.
+numpydoc_show_class_members = False
+
+# Create autosummary for all files.
+autosummary_generate = True
+
+# Autosummary configuration
+autosummary_context = {
+    # Methods that should be skipped when generating the docs
+    "skipmethods": ["__init__"]
+}
 
 # Configuration for generating tutorials.
 from sphinx_gallery.sorting import FileNameSortKey  # noqa: E402
@@ -94,3 +112,8 @@ sphinx_gallery_conf = {
      'filename_pattern': '.',
      'within_subsection_order': FileNameSortKey,
 }
+
+# intersphinx_mapping = {
+#     "python": ("https://docs.python.org/3/", None),
+#     "numpy": ("https://numpy.org/devdocs/", None),
+# }
