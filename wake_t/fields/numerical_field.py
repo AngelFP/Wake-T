@@ -1,8 +1,11 @@
 """Contains the base class for all numerical fields."""
 
+from typing import Optional, List
+
 import numpy as np
 
 from .base import Field
+from wake_t.particles.particle_bunch import ParticleBunch
 
 
 class NumericalField(Field):
@@ -16,33 +19,38 @@ class NumericalField(Field):
 
     Each subclass must implement the logic for calculating and gathering the
     field and, optionally, for initializing and evolving any field properties.
+
+    Parameters
+    ----------
+    dt_update : float
+        Update period (in seconds) of the field.
+    openpmd_diag_supported : bool
+        Whether openPMD diagnostics are supported by the field.
+    force_even_updates : bool
+        During tracking, it can happen that the total simulation time
+        is not an integer multiple of `dt_update`, so that the last
+        update is used for less time than the others. If set to True,
+        this parameter will modify `dt_update` (making it smaller, never
+        larger) so that the total tracking time is an integer multiple
+        of `dt_update`. This makes sure also that the fields are
+        updated one last time exactly at the end of the stage.
     """
 
-    def __init__(self, dt_update, openpmd_diag_supported=False,
-                 force_even_updates=False):
-        """Initialize the field.
-
-        Parameters
-        ----------
-        dt_update : float
-            Update period (in seconds) of the field.
-        openpmd_diag_supported : bool
-            Whether openPMD diagnostics are supported by the field.
-        force_even_updates : bool
-            During tracking, it can happen that the total simulation time
-            is not an integer multiple of `dt_update`, so that the last
-            update is used for less time than the others. If set to True,
-            this parameter will modify `dt_update` (making it smaller, never
-            larger) so that the total tracking time is an integer multiple
-            of `dt_update`. This makes sure also that the fields are
-            updated one last time exactly at the end of the stage.
-        """
+    def __init__(
+        self,
+        dt_update: float,
+        openpmd_diag_supported: Optional[bool] = False,
+        force_even_updates: Optional[bool] = False
+    ) -> None:
         super().__init__(openpmd_diag_supported=openpmd_diag_supported)
         self.dt_update = dt_update
         self.force_even_updates = force_even_updates
         self.initialized = False
 
-    def update(self, bunches):
+    def update(
+        self,
+        bunches: List[ParticleBunch]
+    ) -> None:
         """Update field to the next time step (`dt_update`).
 
         Parameters
@@ -57,19 +65,31 @@ class NumericalField(Field):
             self.evolve_properties(bunches)
         self.calculate_field(bunches)
 
-    def initialize_properties(self, bunches):
+    def initialize_properties(
+        self,
+        bunches: List[ParticleBunch]
+    ) -> None:
         self.t = 0.
         self._initialize_properties(bunches)
         self.initialized = True
 
-    def evolve_properties(self, bunches):
+    def evolve_properties(
+        self,
+        bunches: List[ParticleBunch]
+    ) -> None:
         self.t += self.dt_update
         self._evolve_properties(bunches)
 
-    def calculate_field(self, bunches):
+    def calculate_field(
+        self,
+        bunches: List[ParticleBunch]
+    ) -> None:
         self._calculate_field(bunches)
 
-    def adjust_dt(self, t_final):
+    def adjust_dt(
+        self,
+        t_final: float
+    ) -> None:
         if self.force_even_updates:
             n_updates = np.ceil(t_final / self.dt_update)
             self.dt_update = t_final / n_updates

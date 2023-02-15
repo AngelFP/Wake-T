@@ -1,12 +1,22 @@
 """ Contains methods for interpolating fields to a different grid. """
 
 import math
+import numpy as np
 
 from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial(fastmath=True)
-def interpolate_rz_field(fld, z_min, r_min, dz, dr, z_new, r_new, fld_new):
+def interpolate_rz_field(
+    fld: np.ndarray,
+    z_min: float,
+    r_min: float,
+    dz: float,
+    dr: float,
+    z_new: np.ndarray,
+    r_new: np.ndarray,
+    fld_new: np.ndarray
+) -> None:
     """
     Interpolate a field in r-z geometry to a new grid using linear
     interpolation.

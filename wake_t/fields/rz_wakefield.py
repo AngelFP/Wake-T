@@ -1,75 +1,86 @@
 """This module contains the base class for plasma wakefields in r-z geometry"""
+from typing import Optional, Callable
+
 import numpy as np
 import scipy.constants as ct
 
 from wake_t.particles.interpolation import gather_main_fields_cyl_linear
 from wake_t.utilities.other import generate_field_diag_dictionary
 from .numerical_field import NumericalField
+from wake_t.physics_models.laser.laser_pulse import LaserPulse
 
 
 class RZWakefield(NumericalField):
-    """Base class for plasma wakefields in r-z geometry"""
+    """Base class for plasma wakefields in r-z geometry.
 
-    def __init__(self, density_function, laser=None, laser_evolution=True,
-                 laser_envelope_substeps=1, laser_envelope_nxi=None,
-                 laser_envelope_nr=None, laser_envelope_use_phase=True,
-                 r_max=None, xi_min=None, xi_max=None, n_r=100, n_xi=100,
-                 dz_fields=None, model_name=''):
-        """Initialize wakefield.
+    Parameters
+    ----------
+    density_function : callable
+        Function of that returns the relative value of the plasma density
+        at each `z` position.
+    r_max : float
+        Maximum radial position up to which plasma wakefield will be
+        calculated.
+    xi_min : float
+        Minimum longitudinal (speed of light frame) position up to which
+        plasma wakefield will be calculated.
+    xi_max : float
+        Maximum longitudinal (speed of light frame) position up to which
+        plasma wakefield will be calculated.
+    n_r : int
+        Number of grid elements along r to calculate the wakefields.
+    n_xi : int
+        Number of grid elements along xi to calculate the wakefields.
+    dz_fields : float, optional
+        Determines how often the plasma wakefields should be updated.
+        For example, if ``dz_fields=10e-6``, the plasma wakefields are
+        only updated every time the simulation window advances by
+        10 micron. By default ``dz_fields=xi_max-xi_min``, i.e., the
+        length the simulation box.
+    laser : LaserPulse, optional
+        Laser driver of the plasma stage.
+    laser_evolution : bool, optional
+        If True (default), the laser pulse is evolved
+        using a laser envelope model. If False, the pulse envelope stays
+        unchanged throughout the computation.
+    laser_envelope_substeps : int, optional
+        Number of substeps of the laser envelope solver per `dz_fields`.
+        The time step of the envelope solver is therefore
+        `dz_fields / c / laser_envelope_substeps`.
+    laser_envelope_nxi, laser_envelope_nr : int, optional
+        If given, the laser envelope will run in a grid of size
+        (`laser_envelope_nxi`, `laser_envelope_nr`) instead
+        of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
+        coarser) grid than the plasma wake. It is not necessary to specify
+        both parameters. If one of them is not given, the resolution of
+        the plasma grid with be used for that direction.
+    laser_envelope_use_phase : bool, optional
+        Determines whether to take into account the terms related to the
+        longitudinal derivative of the complex phase in the envelope
+        solver.
+    model_name : str, optional
+        Name of the wakefield model. This will be stored in the openPMD
+        diagnostics.
 
-        Parameters
-        ----------
-        density_function : callable
-            Function of that returns the relative value of the plasma density
-            at each `z` position.
-        laser : LaserPulse
-            Laser driver of the plasma stage.
-        laser_evolution : bool
-            If True (default), the laser pulse is evolved
-            using a laser envelope model. If False, the pulse envelope stays
-            unchanged throughout the computation.
-        laser_envelope_substeps : int
-            Number of substeps of the laser envelope solver per `dz_fields`.
-            The time step of the envelope solver is therefore
-            `dz_fields / c / laser_envelope_substeps`.
-        laser_envelope_nxi, laser_envelope_nr : int, optional
-            If given, the laser envelope will run in a grid of size
-            (`laser_envelope_nxi`, `laser_envelope_nr`) instead
-            of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
-            coarser) grid than the plasma wake. It is not necessary to specify
-            both parameters. If one of them is not given, the resolution of
-            the plasma grid with be used for that direction.
-        laser_envelope_use_phase : bool
-            Determines whether to take into account the terms related to the
-            longitudinal derivative of the complex phase in the envelope
-            solver.
-        r_max : float
-            Maximum radial position up to which plasma wakefield will be
-            calculated.
-        xi_min : float
-            Minimum longitudinal (speed of light frame) position up to which
-            plasma wakefield will be calculated.
-        xi_max : float
-            Maximum longitudinal (speed of light frame) position up to which
-            plasma wakefield will be calculated.
-        n_r : int
-            Number of grid elements along r to calculate the wakefields.
-        n_xi : int
-            Number of grid elements along xi to calculate the wakefields.
-        dz_fields : float (optional)
-            Determines how often the plasma wakefields should be updated. If
-            dz_fields=0 (default value), the wakefields are calculated at every
-            step of the Runge-Kutta solver for the beam particle evolution
-            (most expensive option). If specified, the wakefields are only
-            updated in steps determined by dz_fields. For example, if
-            dz_fields=10e-6, the plasma wakefields are only updated every time
-            the simulation window advances by 10 micron. By default, if not
-            specified, the value of `dz_fields` will be `xi_max-xi_min`, i.e.,
-            the length the simulation box.
-        model_name : str, optional
-            Name of the wakefield model. This will be stored in the openPMD
-            diagnostics.
-        """
+    """
+
+    def __init__(
+        self,
+        density_function: Callable[[float], float],
+        r_max: float,
+        xi_min: float,
+        xi_max: float,
+        n_r: int,
+        n_xi: int,
+        dz_fields=None,
+        laser: Optional[LaserPulse] = None,
+        laser_evolution: Optional[bool] = True,
+        laser_envelope_substeps: Optional[int] = 1,
+        laser_envelope_nxi: Optional[int] = None,
+        laser_envelope_nr: Optional[int] = None,
+        laser_envelope_use_phase: Optional[bool] = True,
+        model_name: Optional[str] = ''
+    ) -> None:
         dz_fields = xi_max - xi_min if dz_fields is None else dz_fields
         self.density_function = density_function
         self.laser = laser

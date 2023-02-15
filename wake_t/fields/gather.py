@@ -1,7 +1,25 @@
 """ Methods for gathering fields """
 
+from typing import List
 
-def gather_fields(fields, x, y, z, t, ex, ey, ez, bx, by, bz):
+import numpy as np
+
+from .base import Field
+
+
+def gather_fields(
+    fields: List[Field],
+    x: np.ndarray,
+    y: np.ndarray,
+    z: np.ndarray,
+    t: float,
+    ex: np.ndarray,
+    ey: np.ndarray,
+    ez: np.ndarray,
+    bx: np.ndarray,
+    by: np.ndarray,
+    bz: np.ndarray,
+) -> None:
     """Gather all fields at the specified locations and time.
 
     Parameters

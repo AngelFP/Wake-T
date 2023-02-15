@@ -1,9 +1,17 @@
 """Contains the class used to define analytic fields."""
 
+from typing import Callable, Optional, List
 import numpy as np
 
 from .base import Field
 from wake_t.utilities.numba import njit_serial
+
+
+# Define type alias.
+FieldFunction = Callable[
+    [np.ndarray, np.ndarray, np.ndarray, float, np.ndarray, List],
+    np.ndarray
+]
 
 
 class AnalyticalField(Field):
@@ -13,7 +21,7 @@ class AnalyticalField(Field):
     arguments (3 arrays containing the x, y, z positions where to calculate the
     field; 1 array with the same size where the field values will be stored;
     and a list of constants). The given functions must be written in a way
-    which allows them to be compiled with `numba`.
+    which allows them to be compiled with ``numba``.
 
     Not all components need to be given. Those which are not specified will
     simply return a zero array when gathered.
@@ -22,8 +30,25 @@ class AnalyticalField(Field):
     This list of constants is always passed to the field functions and can be
     used to compute the field.
 
-    Example
-    -------
+    Parameters
+    ----------
+    e_x : callable, optional
+        Function defining the Ex component.
+    e_y : callable, optional
+        Function defining the Ey component.
+    e_z : callable, optional
+        Function defining the Ez component.
+    b_x : callable, optional
+        Function defining the Bx component.
+    b_y : callable, optional
+        Function defining the By component.
+    b_z : callable, optional
+        Function defining the Bz component.
+    constants : list, optional
+        List of constants to be passed to each component.
+
+    Examples
+    --------
     >>> def linear_ex(x, y, z, t, ex, constants):
     ...     ex_slope = constants[0]
     ...     for i in range(x.shape[0]):
@@ -34,29 +59,18 @@ class AnalyticalField(Field):
     """
 
     def __init__(
-            self, e_x=None, e_y=None, e_z=None, b_x=None, b_y=None, b_z=None,
-            constants=[]
-            ):
-        """Initialize field.
-
-        Parameters
-        ----------
-        e_x : function, optional
-            Function defining the Ex component, by default None
-        e_y : function, optional
-            Function defining the Ey component, by default None
-        e_z : function, optional
-            Function defining the Ez component, by default None
-        b_x : function, optional
-            Function defining the Bx component, by default None
-        b_y : function, optional
-            Function defining the By component, by default None
-        b_z : function, optional
-            Function defining the Bz component, by default None
-        constants : list, optional
-            List of constants to be passed to each component, by default []
-        """
+        self,
+        e_x: Optional[FieldFunction] = None,
+        e_y: Optional[FieldFunction] = None,
+        e_z: Optional[FieldFunction] = None,
+        b_x: Optional[FieldFunction] = None,
+        b_y: Optional[FieldFunction] = None,
+        b_z: Optional[FieldFunction] = None,
+        constants: Optional[List] = None
+    ) -> None:
         super().__init__()
+
+        constants = [] if constants is None else constants
 
         def no_field(x, y, z, t, fld, k):
             """Default field component."""
