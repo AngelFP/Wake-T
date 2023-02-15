@@ -6,7 +6,7 @@ the CSR effects on the bunch are strongly based on the 1D CSR model from OCELOT
 (https://github.com/ocelot-collab/ocelot) written by S. Tomin and M. Dohlus.
 
 """
-
+from typing import Optional
 
 import numpy as np
 from scipy import stats
@@ -14,7 +14,6 @@ import scipy.constants as ct
 
 
 class CSRCalculator():
-
     """Class taking care of calculating and applying CSR effects."""
 
     def __init__(self):
@@ -452,12 +451,16 @@ class CSRCalculator():
 _csr_calculator = CSRCalculator()
 
 
-def get_csr_calculator():
+def get_csr_calculator() -> CSRCalculator:
     """Return the single instance of CSRCalculator"""
     return _csr_calculator
 
 
-def set_csr_settings(csr_step=0.1, csr_traj_step=0.0005, n_bins=2000):
+def set_csr_settings(
+    csr_step: Optional[float] = 0.1,
+    csr_traj_step: Optional[float] = 0.0005,
+    n_bins: Optional[int] = 2000
+) -> None:
     """
     Set the setting for CSR calculation.
 
@@ -478,7 +481,7 @@ def set_csr_settings(csr_step=0.1, csr_traj_step=0.0005, n_bins=2000):
     _csr_calculator.set_settings(csr_step, csr_traj_step, n_bins)
 
 
-def reset_csr_calculator():
+def reset_csr_calculator() -> None:
     """
     Reset CSR calculator by clearing the stored reference trajectory and
     lattice elements. Needed to start a new, independent calculation after
