@@ -79,8 +79,8 @@ def calculate_derivatives(
     Calculate the derivative of the radial position and the radial momentum
     of the plasma particles at the current slice.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     pr, gamma : ndarray
         Arrays containing the radial momentum and Lorentz factor of the
         plasma particles.

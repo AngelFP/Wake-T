@@ -8,3 +8,4 @@ openpmd-viewer>=1.2.0
 pydata-sphinx-theme
 sphinx-panels
 sphinx-gallery
+numpydoc

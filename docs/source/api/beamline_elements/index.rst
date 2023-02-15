@@ -1,13 +1,25 @@
 Beamline elements
 =================
 
-.. toctree::
-   :maxdepth: 2
+.. currentmodule:: wake_t.beamline_elements
 
-   plasma_stage
-   plasma_ramp
-   active_plasma_lens
-   drift
-   dipole
-   quadrupole
-   sextupole
+Field elements
+--------------
+.. autosummary::
+   :toctree: _autosummary
+
+   FieldElement
+   PlasmaStage
+   PlasmaRamp
+   ActivePlasmaLens
+
+Transfer map elements
+---------------------
+.. autosummary::
+   :toctree: _autosummary
+
+   TMElement
+   Drift
+   Dipole
+   Quadrupole
+   Sextupole

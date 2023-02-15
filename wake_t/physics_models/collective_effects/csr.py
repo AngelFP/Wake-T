@@ -6,7 +6,7 @@ the CSR effects on the bunch are strongly based on the 1D CSR model from OCELOT
 (https://github.com/ocelot-collab/ocelot) written by S. Tomin and M. Dohlus.
 
 """
-
+from typing import Optional
 
 import numpy as np
 from scipy import stats
@@ -14,7 +14,6 @@ import scipy.constants as ct
 
 
 class CSRCalculator():
-
     """Class taking care of calculating and applying CSR effects."""
 
     def __init__(self):
@@ -66,20 +65,15 @@ class CSRCalculator():
 
         Parameters
         ----------
-
         bunch_matrix : ndarray
             Matrix containing the (x, xp, y, yp, tau, dp) components of each
-            bunch particle
-
+            bunch particle.
         bunch_q : ndarray
             Array containing the charge of each particle.
-
         gamma : float
             Reference energy used for the CSR calculation.
-
         element : TMElement
             Lattice element through which the bunch is currently being tracked.
-
         element_pos : float
             Current position (longitudinal) of the bunch in the lattice
             element.
@@ -205,21 +199,16 @@ class CSRCalculator():
         (https://github.com/ocelot-collab/ocelot) written by S. Tomin and
         M. Dohlus.
 
-        Parameters:
-        -----------
-
+        Parameters
+        ----------
         i : int
             Iteration index.
-
         traj : ndarray
             Reference trajectory along which CSR forces are calculated
-
         n_bins : int
             Number of bins of the longitudinal bunch histogram.
-
         bin_size : int
             Size of the histogram bins.
-
         gamma: float
             reference gamma to calculate CSR kernel.
 
@@ -256,18 +245,14 @@ class CSRCalculator():
         https://www.desy.de/~dohlus/UWake/
         Two%20Methods%20for%20the%20Calculation%20of%20CSR%20Fields.pdf
 
-        Parameters:
-        -----------
-
+        Parameters
+        ----------
         i : int
             Iteration index.
-
         traj: ndarray
             Reference trajectory along which CSR forces are calculated.
-
         wmin: float
             Leftmost edge of the longitudinal bunch histogram.
-
         gamma: float
             reference gamma to calculate CSR kernel.
 
@@ -344,18 +329,14 @@ class CSRCalculator():
         (https://github.com/ocelot-collab/ocelot) written by S. Tomin and
         M. Dohlus.
 
-        Parameters:
-        -----------
-
+        Parameters
+        ----------
         i : int
             Iteration index.
-
         traj: ndarray
             Reference trajectory along which CSR forces are calculated.
-
         wrange: ndarray
             Region of beam < w_min.
-
         gamma: float
             reference gamma to calculate CSR kernel.
 
@@ -408,23 +389,17 @@ class CSRCalculator():
 
         Parameters
         ----------
-
         i : int
             Iteration index
-
         traj : ndarray
-            Reference trajectory along which CSR forces are calculated
-
+            Reference trajectory along which CSR forces are calculated.
         w_min : float
             Leftmost edge of the longitudinal bunch binning.
-
         beta : float
             Relativistic factor.
-
         i_min : int
             Minimum iteration index. When i<i_min, no estimation of the
             starting index is performed (0 is returned).
-
         n_test : int
             Number of points along the trajectory in which to test whether they
             should be taken into account for the CSR calculation.
@@ -452,24 +427,25 @@ class CSRCalculator():
 _csr_calculator = CSRCalculator()
 
 
-def get_csr_calculator():
+def get_csr_calculator() -> CSRCalculator:
     """Return the single instance of CSRCalculator"""
     return _csr_calculator
 
 
-def set_csr_settings(csr_step=0.1, csr_traj_step=0.0005, n_bins=2000):
+def set_csr_settings(
+    csr_step: Optional[float] = 0.1,
+    csr_traj_step: Optional[float] = 0.0005,
+    n_bins: Optional[int] = 2000
+) -> None:
     """
     Set the setting for CSR calculation.
 
-    Parameters:
-    -----------
-
+    Parameters
+    ----------
     csr_step : float
         Iteration index.
-
     csr_traj_step : float
         Reference trajectory along which CSR forces are calculated.
-
     n_bins : int
         Number of bins used for determining the longitudinal charge profile
         of the bunch.
@@ -478,7 +454,7 @@ def set_csr_settings(csr_step=0.1, csr_traj_step=0.0005, n_bins=2000):
     _csr_calculator.set_settings(csr_step, csr_traj_step, n_bins)
 
 
-def reset_csr_calculator():
+def reset_csr_calculator() -> None:
     """
     Reset CSR calculator by clearing the stored reference trajectory and
     lattice elements. Needed to start a new, independent calculation after

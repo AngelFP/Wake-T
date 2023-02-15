@@ -20,34 +20,27 @@ def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
     Deposit the the weight of each particle of a 3D distribution into a 2D
     grid (cylindrical symmetry).
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     z, x, y : arrays
         Arrays containing the longitudinal and transverse coordinates of the
         particles.
-
     w : array
         Weight of the particles (any quantity) which will be deposited into
         the grid.
-
     z_min : float
         Position of the first field value along z.
-
     r_min : float
         Position of the first field value along r.
-
     nz, nr : int
         Number of grid cells (excluding guard cells) along the longitudinal
         and radial directions.
-
     dz, dr : float
         Grid step size along the longitudinal and radial direction.
-
     deposition_array : array
         The 2D array of size (nr+4, nz+4) (including two guard cells at each
         boundary) into which the weight will be deposited (will be
         modified within this function)
-
     p_shape : str
         Particle shape to be used. Possible values are 'linear' or 'cubic'.
 

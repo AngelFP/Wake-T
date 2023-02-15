@@ -1,5 +1,7 @@
 """ This module contains the definition of the PlasmaStage class """
 
+from typing import Optional, Union, Callable, List
+
 import numpy as np
 import scipy.constants as ct
 
@@ -18,226 +20,62 @@ wakefield_models = {
 
 
 class PlasmaStage(FieldElement):
+    """
+    Main class for defining a plasma acceleration stage.
 
-    """ Generic class for defining a plasma acceleration stage. """
+    Parameters
+    ----------
+    length : float
+        Length of the plasma stage in m.
+    density : float
+        Plasma density in units of m^{-3}.
+    wakefield_model : str or Field
+        Wakefield model to be used. Possible values are ``'blowout'``,
+        ``'custom_blowout'``, ``'focusing_blowout'``, ``'cold_fluid_1d'``
+        and ``'quasistatic_2d'``. If ``None``, no wakefields will be
+        computed.
+    bunch_pusher : str
+        The pusher used to evolve the particle bunches in time within
+        the specified fields. Possible values are ``'rk4'`` (Runge-Kutta
+        method of 4th order) or ``'boris'`` (Boris method).
+    dt_bunch : float
+        The time step for evolving the particle bunches. If ``None``, it
+        will be automatically set to ``dt = T/(10*2*pi)``, where T is the
+        smallest expected betatron period of the bunch along the plasma
+        stage.
+    n_out : int
+        Number of times along the stage in which the particle distribution
+        should be returned (A list with all output bunches is returned
+        after tracking).
+    name : str
+        Name of the plasma stage. This is only used for displaying the
+        progress bar during tracking. By default, ``'Plasma stage'``.
+    **model_params
+        Keyword arguments which will be given to the wakefield model. Each
+        model requires a different set of parameters. See the documentation
+        for each of them for more details.
 
-    def __init__(self, length, density, wakefield_model='simple_blowout',
-                 bunch_pusher='rk4', dt_bunch='auto', n_out=1,
-                 name='Plasma stage', external_fields=[], **model_params):
+    See Also
+    --------
+    wake_t.physics_models.plasma_wakefields.Quasistatic2DWakefield
+    wake_t.physics_models.plasma_wakefields.NonLinearColdFluidWakefield
+
+    """
+
+    def __init__(
+        self,
+        length: float,
+        density: Union[float, Callable[[float], float]],
+        wakefield_model: Optional[str] = 'simple_blowout',
+        bunch_pusher: Optional[str] = 'rk4',
+        dt_bunch: Optional[Union[float, int]] = 'auto',
+        n_out: Optional[int] = 1,
+        name: Optional[str] = 'Plasma stage',
+        external_fields: Optional[List[Field]] = [],
+        **model_params
+    ) -> None:
         """
         Initialize plasma stage.
-
-        Parameters
-        ----------
-        length : float
-            Length of the plasma stage in m.
-
-        density : float
-            Plasma density in units of m^{-3}.
-
-        wakefield_model : str or Field
-            Wakefield model to be used. Possible values are 'blowout',
-            'custom_blowout', 'focusing_blowout', 'cold_fluid_1d' and
-            'quasistatic_2d'. If `None`, no wakefields will be computed.
-
-        bunch_pusher : str
-            The pusher used to evolve the particle bunches in time within
-            the specified fields. Possible values are 'rk4' (Runge-Kutta
-            method of 4th order) or 'boris' (Boris method).
-
-        dt_bunch : float
-            The time step for evolving the particle bunches. If `None`, it will
-            be automatically set to `dt = T/(10*2*pi)`, where T is the smallest
-            expected betatron period of the bunch along the plasma stage.
-
-        n_out : int
-            Number of times along the stage in which the particle distribution
-            should be returned (A list with all output bunches is returned
-            after tracking).
-
-        name : str
-            Name of the plasma stage. This is only used for displaying the
-            progress bar during tracking. By default, `'Plasma stage'`.
-
-        **model_params
-            Keyword arguments which will be given to the wakefield model. Each
-            model requires a different set of parameters which are listed
-            below:
-
-        Model 'focusing_blowout'
-        ------------------------
-        No additional parameters required.
-
-        Model 'simple_blowout'
-        ----------------------
-        laser : LaserPulse
-            Laser driver of the plasma stage.
-
-        Model 'custom_blowout'
-        ----------------------
-        laser : LaserPulse
-            Laser driver of the plasma stage.
-
-        lon_field : float
-            Value of the longitudinal electric field at the bunch center at the
-            beginning of the tracking in units of V/m.
-
-        lon_field_slope : float
-            Value of the longitudinal electric field slope along z at the bunch
-            center at the beginning of the tracking in units of V/m^2.
-
-        foc_strength : float
-            Value of the focusing gradient along the bunch in units of T/m.
-
-        xi_fields : float
-            Longitudinal position at which the wakefields have the values
-            specified by the parameter above. By default, 0.
-
-
-        Model 'cold_fluid_1d'
-        ---------------------
-        laser : LaserPulse
-            Laser driver of the plasma stage.
-
-        laser_evolution : bool
-            If True (default), the laser pulse is evolved
-            using a laser envelope model. If False, the pulse envelope stays
-            unchanged throughout the computation.
-
-        laser_envelope_substeps : int
-            Number of substeps of the laser envelope solver per `dz_fields`.
-            The time step of the envelope solver is therefore
-            `dz_fields / c / laser_envelope_substeps`.
-
-        laser_envelope_nxi, laser_envelope_nr : int, optional
-            If given, the laser envelope will run in a grid of size
-            (`laser_envelope_nxi`, `laser_envelope_nr`) instead
-            of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
-            coarser) grid than the plasma wake. It is not necessary to specify
-            both parameters. If one of them is not given, the resolution of
-            the plasma grid with be used for that direction.
-
-        beam_wakefields : bool
-            Whether to take into account beam-driven wakefields (False by
-            default). This should be set to True for any beam-driven case or
-            in order to take into account the beam-loading of the witness in
-            a laser-driven case.
-
-        r_max : float
-            Maximum radial position up to which plasma wakefield will be
-            calculated. Required only if mode='cold_fluid_1d'.
-
-        xi_min : float
-            Minimum longitudinal (speed of light frame) position up to which
-            plasma wakefield will be calculated.
-
-        xi_max : float
-            Maximum longitudinal (speed of light frame) position up to which
-            plasma wakefield will be calculated.
-
-        n_r : int
-            Number of grid elements along r to calculate the wakefields.
-
-        n_xi : int
-            Number of grid elements along xi to calculate the wakefields.
-
-        dz_fields : float (optional)
-            Determines how often the plasma wakefields should be updated. If
-            dz_fields=0 (default value), the wakefields are calculated at every
-            step of the Runge-Kutta solver for the beam particle evolution
-            (most expensive option). If specified, the wakefields are only
-            updated in steps determined by dz_fields. For example, if
-            dz_fields=10e-6, the plasma wakefields are only updated every time
-            the simulation window advances by 10 micron. By default, if not
-            specified, the value of `dz_fields` will be `xi_max-xi_min`, i.e.,
-            the length the simulation box.
-
-        p_shape : str
-            Particle shape to be used for the beam charge deposition. Possible
-            values are 'linear' or 'cubic'.
-
-        Model 'quasistatic_2d'
-        ---------------------
-        laser : LaserPulse
-            Laser driver of the plasma stage.
-
-        laser_evolution : bool
-            If True (default), the laser pulse is evolved
-            using a laser envelope model. If False, the pulse envelope stays
-            unchanged throughout the computation.
-
-        laser_envelope_substeps : int
-            Number of substeps of the laser envelope solver per `dz_fields`.
-            The time step of the envelope solver is therefore
-            `dz_fields / c / laser_envelope_substeps`.
-
-        laser_envelope_nxi, laser_envelope_nr : int, optional
-            If given, the laser envelope will run in a grid of size
-            (`laser_envelope_nxi`, `laser_envelope_nr`) instead
-            of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
-            coarser) grid than the plasma wake. It is not necessary to specify
-            both parameters. If one of them is not given, the resolution of
-            the plasma grid with be used for that direction.
-
-        laser_envelope_use_phase : bool
-            Determines whether to take into account the terms related to the
-            longitudinal derivative of the complex phase in the envelope
-            solver.
-
-        r_max : float
-            Maximum radial position up to which plasma wakefield will be
-            calculated.
-
-        xi_min : float
-            Minimum longitudinal (speed of light frame) position up to which
-            plasma wakefield will be calculated.
-
-        xi_max : float
-            Maximum longitudinal (speed of light frame) position up to which
-            plasma wakefield will be calculated.
-
-        n_r : int
-            Number of grid elements along r to calculate the wakefields.
-
-        n_xi : int
-            Number of grid elements along xi to calculate the wakefields.
-
-        ppc : int (optional)
-            Number of plasma particles per radial cell. By default `ppc=2`.
-
-        dz_fields : float (optional)
-            Determines how often the plasma wakefields should be updated. If
-            dz_fields=0 (default value), the wakefields are calculated at every
-            step of the Runge-Kutta solver for the beam particle evolution
-            (most expensive option). If specified, the wakefields are only
-            updated in steps determined by dz_fields. For example, if
-            dz_fields=10e-6, the plasma wakefields are only updated every time
-            the simulation window advances by 10 micron. By default, if not
-            specified, the value of `dz_fields` will be `xi_max-xi_min`, i.e.,
-            the length the simulation box.
-
-        r_max_plasma : float
-            Maximum radial extension of the plasma column. If `None`, the
-            plasma extends up to the `r_max` boundary of the simulation box.
-
-        parabolic_coefficient : float or callable
-            The coefficient for the transverse parabolic density profile. The
-            radial density distribution is calculated as
-            `n_r = n_p * (1 + parabolic_coefficient * r**2)`, where n_p is the
-            local on-axis plasma density. If a `float` is provided, the same
-            value will be used throwout the stage. Alternatively, a function
-            which returns the value of the coefficient at the given position
-            `z` (e.g. `def func(z)`) might also be provided.
-
-        p_shape : str
-            Particle shape to be used for the beam charge deposition. Possible
-            values are 'linear' or 'cubic' (default).
-
-        max_gamma : float
-            Plasma particles whose `gamma` exceeds `max_gamma` are considered
-            to violate the quasistatic condition and are put at rest (i.e.,
-            `gamma=1.`, `pr=pz=0.`). By default `max_gamma=10`.
-
         """
         self.density = self._get_density_profile(density)
         self.wakefield = self._get_wakefield(wakefield_model, model_params)

@@ -1,3 +1,5 @@
+from typing import Optional, Callable
+
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
@@ -6,31 +8,131 @@ from wake_t.particles.deposition import deposit_3d_distribution
 from wake_t.particles.interpolation import (
     gather_field_cyl_linear)
 from wake_t.fields.rz_wakefield import RZWakefield
+from wake_t.physics_models.laser.laser_pulse import LaserPulse
 
 
 class NonLinearColdFluidWakefield(RZWakefield):
-    def __init__(self, density_function, laser=None, laser_evolution=True,
-                 laser_envelope_substeps=1, laser_envelope_nxi=None,
-                 laser_envelope_nr=None, laser_envelope_use_phase=True,
-                 r_max=None, xi_min=None,
-                 xi_max=None, n_r=100, n_xi=100, dz_fields=None,
-                 beam_wakefields=False, p_shape='linear'):
+    """
+    This class computes the plasma wakefields using a nonlinear cold fluid
+    theory in one spatial dimension with a three-component fluid momentum, as
+    described in [1]_. This implies that only longitudinal plasma waves are
+    modeled, i.e., it assumes infinitely broad laser pulses and particle beams.
+
+    This 1D model is in Wake-T extended to 2D in r-z geometry by computing the
+    1D plasma response at each radial slice.
+
+    Given the assumptions of the model, it is only accurate for broad drivers
+    where the radial plasma waves can be neglected. For a laser driver, it is
+    typically accurate up to :math:`a_0 \\lesssim 1`. For electron beams it has
+    not been yet fully tested, but given the typically narrow width of the
+    beams, only very low charges can be accurately modeled.
+
+    For a much more general model, see :class:`Quasistatic2DWakefield`.
+
+    Parameters
+    ----------
+    density_function : callable
+        Function that returns the density value at the given position z.
+        This parameter is given by the `PlasmaStage` and does not need
+        to be specified by the user.
+    r_max : float
+        Maximum radial position up to which plasma wakefield will be
+        calculated. Required only if mode='cold_fluid_1d'.
+    xi_min : float
+        Minimum longitudinal (speed of light frame) position up to which
+        plasma wakefield will be calculated.
+    xi_max : float
+        Maximum longitudinal (speed of light frame) position up to which
+        plasma wakefield will be calculated.
+    n_r : int
+        Number of grid elements along r to calculate the wakefields.
+    n_xi : int
+        Number of grid elements along xi to calculate the wakefields.
+    dz_fields : float, optional
+        Determines how often the plasma wakefields should be updated. If
+        dz_fields=0 (default value), the wakefields are calculated at every
+        step of the Runge-Kutta solver for the beam particle evolution
+        (most expensive option). If specified, the wakefields are only
+        updated in steps determined by dz_fields. For example, if
+        dz_fields=10e-6, the plasma wakefields are only updated every time
+        the simulation window advances by 10 micron. By default, if not
+        specified, the value of `dz_fields` will be `xi_max-xi_min`, i.e.,
+        the length the simulation box.
+    beam_wakefields : bool, optional
+        Whether to take into account beam-driven wakefields (False by
+        default). This should be set to True for any beam-driven case or
+        in order to take into account the beam-loading of the witness in
+        a laser-driven case.
+    p_shape : str, optional
+        Particle shape to be used for the beam charge deposition. Possible
+        values are 'linear' or 'cubic'.
+    laser : LaserPulse, optional
+        Laser driver of the plasma stage.
+    laser_evolution : bool, optional
+        If True (default), the laser pulse is evolved
+        using a laser envelope model. If False, the pulse envelope stays
+        unchanged throughout the computation.
+    laser_envelope_substeps : int, optional
+        Number of substeps of the laser envelope solver per `dz_fields`.
+        The time step of the envelope solver is therefore
+        `dz_fields / c / laser_envelope_substeps`.
+    laser_envelope_nxi, laser_envelope_nr : int, optional
+        If given, the laser envelope will run in a grid of size
+        (`laser_envelope_nxi`, `laser_envelope_nr`) instead
+        of (`n_xi`, `n_r`). This allows the laser to run in a finer (or
+        coarser) grid than the plasma wake. It is not necessary to specify
+        both parameters. If one of them is not given, the resolution of
+        the plasma grid with be used for that direction.
+    laser_envelope_use_phase : bool, optional
+        Determines whether to take into account the terms related to the
+        longitudinal derivative of the complex phase in the envelope
+        solver.
+
+    See Also
+    --------
+    Quasistatic2DWakefield
+
+    References
+    ----------
+    .. [1] T. Mehrling, "Theoretical and numerical studies on the transport of
+       transverse beam quality in plasma-based accelerators," PhD thesis
+       (2014), http://dx.doi.org/10.3204/DESY-THESIS-2014-040
+
+    """
+    def __init__(
+        self,
+        density_function: Callable[[float], float],
+        r_max: float,
+        xi_min: float,
+        xi_max: float,
+        n_r: int,
+        n_xi: int,
+        dz_fields: Optional[float] = None,
+        beam_wakefields: Optional[bool] = False,
+        p_shape: Optional[str] = 'linear',
+        laser: Optional[LaserPulse] = None,
+        laser_evolution: Optional[bool] = True,
+        laser_envelope_substeps: Optional[int] = 1,
+        laser_envelope_nxi: Optional[int] = None,
+        laser_envelope_nr: Optional[int] = None,
+        laser_envelope_use_phase: Optional[bool] = True,
+    ) -> None:
         self.beam_wakefields = beam_wakefields
         self.p_shape = p_shape
         super().__init__(
             density_function=density_function,
-            laser=laser,
-            laser_evolution=laser_evolution,
-            laser_envelope_substeps=laser_envelope_substeps,
-            laser_envelope_nxi=laser_envelope_nxi,
-            laser_envelope_nr=laser_envelope_nr,
-            laser_envelope_use_phase=laser_envelope_use_phase,
             r_max=r_max,
             xi_min=xi_min,
             xi_max=xi_max,
             n_r=n_r,
             n_xi=n_xi,
             dz_fields=dz_fields,
+            laser=laser,
+            laser_evolution=laser_evolution,
+            laser_envelope_substeps=laser_envelope_substeps,
+            laser_envelope_nxi=laser_envelope_nxi,
+            laser_envelope_nr=laser_envelope_nr,
+            laser_envelope_use_phase=laser_envelope_use_phase,
             model_name='cold_fluid_1d'
         )
 

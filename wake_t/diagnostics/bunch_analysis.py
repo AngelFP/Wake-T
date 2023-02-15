@@ -1,14 +1,20 @@
 """ This module contains methods for data analysis """
 
 import os
+from typing import Optional, List, Dict
 
 import numpy as np
 from h5py import File as H5File
-
 import aptools.data_analysis.beam_diagnostics as bd
 
+from wake_t.particles.particle_bunch import ParticleBunch
 
-def analyze_bunch(bunch, n_slices=50, len_slice=None):
+
+def analyze_bunch(
+    bunch: ParticleBunch,
+    n_slices: Optional[int] = 50,
+    len_slice: Optional[float] = None
+) -> Dict:
     # perform analysis
     dist = bunch.prop_distance
     params_analysis = _get_distribution_parameters(
@@ -20,7 +26,11 @@ def analyze_bunch(bunch, n_slices=50, len_slice=None):
     return bunch_params
 
 
-def analyze_bunch_list(bunch_list, n_slices=50, len_slice=None):
+def analyze_bunch_list(
+    bunch_list: List[ParticleBunch],
+    n_slices: Optional[int] = 50,
+    len_slice: Optional[float] = None
+) -> Dict:
     # preallocate arrays
     list_len = len(bunch_list)
     a_x = np.zeros(list_len)

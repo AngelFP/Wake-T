@@ -2,6 +2,8 @@
 This module contains the class defining a particle bunch.
 """
 # TODO: clean methods to set and get bunch matrix
+from typing import Optional
+
 import numpy as np
 import scipy.constants as ct
 from aptools.plotting.quick_diagnostics import full_phase_space
@@ -11,77 +13,74 @@ from .push.boris_pusher import apply_boris_pusher
 
 
 class ParticleBunch():
+    """ Defines a particle bunch.
 
-    """ Defines a particle bunch. """
+    Parameters
+    ----------
+    q : array
+        Charge of each particle in units of C.
+    x : array
+        Position of each particle in the x-plane in units of m.
+    y : array
+        Position of each particle in the y-plane in units of m.
+    xi : array
+        Position of each particle in the xi-plane in units of m.
+    px : array
+        Momentum of each particle in the x-plane in non-dimensional units
+        (beta*gamma).
+    py : array
+        Momentum of each particle in the y-plane in non-dimensional units
+        (beta*gamma).
+    pz : array
+        Momentum of each particle in the z-plane in non-dimensional units
+        (beta*gamma).
+    bunch_matrix : array
+        6 x N matrix, where N is the number of particles, containing the
+        phase-space information of the bunch. If provided, the arguments x
+        to pz are not considered. The matrix contains (x, px, y, py, z, pz)
+        if matrix_type='standard' or (x, x', y, y', xi, dp) if
+        matrix_type='alternative'.
+    matrix_type : string
+        Indicates the type of bunch_matrix. Possible values are 'standard'
+        or 'alternative' (see above).
+    gamma_ref : float
+        Reference energy with respect to which the particle momentum dp is
+        calculated. Only needed if bunch_matrix is used and
+        matrix_type='alternative'.
+    tags : array
+        Individual tags assigned to each particle.
+    prop_distance : float
+        Propagation distance of the bunch along the beamline.
+    t_flight : float
+        Time of flight of the bunch along the beamline.
+    z_injection: float (in meters)
+        Particles have a ballistic motion for z<z_injection.
+    name : str
+        Name of the particle bunch. Used for species identification
+        in openPMD diagnostics.
+
+    """
 
     _n_unnamed = 0  # Number of unnamed ParticleBunch instances
 
-    def __init__(self, q, x=None, y=None, xi=None, px=None, py=None, pz=None,
-                 bunch_matrix=None, matrix_type='standard', gamma_ref=None,
-                 tags=None, prop_distance=0, t_flight=0, z_injection=None,
-                 name=None):
-        """
-        Initialize particle bunch.
-
-        Parameters:
-        -----------
-        q : array
-            Charge of each particle in units of C.
-
-        x : array
-            Position of each particle in the x-plane in units of m.
-
-        y : array
-            Position of each particle in the y-plane in units of m.
-
-        xi : array
-            Position of each particle in the xi-plane in units of m.
-
-        px : array
-            Momentum of each particle in the x-plane in non-dimensional units
-            (beta*gamma).
-
-        py : array
-            Momentum of each particle in the y-plane in non-dimensional units
-            (beta*gamma).
-
-        pz : array
-            Momentum of each particle in the z-plane in non-dimensional units
-            (beta*gamma).
-
-        bunch_matrix : array
-            6 x N matrix, where N is the number of particles, containing the
-            phase-space information of the bunch. If provided, the arguments x
-            to pz are not considered. The matrix contains (x, px, y, py, z, pz)
-            if matrix_type='standard' or (x, x', y, y', xi, dp) if
-            matrix_type='alternative'.
-
-        matrix_type : string
-            Indicates the type of bunch_matrix. Possible values are 'standard'
-            or 'alternative' (see above).
-
-        gamma_ref : float
-            Reference energy with respect to which the particle momentum dp is
-            calculated. Only needed if bunch_matrix is used and
-            matrix_type='alternative'.
-
-        tags : array
-            Individual tags assigned to each particle.
-
-        prop_distance : float
-            Propagation distance of the bunch along the beamline.
-
-        t_flight : float
-            Time of flight of the bunch along the beamline.
-
-        z_injection: float (in meters)
-            Particles have a ballistic motion for z<z_injection.
-
-        name : str
-            Name of the particle bunch. Used for species identification
-            in openPMD diagnostics.
-
-        """
+    def __init__(
+        self,
+        q: np.ndarray,
+        x: Optional[np.ndarray] = None,
+        y: Optional[np.ndarray] = None,
+        xi: Optional[np.ndarray] = None,
+        px: Optional[np.ndarray] = None,
+        py: Optional[np.ndarray] = None,
+        pz: Optional[np.ndarray] = None,
+        bunch_matrix: Optional[np.ndarray] = None,
+        matrix_type: Optional[str] = 'standard',
+        gamma_ref: Optional[float] = None,
+        tags: Optional[np.ndarray] = None,
+        prop_distance: Optional[float] = 0,
+        t_flight: Optional[float] = 0,
+        z_injection: Optional[float] = None,
+        name: Optional[str] = None
+    ) -> None:
         if bunch_matrix is not None:
             if matrix_type == 'standard':
                 self.set_phase_space_from_matrix(bunch_matrix)
@@ -106,66 +105,6 @@ class ParticleBunch():
         self.set_name(name)
         self.__field_arrays_allocated = False
         self.__rk4_arrays_allocated = False
-
-    def __preallocate_field_arrays(self):
-        """Preallocate the arrays where the gathered fields will be stored."""
-        n_part = len(self.x)
-        self.__e_x = np.zeros(n_part)
-        self.__e_y = np.zeros(n_part)
-        self.__e_z = np.zeros(n_part)
-        self.__b_x = np.zeros(n_part)
-        self.__b_y = np.zeros(n_part)
-        self.__b_z = np.zeros(n_part)
-        self.__field_arrays_allocated = True
-
-    def get_field_arrays(self):
-        """Get the arrays where the gathered fields will be stored."""
-        if not self.__field_arrays_allocated:
-            self.__preallocate_field_arrays()
-        return (
-            self.__e_x, self.__e_y, self.__e_z,
-            self.__b_x, self.__b_y, self.__b_z
-        )
-
-    def __preallocate_rk4_arrays(self):
-        """Preallocate the arrays needed by the RK4 pusher."""
-        n_part = len(self.x)
-
-        self.__k_x = np.zeros(n_part)
-        self.__k_y = np.zeros(n_part)
-        self.__k_xi = np.zeros(n_part)
-        self.__k_px = np.zeros(n_part)
-        self.__k_py = np.zeros(n_part)
-        self.__k_pz = np.zeros(n_part)
-
-        self.__x_rk4 = np.zeros(n_part)
-        self.__y_rk4 = np.zeros(n_part)
-        self.__xi_rk4 = np.zeros(n_part)
-        self.__px_rk4 = np.zeros(n_part)
-        self.__py_rk4 = np.zeros(n_part)
-        self.__pz_rk4 = np.zeros(n_part)
-
-        self.__dx_rk4 = np.zeros(n_part)
-        self.__dy_rk4 = np.zeros(n_part)
-        self.__dxi_rk4 = np.zeros(n_part)
-        self.__dpx_rk4 = np.zeros(n_part)
-        self.__dpy_rk4 = np.zeros(n_part)
-        self.__dpz_rk4 = np.zeros(n_part)
-
-        self.__rk4_arrays_allocated = True
-
-    def get_rk4_arrays(self):
-        """Get the arrays needed by the RK4 pusher."""
-        if not self.__rk4_arrays_allocated:
-            self.__preallocate_rk4_arrays()
-        return (
-            self.__x_rk4, self.__y_rk4, self.__xi_rk4,
-            self.__px_rk4, self.__py_rk4, self.__pz_rk4,
-            self.__dx_rk4, self.__dy_rk4, self.__dxi_rk4,
-            self.__dpx_rk4, self.__dpy_rk4, self.__dpz_rk4,
-            self.__k_x, self.__k_y, self.__k_xi,
-            self.__k_px, self.__k_py, self.__k_pz
-        )
 
     def set_name(self, name):
         """ Set the particle bunch name """
@@ -201,8 +140,8 @@ class ParticleBunch():
         Sets the phase space coordinates from a matrix with the values of
         (x, x', y, y', xi, dp).
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         bunch_matrix : array
             6 x N matrix, where N is the number of particles, containing the
             phase-space information of the bunch as (x, x', y, y', xi, dp) in
@@ -330,3 +269,63 @@ class ParticleBunch():
         elif pusher == 'boris':
             apply_boris_pusher(self, fields, t, dt)
         self.prop_distance += dt * ct.c
+
+    def get_field_arrays(self):
+        """Get the arrays where the gathered fields will be stored."""
+        if not self.__field_arrays_allocated:
+            self.__preallocate_field_arrays()
+        return (
+            self.__e_x, self.__e_y, self.__e_z,
+            self.__b_x, self.__b_y, self.__b_z
+        )
+
+    def get_rk4_arrays(self):
+        """Get the arrays needed by the RK4 pusher."""
+        if not self.__rk4_arrays_allocated:
+            self.__preallocate_rk4_arrays()
+        return (
+            self.__x_rk4, self.__y_rk4, self.__xi_rk4,
+            self.__px_rk4, self.__py_rk4, self.__pz_rk4,
+            self.__dx_rk4, self.__dy_rk4, self.__dxi_rk4,
+            self.__dpx_rk4, self.__dpy_rk4, self.__dpz_rk4,
+            self.__k_x, self.__k_y, self.__k_xi,
+            self.__k_px, self.__k_py, self.__k_pz
+        )
+
+    def __preallocate_field_arrays(self):
+        """Preallocate the arrays where the gathered fields will be stored."""
+        n_part = len(self.x)
+        self.__e_x = np.zeros(n_part)
+        self.__e_y = np.zeros(n_part)
+        self.__e_z = np.zeros(n_part)
+        self.__b_x = np.zeros(n_part)
+        self.__b_y = np.zeros(n_part)
+        self.__b_z = np.zeros(n_part)
+        self.__field_arrays_allocated = True
+
+    def __preallocate_rk4_arrays(self):
+        """Preallocate the arrays needed by the RK4 pusher."""
+        n_part = len(self.x)
+
+        self.__k_x = np.zeros(n_part)
+        self.__k_y = np.zeros(n_part)
+        self.__k_xi = np.zeros(n_part)
+        self.__k_px = np.zeros(n_part)
+        self.__k_py = np.zeros(n_part)
+        self.__k_pz = np.zeros(n_part)
+
+        self.__x_rk4 = np.zeros(n_part)
+        self.__y_rk4 = np.zeros(n_part)
+        self.__xi_rk4 = np.zeros(n_part)
+        self.__px_rk4 = np.zeros(n_part)
+        self.__py_rk4 = np.zeros(n_part)
+        self.__pz_rk4 = np.zeros(n_part)
+
+        self.__dx_rk4 = np.zeros(n_part)
+        self.__dy_rk4 = np.zeros(n_part)
+        self.__dxi_rk4 = np.zeros(n_part)
+        self.__dpx_rk4 = np.zeros(n_part)
+        self.__dpy_rk4 = np.zeros(n_part)
+        self.__dpz_rk4 = np.zeros(n_part)
+
+        self.__rk4_arrays_allocated = True

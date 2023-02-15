@@ -3,13 +3,17 @@ This module contains the OpenPMDDiagnostics class, which generates the
 openPMD output.
 """
 import os
+from typing import Optional, List
 from copy import deepcopy
+
 import numpy as np
 import scipy.constants as ct
 from openpmd_api import (Series, Access, Dataset, Mesh_Record_Component,
                          Unit_Dimension, Geometry)
 
 from wake_t import __version__
+from wake_t.particles.particle_bunch import ParticleBunch
+from wake_t.fields.base import Field
 
 
 SCALAR = Mesh_Record_Component.SCALAR
@@ -19,19 +23,18 @@ class OpenPMDDiagnostics():
     """
     Class in charge of creating and writing the particle and field
     diagnostics following the openPMD standard.
+
+    Parameters
+    ----------
+    write_dir : str
+        Directory to which the diagnostics will be written. By default
+        this will be a 'diags' folder in the current working directory.
     """
 
-    def __init__(self, write_dir=None):
-        """
-        Initialize diagnostics.
-
-        Parameters
-        ----------
-        write_dir : str
-            Directory to which the diagnostics will be written. By default
-            this will be a 'diags' folder in the current working directory.
-
-        """
+    def __init__(
+        self,
+        write_dir: Optional[str] = None
+    ) -> None:
         if write_dir is None:
             self.write_dir = os.path.join(os.getcwd(), 'diags')
         else:
@@ -46,7 +49,13 @@ class OpenPMDDiagnostics():
         # each other.
         self._current_z_pos = 0.
 
-    def write_diagnostics(self, time, dt, species_list=[], fields=[]):
+    def write_diagnostics(
+        self,
+        time: float,
+        dt: float,
+        species_list: Optional[List[ParticleBunch]] = [],
+        fields: Optional[List[Field]] = []
+    ) -> None:
         """
         Write to disk the diagnostics of a certain time step.
 
@@ -54,17 +63,12 @@ class OpenPMDDiagnostics():
         ----------
         time : float
             Simulation time at the current beamline element.
-
         dt : float
             Time step used in the current beamline element.
-
-        species_list : list
-            List of particle species to be written.
-
-        wakefield : Wakefield
-            Instance of a wakefield from which the fields should be written
-            to the output. It not specified, no fields will be written for
-            this time step.
+        species_list : list, optional
+            List of particle species to be written to file.
+        wakefield : list, optional
+            List of Fields that should be written to file.
 
         """
         # Perform checks.
@@ -105,7 +109,10 @@ class OpenPMDDiagnostics():
         opmd_series.flush()
         self._index_out += 1
 
-    def increase_z_pos(self, dist):
+    def increase_z_pos(
+        self,
+        dist: float
+    ) -> None:
         """
         Increase the current z position along the beamline. This should be
         called after tracking in each beamline element is completed.
@@ -302,7 +309,10 @@ class OpenPMDDiagnostics():
             global_offset[-1] += self._current_z_pos
             fld.grid_global_offset = global_offset
 
-    def check_species_names(self, species_list=[]):
+    def check_species_names(
+        self,
+        species_list: Optional[List[ParticleBunch]] = []
+    ) -> None:
         """ Check that no species have duplicate names. """
         sp_names = []
         for species in species_list:

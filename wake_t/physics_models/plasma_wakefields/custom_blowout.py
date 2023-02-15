@@ -5,11 +5,27 @@ from wake_t.fields.analytical_field import AnalyticalField
 
 
 class CustomBlowoutWakefield(AnalyticalField):
+    """
+    Parameters
+    ----------
+    laser : LaserPulse
+        Laser driver of the plasma stage.
+    lon_field : float
+        Value of the longitudinal electric field at the bunch center at the
+        beginning of the tracking in units of V/m.
+    lon_field_slope : float
+        Value of the longitudinal electric field slope along z at the bunch
+        center at the beginning of the tracking in units of V/m^2.
+    foc_strength : float
+        Value of the focusing gradient along the bunch in units of T/m.
+    xi_fields : float
+        Longitudinal position at which the wakefields have the values
+        specified by the parameter above. By default, 0.
+
+    """
+
     def __init__(self, n_p, laser, lon_field=None, lon_field_slope=None,
                  foc_strength=None, xi_fields=0.):
-        """
-        [n_p] = m^-3
-        """
         super().__init__()
         self.density = n_p
         self.xi_fields = xi_fields

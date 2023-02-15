@@ -62,8 +62,8 @@ def radial_gradient(fld, dr):
     the initial field and its mirrored view along the axis is created. The
     gradient of this array is computed and only its upper half is returned.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     fld : ndarray
         A 2D array containing the original r-z field.
     dr : float

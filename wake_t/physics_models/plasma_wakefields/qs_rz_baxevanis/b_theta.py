@@ -21,24 +21,20 @@ def calculate_b_theta_at_particles(r, pr, q, gamma, psi, dr_psi, dxi_psi,
     discontinuities (at the exact radial position of the plasma particles)
     is calculated as the average between the two neighboring values.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     r, pr, q, gamma : arrays
         Arrays containing, respectively, the radial position, radial momentum,
         charge and gamma (Lorentz) factor of the plasma particles.
-
     psi, dr_psi, dxi_psi : arrays
         Arrays with the value of the wakefield potential and its radial and
         longitudinal derivatives at the location of the plasma particles.
-
     b_theta_0, nabla_a2 : arrays
         Arrays with the value of the source terms. The first one being the
         azimuthal magnetic field due to the beam distribution, and the second
         the gradient of the normalized vector potential of the laser.
-
     idx : ndarray
         Array containing the (radially) sorted indices of the plasma particles.
-
     dr_p : float
         Initial spacing between plasma macroparticles. Corresponds also the
         width of the plasma sheet represented by the macroparticle.
@@ -94,31 +90,25 @@ def calculate_b_theta(r_fld, r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     locations in r_fld using Eqs. (24), (26) and (27) from the paper
     of P. Baxevanis and G. Stupakov.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     r_fld : array
         Array containing the radial positions where psi should be calculated.
-
     r, pr, q, gamma : arrays
         Arrays containing, respectively, the radial position, radial momentum,
         charge and gamma (Lorentz) factor of the plasma particles.
-
     psi, dr_psi, dxi_psi : arrays
         Arrays with the value of the wakefield potential and its radial and
         longitudinal derivatives at the location of the plasma particles.
-
     b_theta_0, nabla_a2 : arrays
         Arrays with the value of the source terms. The first one being the
         azimuthal magnetic field due to the beam distribution, and the second
         the gradient of the normalized vector potential of the laser.
-
     idx : ndarray
         Array containing the (radially) sorted indices of the plasma particles.
-
     b_theta : ndarray
         Array where the values of the plasma azimuthal magnetic field will be
         stored.
-
     k : int
         Index that determines the slice of b_theta where the values will
         be filled in (the index is k+2 due to the guard cells in the array).

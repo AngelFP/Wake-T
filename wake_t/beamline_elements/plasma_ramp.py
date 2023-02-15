@@ -4,7 +4,9 @@ predefined ramp profiles.
 
 """
 
+from typing import Optional, Union
 from functools import partial
+
 import numpy as np
 
 from wake_t.beamline_elements import PlasmaStage
@@ -40,81 +42,86 @@ ramp_profiles = {
 
 
 class PlasmaRamp(PlasmaStage):
+    """
+    Class defining a plasma density ramp.
 
-    """ Convenience class to define a plasma density ramp """
+    This elements is a subclass of :class:`PlasmaStage` that exposes
+    convenient attributes for defining a plasma density ramp, such as
+    predefined density profiles.
 
-    def __init__(self, length, profile='inverse_square', ramp_type='upramp',
-                 wakefield_model='focusing_blowout', decay_length=None,
-                 plasma_dens_top=None, plasma_dens_down=None,
-                 position_down=None, bunch_pusher='rk4', dt_bunch='auto',
-                 n_out=1, name='Plasma ramp', **model_params):
-        """
-        Initialize plasma ramp.
+    Parameters
+    ----------
+    length : float
+        Length of the plasma ramp in m.
+    profile : string or callable
+        Longitudinal density profile of the ramp. Possible string values
+        are ``'gaussian'``, ``'inverse square'`` and ``'exponential'``.
+        A callable might also be provided as a function of the form
+        ``'def func(z)'`` that returns the density value at the given
+        position ``z``.
+    ramp_type : string
+        Possible types are ``'upramp'`` and ``'downramp'``.
+    wakefield_model : str
+        Wakefield model to be used. Possible values are ``'blowout'``,
+        ``'custom_blowout'``, ``'focusing_blowout'``, ``'cold_fluid_1d'`` and
+        ``'quasistatic_2d'``.
+    decay_length : float
+        Optional. Characteristic decay length of the ramp. If not provided,
+        it will be determined from ``plasma_dens_top``, ``plasma_dens_down``
+        and ``position_down``.
+    plasma_dens_top : float
+        Optional. Needed only if `decay_length=None`. Plasma density at the
+        beginning (end) of the downramp (upramp) in units of :math:`m^{-3}`.
+    plasma_dens_down : float
+        Optional. Needed only if ``decay_length=None``. Plasma density at the
+        position ``position_down`` in units of :math:`m^{-3}`.
+    position_down : float
+        Optional. Needed only if ``decay_length=None``. Position where the
+        plasma density will be equal to ``plasma_dens_down`` measured from
+        the beginning (end) of the downramp (upramp). If not provided,
+        the ``length`` value is assigned.
+    bunch_pusher : str
+        The pusher used to evolve the particle bunches in time within
+        the specified fields. Possible values are ``'rk4'`` (Runge-Kutta
+        method of 4th order) or ``'boris'`` (Boris method).
+    dt_bunch : float
+        The time step for evolving the particle bunches. If ``None``, it will
+        be automatically set to :math:`dt = T/(10*2*pi)`, where T is the
+        smallest expected betatron period of the bunch along the plasma stage.
+    n_out : int
+        Number of times along the stage in which the particle distribution
+        should be returned (A list with all output bunches is returned
+        after tracking).
+    name : str
+        Name of the plasma ramp. This is only used for displaying the
+        progress bar during tracking. By default, ``'Plasma ramp'``.
+    **model_params
+        Keyword arguments which will be given to the wakefield model. Each
+        model requires a different set of parameters. See :class:`PlasmaStage`
+        documentation for more details.
 
-        Parameters:
-        -----------
-        length : float
-            Length of the plasma ramp in m.
+    See Also
+    --------
+    PlasmaStage
 
-        profile : string or callable
-            Longitudinal density profile of the ramp. Possible string values
-            are 'gaussian', 'inverse square' and 'exponential'. A callable
-            might also be provided as a function of the form 'def func(z)'
-            which returns the density value at the given position z.
+    """
 
-        ramp_type : string
-            Possible types are 'upramp' and 'downramp'.
-
-        wakefield_model : str
-            Wakefield model to be used. Possible values are 'blowout',
-            'custom_blowout', 'focusing_blowout', 'cold_fluid_1d' and
-            'quasistatic_2d'.
-
-        decay_length : float
-            Optional. Characteristic decay length of the ramp. If not provided,
-            it will be determined from `plasma_dens_top`, `plasma_dens_down`
-            and `position_down`.
-
-        plasma_dens_top : float
-            Optional. Needed only if `decay_length=None`. Plasma density at the
-            beginning (end) of the downramp (upramp) in units of m^{-3}.
-
-        plasma_dens_down : float
-            Optional. Needed only if `decay_length=None`. Plasma density at the
-            position `position_down` in units of m^{-3}.
-
-        position_down : float
-            Optional. Needed only if `decay_length=None`. Position where the
-            plasma density will be equal to `plasma_dens_down` measured from
-            the beginning (end) of the downramp (upramp). If not provided,
-            the `length` value is assigned.
-
-        bunch_pusher : str
-            The pusher used to evolve the particle bunches in time within
-            the specified fields. Possible values are 'rk4' (Runge-Kutta
-            method of 4th order) or 'boris' (Boris method).
-
-        dt_bunch : float
-            The time step for evolving the particle bunches. If `None`, it will
-            be automatically set to `dt = T/(10*2*pi)`, where T is the smallest
-            expected betatron period of the bunch along the plasma stage.
-
-        n_out : int
-            Number of times along the stage in which the particle distribution
-            should be returned (A list with all output bunches is returned
-            after tracking).
-
-        name : str
-            Name of the plasma ramp. This is only used for displaying the
-            progress bar during tracking. By default, `'Plasma ramp'`.
-
+    def __init__(
+        self,
+        length: float,
+        profile: Optional[str] = 'inverse_square',
+        ramp_type: Optional[str] = 'upramp',
+        wakefield_model: Optional[str] = 'focusing_blowout',
+        decay_length: Optional[float] = None,
+        plasma_dens_top: Optional[float] = None,
+        plasma_dens_down: Optional[float] = None,
+        position_down: Optional[float] = None,
+        bunch_pusher: Optional[str] = 'rk4',
+        dt_bunch: Optional[Union[float, int]] = 'auto',
+        n_out: Optional[int] = 1,
+        name: Optional[str] = 'Plasma ramp',
         **model_params
-            Keyword arguments which will be given to the wakefield model. Each
-            model requires a different set of parameters. See `PlasmaStage`
-            documentation for more details.
-
-        """
-
+    ) -> None:
         self.ramp_type = ramp_type
         if position_down is None:
             position_down = length

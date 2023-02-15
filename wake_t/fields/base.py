@@ -1,5 +1,8 @@
 """ Contains the base class for all EM fields. """
 
+from typing import Union, Dict
+import numpy as np
+
 
 class Field():
     """
@@ -13,7 +16,19 @@ class Field():
     def __init__(self, openpmd_diag_supported=False):
         self.__openpmd_diag_supported = openpmd_diag_supported
 
-    def gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
+    def gather(
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        z: np.ndarray,
+        t: np.ndarray,
+        ex: np.ndarray,
+        ey: np.ndarray,
+        ez: np.ndarray,
+        bx: np.ndarray,
+        by: np.ndarray,
+        bz: np.ndarray
+    ) -> None:
         """Gather all field components at the specified locations.
 
         Parameters
@@ -41,7 +56,10 @@ class Field():
         """
         self._gather(x, y, z, t, ex, ey, ez, bx, by, bz)
 
-    def get_openpmd_diagnostics_data(self, global_time):
+    def get_openpmd_diagnostics_data(
+        self,
+        global_time: float
+    ) -> Union[Dict, None]:
         """Get the data for including the field in the openPMD diagnostics.
 
         Parameters

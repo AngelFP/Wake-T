@@ -1,50 +1,55 @@
+from typing import Optional, Union, List
+
 import scipy.constants as ct
 
 from wake_t.diagnostics import OpenPMDDiagnostics
 from wake_t.tracking.tracker import Tracker
+from wake_t.fields.base import Field
+from wake_t.particles.particle_bunch import ParticleBunch
 
 
 class FieldElement():
-    """ Generic class for any beamline element based on field tracking. """
+    """
+    Generic class for any beamline element based on field tracking.
 
-    def __init__(self, length, dt_bunch, bunch_pusher='rk4', n_out=1,
-                 name='field element', fields=[], auto_dt_bunch=None):
-        """
-        Initialize element.
+    Parameters
+    ----------
+    length : float or str
+        Length of the plasma stage in m.
+    dt_bunch : float
+        The time step for evolving the particle bunches. An adaptive time
+        step can be used if this parameter is set to ``'auto'`` and a
+        ``auto_dt_bunch`` function is provided.
+    bunch_pusher : str
+        The pusher used to evolve the particle bunches in time within
+        the specified fields. Possible values are ``'rk4'`` (Runge-Kutta
+        method of 4th order) or ``'boris'`` (Boris method).
+    n_out : int
+        Number of times along the stage in which the particle distribution
+        should be returned (A list with all output bunches is returned
+        after tracking).
+    name : str
+        Name of the plasma stage. This is only used for displaying the
+        progress bar during tracking. By default, ``'field element'``.
+    fields : list
+        List of Fields that will be applied to the particle bunches.
+    auto_dt_bunch : callable, optional
+        Function used to determine the adaptive time step for bunches in
+        which the time step is set to ``'auto'``. The function should take
+        solely a ``ParticleBunch`` as argument.
 
-        Parameters
-        ----------
-        length : float
-            Length of the plasma stage in m.
+    """
 
-        dt_bunch : float
-            The time step for evolving the particle bunches. An adaptive time
-            step can be used if this parameter is set to `'auto'` and a
-            `auto_dt_bunch` function is provided.
-
-        bunch_pusher : str
-            The pusher used to evolve the particle bunches in time within
-            the specified fields. Possible values are 'rk4' (Runge-Kutta
-            method of 4th order) or 'boris' (Boris method).
-
-        n_out : int
-            Number of times along the stage in which the particle distribution
-            should be returned (A list with all output bunches is returned
-            after tracking).
-
-        name : str
-            Name of the plasma stage. This is only used for displaying the
-            progress bar during tracking. By default, `'Plasma stage'`.
-
-        fields : list
-            List of Fields that will be applied to the particle bunches.
-
-        auto_dt_bunch_f : callable, optional
-            Function used to determine the adaptive time step for bunches in
-            which the time step is set to `'auto'`. The function should take
-            solely a `ParticleBunch` as argument.
-
-        """
+    def __init__(
+        self,
+        length: float,
+        dt_bunch: Union[float, str],
+        bunch_pusher: Optional[str] = 'rk4',
+        n_out: Optional[int] = 1,
+        name: Optional[str] = 'field element',
+        fields: Optional[List[Field]] = [],
+        auto_dt_bunch: Optional[str] = None
+    ) -> None:
         self.length = length
         self.bunch_pusher = bunch_pusher
         self.dt_bunch = dt_bunch
@@ -53,29 +58,32 @@ class FieldElement():
         self.fields = fields
         self.auto_dt_bunch = auto_dt_bunch
 
-    def track(self, bunches=[], opmd_diag=False, diag_dir=None):
+    def track(
+        self,
+        bunches: Optional[Union[ParticleBunch, List[ParticleBunch]]] = [],
+        opmd_diag: Optional[Union[bool, OpenPMDDiagnostics]] = False,
+        diag_dir: Optional[str] = None
+    ) -> Union[List[ParticleBunch], List[List[ParticleBunch]]]:
         """
-        Track bunch through plasma stage.
+        Track bunch through element.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         bunches : ParticleBunch or list of ParticleBunch
             Particle bunches to be tracked.
-
         opmd_diag : bool or OpenPMDDiagnostics
             Determines whether to write simulation diagnostics to disk (i.e.
             particle distributions and fields). The output is written to
             HDF5 files following the openPMD standard. The number of outputs
             the `n_out` value. It is also possible to provide an already
             existing OpenPMDDiagnostics instance instead of a boolean value.
-
         diag_dir : str
             Directory into which the openPMD output will be written. By default
             this is a 'diags' folder in the current directory. Only needed if
             `opmd_diag=True`.
 
-        Returns:
-        --------
+        Returns
+        -------
         A list of size 'n_out' containing the bunch distribution at each step.
 
         """
@@ -91,6 +99,8 @@ class FieldElement():
         # Create diagnostics instance.
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
             opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
+        elif not opmd_diag:
+            opmd_diag = None
 
         # Create tracker.
         tracker = Tracker(
