@@ -1,12 +1,15 @@
 """ This module contains the Tracker class. """
+from typing import Optional, Callable, List
 from copy import deepcopy
 
 import numpy as np
 import scipy.constants as ct
 
 from wake_t.particles.particle_bunch import ParticleBunch
+from wake_t.fields.base import Field
 from wake_t.fields.analytical_field import AnalyticalField
 from wake_t.fields.numerical_field import NumericalField
+from wake_t.diagnostics.openpmd_diag import OpenPMDDiagnostics
 from .progress_bar import get_progress_bar
 
 
@@ -31,41 +34,49 @@ class Tracker():
 
     The job of the `Tracker` is to orchestrate this flow and update each
     element at the right time.
+
+    Parameters
+    ----------
+    t_final : float
+        Final time of the tracking.
+    bunches : list, optional
+        List of `ParticleBunch`es to track.
+    dt_bunches : list, optional
+        List of time steps. There should be one value per bunch. Possible
+        values are any float >0 for a constant time step, or 'auto' for
+        enabling an adaptive time step.
+    fields : list, optional
+        List of `Field`s in which to evolve the particles.
+    n_diags : int, optional
+        Number of diagnostics to output.
+    opmd_diags : OpenPMDDiagnostics, optional
+        Instace of OpenPMDDiagnostics in charge of generating the openPMD
+        output. If not given, no diagnostics will be generated.
+    auto_dt_bunch_f : callable, optional
+        Function used to determine the adaptive time step for bunches in
+        which the time step is set to `'auto'`. The function should take
+        solely a `ParticleBunch` as argument.
+    bunch_pusher : str, optional
+        The particle pusher used to evolve the bunches. Possible values
+        are `'boris'` or `'rk4'`.
+    section_name : str, optional
+        Name of the section to be tracked. This will be appended to the
+        beginning of the progress bar.
+
     """
 
     def __init__(
-            self, t_final, bunches=[], dt_bunches=[], fields=[],
-            n_diags=0, opmd_diags=False, auto_dt_bunch_f=None,
-            bunch_pusher='rk4', section_name='Simulation'):
-        """Initialize tracker.
-
-        Parameters
-        ----------
-        t_final : float
-            Final time of the tracking.
-        bunches : list, optional
-            List of `ParticleBunch`es to track.
-        dt_bunches : list, optional
-            List of time steps. There should be one value per bunch. Possible
-            values are any float >0 for a constant time step, or 'auto' for
-            enabling an adaptive time step.
-        fields : list, optional
-            List of `Field`s in which to evolve the particles.
-        n_diags : int, optional
-            Number of diagnostics to output.
-        opmd_diags : bool, optional
-            Whether to generate openPMD diagnostics, by default False.
-        auto_dt_bunch_f : callable, optional
-            Function used to determine the adaptive time step for bunches in
-            which the time step is set to `'auto'`. The function should take
-            solely a `ParticleBunch` as argument.
-        bunch_pusher : str, optional
-            The particle pusher used to evolve the bunches. Possible values
-            are `'boris'` or `'rk4'`.
-        section_name : str, optional
-            Name of the section to be tracked. This will be appended to the
-            beginning of the progress bar.
-        """
+        self,
+        t_final: float,
+        bunches: Optional[List[ParticleBunch]] = [],
+        dt_bunches: Optional[List[float]] = [],
+        fields: Optional[List[Field]] = [],
+        n_diags: Optional[int] = 0,
+        opmd_diags: Optional[OpenPMDDiagnostics] = None,
+        auto_dt_bunch_f: Optional[Callable[[ParticleBunch], float]] = None,
+        bunch_pusher: Optional[str] = 'rk4',
+        section_name: Optional[str] = 'Simulation'
+    ) -> None:
         self.t_final = t_final
         self.bunches = bunches
         self.dt_bunches = dt_bunches
@@ -104,7 +115,7 @@ class Tracker():
         # Initialize tracking time.
         self.t_tracking = 0.
 
-    def do_tracking(self):
+    def do_tracking(self) -> List[List[ParticleBunch]]:
         """Do the tracking.
 
         Returns
@@ -198,7 +209,7 @@ class Tracker():
             progress_bar.update(self.t_tracking*ct.c - progress_bar.n)
 
         # Finalize tracking by increasing z position of diagnostics.
-        if self.opmd_diags is not False:
+        if self.opmd_diags is not None:
             self.opmd_diags.increase_z_pos(self.t_final * ct.c)
 
         # Close progress bar.
@@ -206,7 +217,7 @@ class Tracker():
 
         return self.bunch_list
 
-    def generate_diagnostics(self):
+    def generate_diagnostics(self) -> None:
         """Generate tracking diagnostics."""
         # Make copy of current bunches and store in output list.
         for i, bunch in enumerate(self.bunches):
@@ -225,6 +236,6 @@ class Tracker():
             )
 
         # If needed, write also the openPMD diagnostics.
-        if self.opmd_diags is not False:
+        if self.opmd_diags is not None:
             self.opmd_diags.write_diagnostics(
                 self.t_tracking, self.dt_diags, self.bunches, self.fields)

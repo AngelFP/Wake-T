@@ -1,5 +1,7 @@
 """ This module contains the definition of the ActivePlasmaLens class """
 
+from typing import Optional, Union, Callable
+
 import numpy as np
 import scipy.constants as ct
 
@@ -8,62 +10,69 @@ from wake_t.physics_models.em_fields.linear_b_theta import LinearBThetaField
 
 
 class ActivePlasmaLens(PlasmaStage):
+    """
+    Class defining an active plasma lens.
 
-    """ Convenience class to define an active plasma lens. """
+    This elements is a subclass of :class:`PlasmaStage`, where a linear
+    azimuthal magnetic field is added externally. It also includes
+    convenient methods to specify the field gradient and whether the plasma
+    wakefields should be taken into account.
 
-    def __init__(self, length, foc_strength, wakefields=False, density=None,
-                 wakefield_model='quasistatic_2d', bunch_pusher='rk4',
-                 dt_bunch='auto', n_out=1, name='Active plasma lens',
-                 **model_params):
-        """
-        Initialize plasma lens.
+    Parameters
+    ----------
+    length : float
+        Length of the plasma lens in :math:`m`.
+    foc_strength : float
+        Focusing strength of the plasma lens in :math:`T/m`. Defined so that
+        a positive value is focusing for electrons.
+    wakefields : bool
+        If ``True``, the beam-induced wakefields in the plasma lens will be
+        computed using the model specified in ``'wakefield_model'`` and
+        taken into account for the beam evolution.
+    wakefield_model : str
+        Name of the model which should be used for computing the
+        beam-induced wakefields. Recommended models are ``'cold_fluid_1d'`` or
+        ``'quasistatic_2d'``. See :class:`PlasmaStage` documentation for other
+        possibilities.
+    density : float or callable
+        Optional. Required only if ``wakefields=True``. Plasma density
+        of the APL in units of :math:`m^{-3}`. See :class:`PlasmaStage`
+        documentation for more details.
+    bunch_pusher : str
+        The pusher used to evolve the particle bunches in time within
+        the specified fields. Possible values are ``'rk4'`` (Runge-Kutta
+        method of 4th order) or ``'boris'`` (Boris method).
+    n_out : int
+        Number of times along the lens in which the particle distribution
+        should be returned (A list with all output bunches is returned
+        after tracking).
+    name : str
+        Name of the plasma lens. This is only used for displaying the
+        progress bar during tracking. By default, ``'Active plasma lens'``.
+    **model_params
+        Optional. Required only if ``wakefields=True``. Keyword arguments
+        which will be given to the wakefield model. See :class:`PlasmaStage`
+        documentation for more details.
 
-        Parameters:
-        -----------
-        length : float
-            Length of the plasma lens in m.
+    See Also
+    --------
+    PlasmaStage
 
-        foc_strength : float
-            Focusing strength of the plasma lens in T/m. Defined so that
-            a positive value is focusing for electrons.
+    """
 
-        wakefields : bool
-            If True, the beam-induced wakefields in the plasma lens will be
-            computed using the model specified in 'wakefield_model' and
-            taken into account for the beam evolution.
-
-        wakefield_model : str
-            Name of the model which should be used for computing the
-            beam-induced wakefields. Recommended models are 'cold_fluid_1d' or
-            'quasistatic_2d'. See `PlasmaStage` documentation for other
-            possibilities.
-
-        density : float or callable
-            Optional. Required only if `wakefields=true`. Plasma density
-            of the APL in units of m^{-3}. See `PlasmaStage` documentation
-            for more details.
-
-        bunch_pusher : str
-            The pusher used to evolve the particle bunches in time within
-            the specified fields. Possible values are 'rk4' (Runge-Kutta
-            method of 4th order) or 'boris' (Boris method).
-
-        n_out : int
-            Number of times along the lens in which the particle distribution
-            should be returned (A list with all output bunches is returned
-            after tracking).
-
-        name : str
-            Name of the plasma lens. This is only used for displaying the
-            progress bar during tracking. By default, `'Active plasma lens'`.
-
+    def __init__(
+        self,
+        length: float,
+        foc_strength: float,
+        wakefields: bool = False,
+        density: Optional[Union[float, Callable[[float], float]]] = None,
+        wakefield_model: Optional[str] = 'quasistatic_2d',
+        bunch_pusher: Optional[str] = 'rk4',
+        dt_bunch: Optional[Union[float, int]] = 'auto',
+        n_out: Optional[int] = 1,
+        name: Optional[str] = 'Active plasma lens',
         **model_params
-            Optional. Required only if `wakefields=true`. Keyword arguments
-            which will be given to the wakefield model. See `PlasmaStage`
-            documentation for more details.
-
-        """
-
+    ) -> None:
         self.foc_strength = foc_strength
         self.wakefields = wakefields
         if not self.wakefields:
