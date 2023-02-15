@@ -31,14 +31,12 @@ class LinearBThetaField(AnalyticalField):
 
         b_x = - k * y
         b_y = k * x
+
+    Parameters
+    ----------
+    foc_gradient : float
+        Uniform focusing gradient in T/m.
     """
 
     def __init__(self, foc_gradient):
-        """Initialize field.
-
-        Parameters
-        ----------
-        foc_gradient : float
-            Uniform focusing gradient in T/m.
-        """
         super().__init__(b_x=b_x, b_y=b_y, constants=[foc_gradient])
