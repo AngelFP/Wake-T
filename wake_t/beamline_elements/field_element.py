@@ -61,7 +61,7 @@ class FieldElement():
     def track(
         self,
         bunches: Optional[Union[ParticleBunch, List[ParticleBunch]]] = [],
-        opmd_diag: Optional[bool] = False,
+        opmd_diag: Optional[Union[bool, OpenPMDDiagnostics]] = False,
         diag_dir: Optional[str] = None
     ) -> Union[List[ParticleBunch], List[List[ParticleBunch]]]:
         """

@@ -1,5 +1,5 @@
 """ Contains the classes of all elements tracked using transfer matrices. """
-from typing import Optional, List
+from typing import Optional, Union, List
 import time
 from copy import deepcopy
 
@@ -76,7 +76,7 @@ class TMElement():
         bunch: ParticleBunch,
         backtrack: Optional[bool] = False,
         out_initial: Optional[bool] = False,
-        opmd_diag: Optional[bool] = False,
+        opmd_diag: Optional[Union[bool, OpenPMDDiagnostics]] = False,
         diag_dir: Optional[str] = None
     ) -> List[ParticleBunch]:
         """
@@ -141,7 +141,7 @@ class TMElement():
         output_bunch_list = list()
         if out_initial:
             output_bunch_list.append(deepcopy(bunch))
-            if opmd_diag is not False:
+            if opmd_diag is not None:
                 opmd_diag.write_diagnostics(
                     0., l_step/ct.c, [output_bunch_list[-1]])
         for i in track_steps:
@@ -162,7 +162,7 @@ class TMElement():
                 new_bunch = self._create_new_bunch(
                     bunch, new_bunch_mat, l_curr)
                 output_bunch_list.append(new_bunch)
-                if opmd_diag is not False:
+                if opmd_diag is not None:
                     opmd_diag.write_diagnostics(
                         l_curr/ct.c, l_step/ct.c, [output_bunch_list[-1]])
 
@@ -170,7 +170,7 @@ class TMElement():
         self._update_input_bunch(bunch, bunch_mat, output_bunch_list)
 
         # Add element length to diagnostics position
-        if opmd_diag is not False:
+        if opmd_diag is not None:
             opmd_diag.increase_z_pos(self.length)
 
         # Finalize
