@@ -65,20 +65,15 @@ class CSRCalculator():
 
         Parameters
         ----------
-
         bunch_matrix : ndarray
             Matrix containing the (x, xp, y, yp, tau, dp) components of each
-            bunch particle
-
+            bunch particle.
         bunch_q : ndarray
             Array containing the charge of each particle.
-
         gamma : float
             Reference energy used for the CSR calculation.
-
         element : TMElement
             Lattice element through which the bunch is currently being tracked.
-
         element_pos : float
             Current position (longitudinal) of the bunch in the lattice
             element.
@@ -204,21 +199,16 @@ class CSRCalculator():
         (https://github.com/ocelot-collab/ocelot) written by S. Tomin and
         M. Dohlus.
 
-        Parameters:
-        -----------
-
+        Parameters
+        ----------
         i : int
             Iteration index.
-
         traj : ndarray
             Reference trajectory along which CSR forces are calculated
-
         n_bins : int
             Number of bins of the longitudinal bunch histogram.
-
         bin_size : int
             Size of the histogram bins.
-
         gamma: float
             reference gamma to calculate CSR kernel.
 
@@ -255,18 +245,14 @@ class CSRCalculator():
         https://www.desy.de/~dohlus/UWake/
         Two%20Methods%20for%20the%20Calculation%20of%20CSR%20Fields.pdf
 
-        Parameters:
-        -----------
-
+        Parameters
+        ----------
         i : int
             Iteration index.
-
         traj: ndarray
             Reference trajectory along which CSR forces are calculated.
-
         wmin: float
             Leftmost edge of the longitudinal bunch histogram.
-
         gamma: float
             reference gamma to calculate CSR kernel.
 
@@ -343,18 +329,14 @@ class CSRCalculator():
         (https://github.com/ocelot-collab/ocelot) written by S. Tomin and
         M. Dohlus.
 
-        Parameters:
-        -----------
-
+        Parameters
+        ----------
         i : int
             Iteration index.
-
         traj: ndarray
             Reference trajectory along which CSR forces are calculated.
-
         wrange: ndarray
             Region of beam < w_min.
-
         gamma: float
             reference gamma to calculate CSR kernel.
 
@@ -407,23 +389,17 @@ class CSRCalculator():
 
         Parameters
         ----------
-
         i : int
             Iteration index
-
         traj : ndarray
-            Reference trajectory along which CSR forces are calculated
-
+            Reference trajectory along which CSR forces are calculated.
         w_min : float
             Leftmost edge of the longitudinal bunch binning.
-
         beta : float
             Relativistic factor.
-
         i_min : int
             Minimum iteration index. When i<i_min, no estimation of the
             starting index is performed (0 is returned).
-
         n_test : int
             Number of points along the trajectory in which to test whether they
             should be taken into account for the CSR calculation.
@@ -464,15 +440,12 @@ def set_csr_settings(
     """
     Set the setting for CSR calculation.
 
-    Parameters:
-    -----------
-
+    Parameters
+    ----------
     csr_step : float
         Iteration index.
-
     csr_traj_step : float
         Reference trajectory along which CSR forces are calculated.
-
     n_bins : int
         Number of bins used for determining the longitudinal charge profile
         of the bunch.

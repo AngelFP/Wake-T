@@ -65,10 +65,10 @@ class FieldElement():
         diag_dir: Optional[str] = None
     ) -> Union[List[ParticleBunch], List[List[ParticleBunch]]]:
         """
-        Track bunch through plasma stage.
+        Track bunch through element.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         bunches : ParticleBunch or list of ParticleBunch
             Particle bunches to be tracked.
         opmd_diag : bool or OpenPMDDiagnostics
@@ -82,8 +82,8 @@ class FieldElement():
             this is a 'diags' folder in the current directory. Only needed if
             `opmd_diag=True`.
 
-        Returns:
-        --------
+        Returns
+        -------
         A list of size 'n_out' containing the bunch distribution at each step.
 
         """

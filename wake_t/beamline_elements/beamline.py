@@ -41,8 +41,8 @@ class Beamline():
             this is a 'diags' folder in the current directory. Only needed if
             `opmd_diag=True`.
 
-        Returns:
-        --------
+        Returns
+        -------
         A list of size 'n_out' containing the bunch distribution at each step.
 
         """

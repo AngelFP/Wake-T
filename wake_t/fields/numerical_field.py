@@ -69,6 +69,7 @@ class NumericalField(Field):
         self,
         bunches: List[ParticleBunch]
     ) -> None:
+        """Initialize field properties."""
         self.t = 0.
         self._initialize_properties(bunches)
         self.initialized = True
@@ -77,6 +78,7 @@ class NumericalField(Field):
         self,
         bunches: List[ParticleBunch]
     ) -> None:
+        """Evolve field properties."""
         self.t += self.dt_update
         self._evolve_properties(bunches)
 
@@ -84,12 +86,14 @@ class NumericalField(Field):
         self,
         bunches: List[ParticleBunch]
     ) -> None:
+        """Calculate field using the current properties and given bunches."""
         self._calculate_field(bunches)
 
     def adjust_dt(
         self,
         t_final: float
     ) -> None:
+        """Autoadjust the time step of the field update."""
         if self.force_even_updates:
             n_updates = np.ceil(t_final / self.dt_update)
             self.dt_update = t_final / n_updates

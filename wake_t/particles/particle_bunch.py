@@ -15,8 +15,8 @@ from .push.boris_pusher import apply_boris_pusher
 class ParticleBunch():
     """ Defines a particle bunch.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     q : array
         Charge of each particle in units of C.
     x : array
@@ -140,8 +140,8 @@ class ParticleBunch():
         Sets the phase space coordinates from a matrix with the values of
         (x, x', y, y', xi, dp).
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         bunch_matrix : array
             6 x N matrix, where N is the number of particles, containing the
             phase-space information of the bunch as (x, x', y, y', xi, dp) in

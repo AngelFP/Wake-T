@@ -79,6 +79,33 @@ class TMElement():
         opmd_diag: Optional[bool] = False,
         diag_dir: Optional[str] = None
     ) -> List[ParticleBunch]:
+        """
+        Track bunch through element.
+
+        Parameters
+        ----------
+        bunch : ParticleBunch
+            Particle bunch to be tracked.
+        backtrack : bool
+            Whether to perform the tracking backwards.
+        out_initial : bool
+            Whether to include the initial bunch in the output.
+        opmd_diag : bool or OpenPMDDiagnostics
+            Determines whether to write simulation diagnostics to disk (i.e.
+            particle distributions and fields). The output is written to
+            HDF5 files following the openPMD standard. The number of outputs
+            the `n_out` value. It is also possible to provide an already
+            existing OpenPMDDiagnostics instance instead of a boolean value.
+        diag_dir : str
+            Directory into which the openPMD output will be written. By default
+            this is a 'diags' folder in the current directory. Only needed if
+            `opmd_diag=True`.
+
+        Returns
+        -------
+        A list of size 'n_out' containing the bunch distribution at each step.
+
+        """
         # Convert bunch to ocelot units and reference frame
         bunch_mat, g_avg = self._get_beam_matrix_for_tracking(bunch)
         if self.gamma_ref is None:

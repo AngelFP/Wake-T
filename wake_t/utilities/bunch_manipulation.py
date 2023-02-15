@@ -28,15 +28,14 @@ def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
     Produces a matrix with the phase space coordinates
     (x, px, y, py, xi, pz) from a matrix containing (x, x', y, y', xi, dp).
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     bunch_matrix : array
         6 x N matrix, where N is the number of particles, containing the
         phase-space information of the bunch as (x, x', y, y', xi, dp) in
         units of (m, rad, m, rad, m, -). dp is defined as
         dp = (g-g_ref)/g_ref, while x' = px/p_kin and y' = py/p_kin, where
         p_kin is the kinetic momentum of each particle.
-
     gamma_ref : float
         Reference energy with respect to which the particle momentum dp is
         calculated.

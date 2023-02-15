@@ -61,8 +61,8 @@ class LaserPulse():
         """
         Set the parameters for the laser envelope solver.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         xi_min, xi_max : float
             Position of the left and right boundaries of the the grid in SI
             units.
@@ -154,8 +154,8 @@ class LaserPulse():
         """
         Evolve laser envelope to next time step.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         chi : ndarray
             A (nz x nr) array containing the plasma susceptibility.
         n_p : float
@@ -189,13 +189,13 @@ class LaserPulse():
         """
         Get group velocity of the laser pulse for a given plasma density.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         n_p : float
             Plasma density in units of m^{-3}.
 
-        Returns:
-        --------
+        Returns
+        -------
         A float containing the group velocity.
         """
         w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))

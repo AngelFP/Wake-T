@@ -16,61 +16,45 @@ def get_gaussian_bunch_from_twiss(
     """
     Creates a 6D Gaussian particle bunch with the specified Twiss parameters.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     en_x : float
         Normalized trace-space emittance in the x-plane in units of m*rad.
-
     en_y : float
         Normalized trace-space emittance in the y-plane in units of m*rad.
-
     a_x : float
         Alpha parameter in the x-plane.
-
     a_y : float
         Alpha parameter in the y-plane.
-
     b_x : float
         Beta parameter in the x-plane in units of m.
-
     b_y : float
         Beta parameter in the y-plane in units of m.
-
     ene: float
         Mean bunch energy in non-dimensional units (beta*gamma).
-
     ene_sp: float
         Relative energy spread in %.
-
     s_t: float
         Bunch duration (standard deviation) in units of fs.
-
     xi_c: float
         Central bunch position in the xi in units of m.
-
     q_tot: float
         Total bunch charge in pC.
-
     n_part: int
         Total number of particles in the bunch.
-
     x_off: float
         Centroid offset in the x-plane in units of m.
-
     y_off: float
         Centroid offset in the y-plane in units of m.
-
     theta_x: float
         Pointing angle in the x-plane in radians.
-
     theta_y: float
         Pointing angle in the y-plane in radians.
-
     name: str
         Name of the particle bunch.
 
-    Returns:
-    --------
+    Returns
+    -------
     A ParticleBunch object.
 
     """
@@ -121,55 +105,41 @@ def get_gaussian_bunch_from_size(
     Creates a Gaussian bunch with the specified emitance and spot size. It is
     assumed to be on its waist (alpha_x = alpha_y = 0)
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     en_x : float
         Normalized trace-space emittance in the x-plane in units of m*rad.
-
     en_y : float
         Normalized trace-space emittance in the y-plane in units of m*rad.
-
     s_x : float
         Bunch size (standard deviation) in the x-plane in units of m.
-
     s_y : float
         Bunch size (standard deviation) in the y-plane in units of m.
-
     ene: float
         Mean bunch energy in non-dimensional units (beta*gamma).
-
     ene_sp: float
         Relative energy spread in %.
-
     s_t: float
         Bunch duration (standard deviation) in units of fs.
-
     xi_c: float
         Central bunch position in the xi in units of m.
-
     q_tot: float
         Total bunch charge in pC.
-
     n_part: int
         Total number of particles in the bunch.
-
     x_off: float
         Centroid offset in the x-plane in units of m.
-
     y_off: float
         Centroid offset in the y-plane in units of m.
-
     theta_x: float
         Pointing angle in the x-plane in radians.
-
     theta_y: float
         Pointing angle in the y-plane in radians.
-
     name: str
         Name of the particle bunch.
 
-    Returns:
-    --------
+    Returns
+    -------
     A ParticleBunch object.
 
     """
@@ -187,56 +157,42 @@ def get_matched_bunch(
     """
     Creates a Gaussian bunch matched to the plasma focusing fields.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     en_x : float
         Normalized trace-space emittance in the x-plane in units of m*rad.
-
     en_y : float
         Normalized trace-space emittance in the y-plane in units of m*rad.
-
     ene: float
         Mean bunch energy in non-dimensional units (beta*gamma).
-
     ene_sp: float
         Relative energy spread in %.
-
     s_t: float
         Bunch duration (standard deviation) in units of fs.
-
     xi_c: float
         Central bunch position in the xi in units of m.
-
     q_tot: float
         Total bunch charge in pC.
-
     n_part: int
         Total number of particles in the bunch.
-
     x_off: float
         Centroid offset in the x-plane in units of m.
-
     y_off: float
         Centroid offset in the y-plane in units of m.
-
     theta_x: float
         Pointing angle in the x-plane in radians.
-
     theta_y: float
         Pointing angle in the y-plane in radians.
-
     n_p: double
         Plasma density in units of m^{-3}. This value is used to calculate the
         focusing fields in the plasma assuming blowout regime.
-
     k_x: int
         Focusing fields in the plasma in units of T/m. Has priority over n_p.
-
     name: str
         Name of the particle bunch.
 
-    Returns:
-    --------
+    Returns
+    -------
     A ParticleBunch object.
 
     """

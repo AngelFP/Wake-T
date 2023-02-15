@@ -21,22 +21,18 @@ def calculate_psi_and_derivatives_at_particles(
     discontinuities (at the exact radial position of the plasma particles)
     is calculated as the average between the two neighboring values.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     r, pr, q : array
         Arrays containing the radial position, momentum and charge of the
         plasma particles.
-
     idx : ndarray
         Array containing the (radially) sorted indices of the plasma particles.
-
     r_max : float
         Maximum radial extent of the plasma column.
-
     dr_p : float
         Initial spacing between plasma macroparticles. Corresponds also the
         width of the plasma sheet represented by the macroparticle.
-
     psi_pp, dr_psi_pp, dxi_psi_pp : ndarray
         Arrays where the value of the wakefield potential and its derivatives
         at the location of the plasma particles will be stored.
@@ -177,27 +173,21 @@ def calculate_psi(r_fld, r, q, idx, r_max, pc, psi, k):
     positions specified in r_fld. This is done by using Eq. (29) in
     the paper by P. Baxevanis and G. Stupakov.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     r_fld : array
         Array containing the radial positions where psi should be calculated.
-
     r, q : array
         Arrays containing the radial position, and charge of the
         plasma particles.
-
     idx : ndarray
         Array containing the (radially) sorted indices of the plasma particles.
-
     r_max : float
         Maximum radial extent of the plasma column.
-
     pc : float
         The parabolic density profile coefficient.
-
     psi : ndarray
         Array where the values of the wakefield potential will be stored.
-
     k : int
         Index that determines the slice of psi where the values will
         be filled in (the index is k+2 due to the guard cells in the array).
@@ -262,11 +252,10 @@ def calculate_psi_and_derivatives(r_fld, r, pr, q):
     positions specified in r_fld. This is done by using Eqs. (29) - (32) in
     the paper by P. Baxevanis and G. Stupakov.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     r_fld : array
         Array containing the radial positions where psi should be calculated.
-
     r, pr, q : array
         Arrays containing the radial position, momentum and charge of the
         plasma particles.

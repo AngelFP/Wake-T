@@ -21,27 +21,21 @@ def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
     Interpolate a 2D field defined on an r-z grid to the particle positions
     of a 3D distribution.
 
-    Parameters:
-    -----------
-
+    Parameters
+    ----------
     fld : 2darray
         The field to be interpolated.
-
     z_min, z_max : float
         Position of the first and last field values along z.
-
     r_min,r_max : float
         Position of the first and last field values along r.
-
     dz, dr : float
         Grid step size along the longitudinal and radial direction.
-
     x, y, z : 1darray
         Coordinates of the particle distribution.
 
-    Returns:
-    --------
-
+    Returns
+    -------
     A 1darray with the field values at the location of each particle.
 
     """
@@ -101,30 +95,22 @@ def gather_main_fields_cyl_linear(
     Convenient method for interpolating at once (more efficient) the transverse
     and longitudinal wakefields.
 
-    Parameters:
-    -----------
-
+    Parameters
+    ----------
     er : 2darray
         The radial electric field.
-
     ez : 2darray
         The longitudinal electric field.
-
     bt : 2darray
         The azimuthal magnetic field.
-
     z_min, z_max : float
         Position of the first and last field values along z.
-
     r_min,r_max : float
         Position of the first and last field values along r.
-
     dz, dr : float
         Grid step size along the longitudinal and radial direction.
-
     x, y, z : 1darray
         Coordinates of the particle distribution.
-
     ex_part, ey_part, ez_part, bx_part, by_part, bz_part : 1darray
         Arrays where the gathered field components will be stored.
     """
@@ -220,32 +206,25 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
     same longitudinal position (which is the case in a quasistatic model,
     where there is only a single column of particles).
 
-    Parameters:
-    -----------
-
+    Parameters
+    ----------
     fld_1, fld_2, fld_3 : ndarray
         The three source fields, corresponding respectively to a2, nabla_a2
         and b_theta_0. Each of them is a (nr+4, nr+4) array, including 2 guard
         cells in each boundary.
-
     z_min, z_max : float
         Position of the first and last field values along z.
-
     r_min, r_max : float
         Position of the first and last field values along r.
-
     dz, dr : float
         Grid step size along the longitudinal and radial direction.
-
     r : 1darray
         Transverse position of the plasma particles.
-
     z : int
         Longitudinal position of the column of plasma particles.
 
-    Returns:
+    Returns
     --------
-
     A tuple with three 1darray containing the gathered field values at the
     position of each particle.
 
