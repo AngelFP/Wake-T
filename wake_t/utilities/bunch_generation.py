@@ -12,7 +12,7 @@ from wake_t.particles.particle_bunch import ParticleBunch
 
 def get_gaussian_bunch_from_twiss(
         en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
-        x_off=0, y_off=0, theta_x=0, theta_y=0, name=None):
+        x_off=0, y_off=0, theta_x=0, theta_y=0, name=None, dist_ene='gauss'):
     """
     Creates a 6D Gaussian particle bunch with the specified Twiss parameters.
 
@@ -52,13 +52,15 @@ def get_gaussian_bunch_from_twiss(
         Pointing angle in the y-plane in radians.
     name: str
         Name of the particle bunch.
+    dist_ene: str
+        Form of energy distribution. Can be Gaussian 'gauss' or Uniform 'uniform'
 
     Returns
     -------
     A ParticleBunch object.
 
     """
-
+    
     # Calculate necessary values
     n_part = int(n_part)
     ene_sp = ene_sp/100
@@ -89,7 +91,11 @@ def get_gaussian_bunch_from_twiss(
     yp = s_yp*(p_y*u_y + np.sqrt(1-np.square(p_y))*v_y)
     # Create longitudinal distributions (truncated at -3 and 3 sigma in xi)
     xi = truncnorm.rvs(-3, 3, loc=xi_c, scale=s_z, size=n_part)
-    pz = np.random.normal(ene, ene_sp_abs, n_part)
+    if dist_ene=='uniform':
+        print("uniform energy distribution")
+        pz = np.random.uniform(ene-ene_sp_abs/2, ene+ene_sp_abs/2, n_part)
+    else:
+        pz = np.random.normal(ene, ene_sp_abs, n_part)
     # Change from slope to momentum and apply offset
     px = xp*pz + p_x_off
     py = yp*pz + p_y_off
@@ -100,7 +106,7 @@ def get_gaussian_bunch_from_twiss(
 
 def get_gaussian_bunch_from_size(
         en_x, en_y, s_x, s_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0,
-        y_off=0, theta_x=0, theta_y=0, name=None):
+        y_off=0, theta_x=0, theta_y=0, name=None, dist_ene='gauss'):
     """
     Creates a Gaussian bunch with the specified emitance and spot size. It is
     assumed to be on its waist (alpha_x = alpha_y = 0)
@@ -148,12 +154,12 @@ def get_gaussian_bunch_from_size(
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_x, b_y, ene,
                                          ene_sp, s_t, xi_c, q_tot, n_part,
                                          x_off, y_off, theta_x, theta_y,
-                                         name=name)
+                                         name=name, dist_ene=dist_ene)
 
 
 def get_matched_bunch(
         en_x, en_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0, y_off=0,
-        theta_x=0, theta_y=0, n_p=None, k_x=None, name=None):
+        theta_x=0, theta_y=0, n_p=None, k_x=None, name=None, dist_ene='gauss'):
     """
     Creates a Gaussian bunch matched to the plasma focusing fields.
 
@@ -202,7 +208,7 @@ def get_matched_bunch(
     return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_m, b_m, ene,
                                          ene_sp, s_t, xi_c, q_tot, n_part,
                                          x_off, y_off, theta_x, theta_y,
-                                         name=name)
+                                         name=name, dist_ene=dist_ene)
 
 
 def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
