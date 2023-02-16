@@ -74,9 +74,6 @@ class PlasmaStage(FieldElement):
         external_fields: Optional[List[Field]] = [],
         **model_params
     ) -> None:
-        """
-        Initialize plasma stage.
-        """
         self.density = self._get_density_profile(density)
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
         self.external_fields = external_fields
