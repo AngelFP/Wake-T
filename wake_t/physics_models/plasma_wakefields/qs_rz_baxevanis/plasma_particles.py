@@ -7,28 +7,27 @@ class PlasmaParticles():
     """
     Class containing the 1D slice of plasma particles used in the quasi-static
     Baxevanis wakefield model.
+
+    Parameters
+    ----------
+    r_max : float
+        Maximum radial extension of the simulation box in normalized units.
+    r_max_plasma : float
+        Maximum radial extension of the plasma column in normalized units.
+    parabolic_coefficient : float
+        The coefficient for the transverse parabolic density profile.
+    dr : float
+        Radial step size of the discretized simulation box.
+    ppc : int
+        Number of particles per cell.
+    pusher : str
+        Particle pusher used to evolve the plasma particles. Possible
+        values are `'rk4'` and `'ab5'`.
+
     """
 
     def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc,
                  pusher):
-        """Create particle collection.
-
-        Parameters
-        ----------
-        r_max : float
-            Maximum radial extension of the simulation box in normalized units.
-        r_max_plasma : float
-            Maximum radial extension of the plasma column in normalized units.
-        parabolic_coefficient : float
-            The coefficient for the transverse parabolic density profile.
-        dr : float
-            Radial step size of the discretized simulation box.
-        ppc : int
-            Number of particles per cell.
-        pusher : str
-            Particle pusher used to evolve the plasma particles. Possible
-            values are `'rk4'` and `'ab5'`.
-        """
         # Calculate total number of plasma particles.
         n_part = int(np.round(r_max_plasma / dr * ppc))
 

@@ -33,9 +33,6 @@ class LaserPulse():
         self,
         l_0: float
     ) -> None:
-        """
-        Initialize pulse.
-        """
         self.l_0 = l_0
         self.a_env = None
         self.solver_params = None
