@@ -17,7 +17,6 @@ class CSRCalculator():
     """Class taking care of calculating and applying CSR effects."""
 
     def __init__(self):
-        """Initialize CSR calculator."""
         self._ref_traj = None
         self._lattice_elements = []
         self._lattice_element_steps = []
