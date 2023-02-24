@@ -75,7 +75,7 @@ def test_gaussian_beam(show=False):
             rho_fld /= v_cell
 
             # Analytical expectation at beam center.
-            rho_ana_0 = rho_gaussian_beam(r_fld, 0., q_tot, s_r, s_z)
+            rho_ana_0 = rho_gaussian_beam(r_fld, 0., -q_tot, s_r, s_z)
 
             # Deposited density at beam center.
             i_center = int((n_z - 1) / 2)
@@ -128,7 +128,7 @@ def b_theta_gaussian_beam(r, z, q_tot, s_r, s_z, gamma):
     beta = np.sqrt(1 - 1/gamma**2)
     e_r = (
         1 / ((2 * np.pi) ** (3/2) * ct.epsilon_0)
-        * (-q_tot) * 1e-12 / s_z * np.exp(-z**2 / (2*s_z**2))
+        * q_tot * 1e-12 / s_z * np.exp(-z**2 / (2*s_z**2))
         * (1 - np.exp(-r**2 / (2*s_r**2))) / r
     )
     b_theta = beta / ct.c * e_r

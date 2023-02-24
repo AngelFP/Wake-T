@@ -187,7 +187,7 @@ class TMElement():
         if bunch.theta_ref != 0:
             rot = rotation_matrix_xz(-bunch.theta_ref)
             bunch_mat = np.dot(rot, bunch_mat)
-        return convert_to_ocelot_matrix(bunch_mat, bunch.q, self.gamma_ref)
+        return convert_to_ocelot_matrix(bunch_mat, bunch.w, self.gamma_ref)
 
     def _determine_steps(self):
         if self.n_out is not None:

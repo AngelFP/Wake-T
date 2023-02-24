@@ -482,7 +482,7 @@ def calculate_beam_source(
     y_n = bunch.y / s_d
 
     # Calculate particle weights.
-    w = - bunch.q / ct.e / (2 * np.pi * dr * dxi * s_d ** 3 * n_p)
+    w = bunch.q / ct.e / (2 * np.pi * dr * dxi * s_d ** 3 * n_p)
 
     # Obtain charge distribution (using cubic particle shape by default).
     q_dist = np.zeros((n_xi + 4, n_r + 4))
