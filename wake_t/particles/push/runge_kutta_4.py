@@ -48,8 +48,8 @@ def apply_rk4_pusher(bunch, fields, t, dt):
      k_x, k_y, k_xi, k_px, k_py, k_pz) = bunch.get_rk4_arrays()
     ex, ey, ez, bx, by, bz = bunch.get_field_arrays()
 
-    # Bunch constant (currently assumes electrons).
-    q_over_mc = -ct.e / (ct.m_e * ct.c)
+    # Particle species constant (currently assumes electrons).
+    q_over_mc = bunch.q_species / (bunch.m_species * ct.c)
 
     # Calculate push.
     for i in range(4):
