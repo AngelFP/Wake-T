@@ -95,7 +95,7 @@ def get_gaussian_bunch_from_twiss(
     py = yp*pz + p_y_off
     # Charge
     q = np.ones(n_part)*(q_tot/n_part)
-    return ParticleBunch(q, x, y, xi, px, py, pz, name=name)
+    return ParticleBunch(q / ct.e, x, y, xi, px, py, pz, name=name)
 
 
 def get_gaussian_bunch_from_size(
@@ -270,7 +270,7 @@ def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
     z_avg = np.average(z, weights=q)
     xi = z - z_avg
     # Create ParticleBunch
-    bunch = ParticleBunch(q, x, y, xi, px, py, pz, name=name)
+    bunch = ParticleBunch(q / ct.e, x, y, xi, px, py, pz, name=name)
     # Preserve `z_avg` as the initial propagation distance of the bunch.
     if preserve_prop_dist:
         bunch.prop_distance = z_avg

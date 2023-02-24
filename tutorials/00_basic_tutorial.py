@@ -30,11 +30,13 @@ This tutorial illustrates some of the basic capabilities of Wake-T:
 
 
 import numpy as np
+import scipy.constants as ct
 from wake_t import ParticleBunch
 
-# Create particle arrays.
+# Create particle arrays for an electron bunch with 30pC of charge.
 n_part = int(1e4)
-q = np.ones(n_part) * 30e-12 / n_part  # C
+q = - np.ones(n_part) * 30e-12 / n_part  # C
+w = q / (-ct.e)
 x = np.random.rand(n_part) * 1e-6  # m
 y = np.random.rand(n_part) * 1e-6  # m
 z = np.random.rand(n_part) * 1e-6  # m
@@ -43,7 +45,7 @@ py = np.random.rand(n_part)  # m_e c
 pz = np.random.rand(n_part) + 100 / 0.511  # m_e c
 
 # Create particle bunch.
-bunch = ParticleBunch(q, x, y, z, px, py, pz, name='random_bunch')
+bunch = ParticleBunch(w, x, y, z, px, py, pz, name='random_bunch')
 
 # Show phase space.
 bunch.show()

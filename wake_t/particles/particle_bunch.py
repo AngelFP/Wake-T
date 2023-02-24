@@ -17,24 +17,18 @@ class ParticleBunch():
 
     Parameters
     ----------
-    q : array
-        Charge of each particle in units of C.
-    x : array
-        Position of each particle in the x-plane in units of m.
-    y : array
-        Position of each particle in the y-plane in units of m.
-    xi : array
-        Position of each particle in the xi-plane in units of m.
-    px : array
-        Momentum of each particle in the x-plane in non-dimensional units
-        (beta*gamma).
-    py : array
-        Momentum of each particle in the y-plane in non-dimensional units
-        (beta*gamma).
-    pz : array
-        Momentum of each particle in the z-plane in non-dimensional units
-        (beta*gamma).
-    bunch_matrix : array
+    w : ndarray
+        Weight of the macroparticles, i.e., the number of real particles
+        represented by each macroparticle. In practice, :math:`w = q_m / q`,
+        where :math:`q_m` and :math:`q` are, respectively the charge of the
+        macroparticle and of the real particle (e.g., an electron).
+    x, y, xi : ndarray
+        Position of the macropparticles in the x, y, and xi directions in
+        units of m.
+    px, py, pz : ndarray
+        Momentum of the macropparticles in the x, y, and z directions in
+        non-dimensional units (beta*gamma).
+    bunch_matrix : ndarray
         6 x N matrix, where N is the number of particles, containing the
         phase-space information of the bunch. If provided, the arguments x
         to pz are not considered. The matrix contains (x, px, y, py, z, pz)
@@ -47,17 +41,21 @@ class ParticleBunch():
         Reference energy with respect to which the particle momentum dp is
         calculated. Only needed if bunch_matrix is used and
         matrix_type='alternative'.
-    tags : array
+    tags : ndarray
         Individual tags assigned to each particle.
     prop_distance : float
         Propagation distance of the bunch along the beamline.
     t_flight : float
         Time of flight of the bunch along the beamline.
-    z_injection: float (in meters)
-        Particles have a ballistic motion for z<z_injection.
+    z_injection: float
+        Particles have a ballistic motion for z<z_injection (in meters).
     name : str
         Name of the particle bunch. Used for species identification
         in openPMD diagnostics.
+    q_species, m_species : float
+        Charge and mass of a single particle of the species represented
+        by the macroparticles. For an electron bunch (default),
+        ``q_species=-e`` and ``m_species=m_e``
 
     """
 
@@ -65,7 +63,7 @@ class ParticleBunch():
 
     def __init__(
         self,
-        q: np.ndarray,
+        w: np.ndarray,
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         xi: Optional[np.ndarray] = None,
@@ -79,7 +77,9 @@ class ParticleBunch():
         prop_distance: Optional[float] = 0,
         t_flight: Optional[float] = 0,
         z_injection: Optional[float] = None,
-        name: Optional[str] = None
+        name: Optional[str] = None,
+        q_species: Optional[float] = -ct.e,
+        m_species: Optional[float] = ct.m_e
     ) -> None:
         if bunch_matrix is not None:
             if matrix_type == 'standard':
@@ -94,7 +94,7 @@ class ParticleBunch():
             self.px = px
             self.py = py
             self.pz = pz
-        self.q = q
+        self.w = w
         # self.mu = 0
         self.tags = tags
         self.prop_distance = prop_distance
@@ -103,8 +103,19 @@ class ParticleBunch():
         self.x_ref = 0
         self.theta_ref = 0
         self.set_name(name)
+        self.q_species = q_species
+        self.m_species = m_species
         self.__field_arrays_allocated = False
         self.__rk4_arrays_allocated = False
+
+    @property
+    def q(self) -> np.ndarray:
+        """Get an array with the charge of each macroparticle.
+        
+        This property is implemented for convenience and for backward
+        compatibility.
+        """
+        return self.w * self.q_species
 
     def set_name(self, name):
         """ Set the particle bunch name """
@@ -172,12 +183,12 @@ class ParticleBunch():
         self.px = beam_matrix[3]
         self.py = beam_matrix[4]
         self.pz = beam_matrix[5]
-        self.q = beam_matrix[6]
+        self.w = beam_matrix[6] / self.q_species
 
     def get_bunch_matrix(self):
         """Returns a matrix with the 6D phase space and charge of the bunch"""
         return np.array([self.x, self.y, self.xi, self.px, self.py, self.pz,
-                         self.q])
+                         self.w * self.q_species])
 
     def get_6D_matrix(self):
         """
@@ -191,8 +202,8 @@ class ParticleBunch():
         Returns the 6D phase space matrix of the bunch containing
         (x, px, y, py, xi, pz)
         """
-        return np.array(
-            [self.x, self.px, self.y, self.py, self.xi, self.pz, self.q])
+        return np.array([self.x, self.px, self.y, self.py, self.xi, self.pz,
+                         self.w * self.q_species])
 
     def get_alternative_6D_matrix(self):
         """
@@ -200,7 +211,7 @@ class ParticleBunch():
         (x, x', y, y', xi, dp)
         """
         g = np.sqrt(1 + self.px**2 + self.py**2 + self.pz**2)
-        g_avg = np.average(g, weights=self.q)
+        g_avg = np.average(g, weights=self.w)
         b_avg = np.sqrt(1 - g_avg**(-2))
         dp = (g-g_avg)/(g_avg*b_avg)
         p_kin = np.sqrt(g**2 - 1)
@@ -213,7 +224,7 @@ class ParticleBunch():
 
     def reposition_xi(self, xi_c):
         """Recenter bunch along xi around the specified xi_c"""
-        current_xi_c = np.average(self.xi, weights=self.q)
+        current_xi_c = np.average(self.xi, weights=self.w)
         dxi = xi_c - current_xi_c
         self.xi += dxi
 
@@ -230,9 +241,9 @@ class ParticleBunch():
             'px': self.px * ct.m_e * ct.c,
             'py': self.py * ct.m_e * ct.c,
             'pz': self.pz * ct.m_e * ct.c,
-            'w': self.q / ct.e,
-            'q': -ct.e,
-            'm': ct.m_e,
+            'w': self.w,
+            'q': self.q_species,
+            'm': self.m_species,
             'name': self.name,
             'z_off': global_time * ct.c
         }
@@ -241,8 +252,8 @@ class ParticleBunch():
     def show(self, **kwargs):
         """ Show the phase space of the bunch in all dimensions. """
         full_phase_space(
-            self.x, self.y, self.xi, self.px, self.py, self.pz, self.q,
-            show=True, **kwargs)
+            self.x, self.y, self.xi, self.px, self.py, self.pz,
+            self.w * self.q_species, show=True, **kwargs)
 
     def evolve(self, fields, t, dt, pusher='rk4'):
         """Evolve particle bunch to the next time step.

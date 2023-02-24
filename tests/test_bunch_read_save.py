@@ -61,7 +61,7 @@ def test_bunch_read_save():
             bunch_saved.px = bunch_saved.px[1:]
             bunch_saved.py = bunch_saved.py[1:]
             bunch_saved.pz = bunch_saved.pz[1:]
-            bunch_saved.q = bunch_saved.q[1:]
+            bunch_saved.w = bunch_saved.w[1:]
 
         # Check saved bunch is the same as original.
         assert_array_almost_equal(bunch_saved.x, bunch.x)
