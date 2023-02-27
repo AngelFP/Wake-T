@@ -105,8 +105,9 @@ class ActivePlasmaLens(PlasmaStage):
         # Otherwise, determine dt from the APL focusing strength.
         else:
             # Get minimum gamma in the bunch (assumes px,py << pz).
+            q_over_m = beam.q_species / beam.m_species
             min_gamma = np.sqrt(np.min(beam.pz)**2 + 1)
-            w_x = np.sqrt(ct.e*ct.c/ct.m_e * self.foc_strength/min_gamma)
+            w_x = np.sqrt(np.abs(q_over_m*ct.c * self.foc_strength/min_gamma))
             T_x = 1/w_x
             dt = 0.1*T_x
         return dt
