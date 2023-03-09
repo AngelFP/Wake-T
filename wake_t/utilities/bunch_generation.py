@@ -4,7 +4,7 @@ import numpy as np
 import scipy.constants as ct
 from scipy.stats import truncnorm
 import aptools.plasma_accel.general_equations as ge
-import aptools.data_handling.reading as dr
+from aptools.particle_distributions.read import read_distribution
 from aptools.data_handling.utilities import get_available_species
 
 from wake_t.particles.particle_bunch import ParticleBunch
@@ -205,7 +205,7 @@ def get_matched_bunch(
                                          name=name)
 
 
-def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
+def get_from_file(file_path, data_format, preserve_prop_dist=False, name=None,
                   species_name=None, **kwargs):
     """Get particle bunch from file.
 
@@ -213,9 +213,9 @@ def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
     ----------
     file_path : str
         Path to the file containing the particle distribution.
-    code_name : str
-        Name of the code from which the particle distribution originates.
-        Possible values are 'astra', 'csrtrack' and 'openpmd'.
+    data_format : str
+        Internal format of the data.  Possible values
+        are 'astra', 'csrtrack' and 'openpmd'.
     preserve_prop_dist : bool, optional
         Whether to preserve the average longitudinal position of the
         distribution in the `prop_distance` parameter of the `ParticleBunch`,
@@ -244,7 +244,7 @@ def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
         A ParticleBunch with the distribution from the specified file.
     """
     # If reading from an openPMD file, use the right `name` and `species_name`.
-    if code_name == 'openpmd':
+    if data_format == 'openpmd':
         if species_name is None:
             available_species = get_available_species(file_path)
             n_species = len(available_species)
@@ -264,13 +264,23 @@ def get_from_file(file_path, code_name, preserve_prop_dist=False, name=None,
         kwargs['species_name'] = species_name
         if name is None:
             name = species_name
-    # Read particle species.
-    x, y, z, px, py, pz, q = dr.read_beam(code_name, file_path, **kwargs)
+    distribution = read_distribution(file_path, data_format, **kwargs)
     # Center in z.
-    z_avg = np.average(z, weights=q)
-    xi = z - z_avg
+    z_avg = np.average(distribution.z, weights=distribution.w)
+    xi = distribution.z - z_avg
     # Create ParticleBunch
-    bunch = ParticleBunch(q / ct.e, x, y, xi, px, py, pz, name=name)
+    bunch = ParticleBunch(
+        w=distribution.w,
+        x=distribution.x,
+        y=distribution.y,
+        xi=xi,
+        px=distribution.px,
+        py=distribution.py,
+        pz=distribution.pz,
+        q_species=distribution.q_species,
+        m_species=distribution.m_species,
+        name=name
+    )
     # Preserve `z_avg` as the initial propagation distance of the bunch.
     if preserve_prop_dist:
         bunch.prop_distance = z_avg
