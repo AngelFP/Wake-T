@@ -46,7 +46,13 @@ def test_bunch_read_save():
     for data_format, file_format in zip(data_formats, file_formats):
         # Save bunch.
         save_bunch_to_file(
-            bunch, data_format, output_folder, 'bunch_'+data_format)
+            bunch,
+            data_format,
+            os.path.join(
+                output_folder,
+                'bunch_{}.{}'.format(data_format, file_format)
+            )
+        )
         # Read saved bunch.
         file_path = os.path.join(
             output_folder,
