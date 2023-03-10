@@ -1,5 +1,7 @@
 """ This module contains methods for generating particle distributions"""
 
+from typing import Optional
+
 import numpy as np
 import scipy.constants as ct
 from scipy.stats import truncnorm
@@ -11,51 +13,64 @@ from wake_t.particles.particle_bunch import ParticleBunch
 
 
 def get_gaussian_bunch_from_twiss(
-        en_x, en_y, a_x, a_y, b_x, b_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
-        x_off=0, y_off=0, theta_x=0, theta_y=0, name=None):
+    en_x: float,
+    en_y: float,
+    a_x: float,
+    a_y: float,
+    b_x: float,
+    b_y: float,
+    ene: float,
+    ene_sp: float,
+    s_t: float,
+    xi_c: float,
+    q_tot: float,
+    n_part: int,
+    x_off: Optional[float] = 0,
+    y_off: Optional[float] = 0,
+    theta_x: Optional[float] = 0,
+    theta_y: Optional[float] = 0,
+    name: Optional[str] = None,
+    q_species: Optional[float] = -ct.e,
+    m_species: Optional[float] = ct.m_e
+) -> ParticleBunch:
     """
     Creates a 6D Gaussian particle bunch with the specified Twiss parameters.
 
     Parameters
     ----------
-    en_x : float
-        Normalized trace-space emittance in the x-plane in units of m*rad.
-    en_y : float
-        Normalized trace-space emittance in the y-plane in units of m*rad.
-    a_x : float
-        Alpha parameter in the x-plane.
-    a_y : float
-        Alpha parameter in the y-plane.
-    b_x : float
-        Beta parameter in the x-plane in units of m.
-    b_y : float
-        Beta parameter in the y-plane in units of m.
-    ene: float
+    en_x, en_y : float
+        Normalized trace-space emittance in x and y (units of m*rad).
+    a_x, a_y : float
+        Alpha Twiss parameter in x and y.
+    b_x, b_y : float
+        Beta Twiss parameter in x and y (units of m).
+    ene : float
         Mean bunch energy in non-dimensional units (beta*gamma).
-    ene_sp: float
+    ene_sp : float
         Relative energy spread in %.
-    s_t: float
+    s_t : float
         Bunch duration (standard deviation) in units of fs.
-    xi_c: float
+    xi_c : float
         Central bunch position in the xi in units of m.
-    q_tot: float
+    q_tot : float
         Total bunch charge in pC.
-    n_part: int
+    n_part : int
         Total number of particles in the bunch.
-    x_off: float
-        Centroid offset in the x-plane in units of m.
-    y_off: float
-        Centroid offset in the y-plane in units of m.
-    theta_x: float
-        Pointing angle in the x-plane in radians.
-    theta_y: float
-        Pointing angle in the y-plane in radians.
-    name: str
+    x_off, y_off : float
+        Centroid offsets in x and y (units of m).
+    theta_x, theta_y : float
+        Pointing angle in x and y (in radians).
+    name : str
         Name of the particle bunch.
+    q_species, m_species : float
+        Charge and mass of a single particle of the species represented
+        by the macroparticles. For an electron bunch (default),
+        ``q_species=-e`` and ``m_species=m_e``
 
     Returns
     -------
-    A ParticleBunch object.
+    ParticleBunch
+        The generated particle bunch.
 
     """
 
@@ -93,120 +108,155 @@ def get_gaussian_bunch_from_twiss(
     # Change from slope to momentum and apply offset
     px = xp*pz + p_x_off
     py = yp*pz + p_y_off
-    # Charge
-    q = np.ones(n_part)*(q_tot/n_part)
-    return ParticleBunch(q / ct.e, x, y, xi, px, py, pz, name=name)
+    # Macroparticle weight.
+    w = np.abs(np.ones(n_part) * q_tot / (n_part * q_species))
+    return ParticleBunch(w, x, y, xi, px, py, pz, name=name,
+                         q_species=q_species, m_species=m_species)
 
 
 def get_gaussian_bunch_from_size(
-        en_x, en_y, s_x, s_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0,
-        y_off=0, theta_x=0, theta_y=0, name=None):
+    en_x: float,
+    en_y: float,
+    s_x: float,
+    s_y: float,
+    ene: float,
+    ene_sp: float,
+    s_t: float,
+    xi_c: float,
+    q_tot: float,
+    n_part: int,
+    x_off: Optional[float] = 0,
+    y_off: Optional[float] = 0,
+    theta_x: Optional[float] = 0,
+    theta_y: Optional[float] = 0,
+    name: Optional[str] = None,
+    q_species: Optional[float] = -ct.e,
+    m_species: Optional[float] = ct.m_e
+) -> ParticleBunch:
     """
     Creates a Gaussian bunch with the specified emitance and spot size. It is
     assumed to be on its waist (alpha_x = alpha_y = 0)
 
     Parameters
     ----------
-    en_x : float
-        Normalized trace-space emittance in the x-plane in units of m*rad.
-    en_y : float
-        Normalized trace-space emittance in the y-plane in units of m*rad.
-    s_x : float
-        Bunch size (standard deviation) in the x-plane in units of m.
-    s_y : float
-        Bunch size (standard deviation) in the y-plane in units of m.
-    ene: float
+    en_x, en_y : float
+        Normalized trace-space emittance in x and y (units of m*rad).
+    s_x, s_y : float
+        Bunch size (standard deviation) in x and y (units of m).
+    ene : float
         Mean bunch energy in non-dimensional units (beta*gamma).
-    ene_sp: float
+    ene_sp : float
         Relative energy spread in %.
-    s_t: float
+    s_t : float
         Bunch duration (standard deviation) in units of fs.
-    xi_c: float
+    xi_c : float
         Central bunch position in the xi in units of m.
-    q_tot: float
+    q_tot : float
         Total bunch charge in pC.
-    n_part: int
+    n_part : int
         Total number of particles in the bunch.
-    x_off: float
-        Centroid offset in the x-plane in units of m.
-    y_off: float
-        Centroid offset in the y-plane in units of m.
-    theta_x: float
-        Pointing angle in the x-plane in radians.
-    theta_y: float
-        Pointing angle in the y-plane in radians.
-    name: str
+    x_off, y_off : float
+        Centroid offsets in x and y (units of m).
+    theta_x, theta_y : float
+        Pointing angle in x and y (in radians).
+    name : str
         Name of the particle bunch.
+    q_species, m_species : float
+        Charge and mass of a single particle of the species represented
+        by the macroparticles. For an electron bunch (default),
+        ``q_species=-e`` and ``m_species=m_e``
 
     Returns
     -------
-    A ParticleBunch object.
+    ParticleBunch
+        The generated particle bunch.
 
     """
     b_x = s_x**2*ene/en_x
     b_y = s_y**2*ene/en_y
-    return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_x, b_y, ene,
-                                         ene_sp, s_t, xi_c, q_tot, n_part,
-                                         x_off, y_off, theta_x, theta_y,
-                                         name=name)
+    return get_gaussian_bunch_from_twiss(
+        en_x, en_y, 0, 0, b_x, b_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
+        x_off, y_off, theta_x, theta_y, name=name, q_species=q_species,
+        m_species=m_species)
 
 
 def get_matched_bunch(
-        en_x, en_y, ene, ene_sp, s_t, xi_c, q_tot, n_part, x_off=0, y_off=0,
-        theta_x=0, theta_y=0, n_p=None, k_x=None, name=None):
+    en_x: float,
+    en_y: float,
+    ene: float,
+    ene_sp: float,
+    s_t: float,
+    xi_c: float,
+    q_tot: float,
+    n_part: int,
+    x_off: Optional[float] = 0,
+    y_off: Optional[float] = 0,
+    theta_x: Optional[float] = 0,
+    theta_y: Optional[float] = 0,
+    n_p: Optional[float] = None,
+    k_x: Optional[float] = None,
+    name: Optional[str] = None,
+    q_species: Optional[float] = -ct.e,
+    m_species: Optional[float] = ct.m_e
+) -> ParticleBunch:
     """
     Creates a Gaussian bunch matched to the plasma focusing fields.
 
     Parameters
     ----------
-    en_x : float
-        Normalized trace-space emittance in the x-plane in units of m*rad.
-    en_y : float
-        Normalized trace-space emittance in the y-plane in units of m*rad.
-    ene: float
+    en_x, en_y : float
+        Normalized trace-space emittance in x and y (units of m*rad).
+    ene : float
         Mean bunch energy in non-dimensional units (beta*gamma).
-    ene_sp: float
+    ene_sp : float
         Relative energy spread in %.
-    s_t: float
+    s_t : float
         Bunch duration (standard deviation) in units of fs.
-    xi_c: float
+    xi_c : float
         Central bunch position in the xi in units of m.
-    q_tot: float
+    q_tot : float
         Total bunch charge in pC.
-    n_part: int
+    n_part : int
         Total number of particles in the bunch.
-    x_off: float
-        Centroid offset in the x-plane in units of m.
-    y_off: float
-        Centroid offset in the y-plane in units of m.
-    theta_x: float
-        Pointing angle in the x-plane in radians.
-    theta_y: float
-        Pointing angle in the y-plane in radians.
-    n_p: double
+    x_off, y_off : float
+        Centroid offsets in x and y (units of m).
+    theta_x, theta_y : float
+        Pointing angle in x and y (in radians).
+    n_p : double
         Plasma density in units of m^{-3}. This value is used to calculate the
         focusing fields in the plasma assuming blowout regime.
-    k_x: int
+    k_x : int
         Focusing fields in the plasma in units of T/m. Has priority over n_p.
-    name: str
+    name : str
         Name of the particle bunch.
+    q_species, m_species : float
+        Charge and mass of a single particle of the species represented
+        by the macroparticles. For an electron bunch (default),
+        ``q_species=-e`` and ``m_species=m_e``
 
     Returns
     -------
-    A ParticleBunch object.
+    ParticleBunch
+        The generated particle bunch.
 
     """
     if n_p is not None:
         n_p *= 1e-6
     b_m = ge.matched_plasma_beta_function(ene, n_p, k_x)
-    return get_gaussian_bunch_from_twiss(en_x, en_y, 0, 0, b_m, b_m, ene,
-                                         ene_sp, s_t, xi_c, q_tot, n_part,
-                                         x_off, y_off, theta_x, theta_y,
-                                         name=name)
+    return get_gaussian_bunch_from_twiss(
+        en_x, en_y, 0, 0, b_m, b_m, ene, ene_sp, s_t, xi_c, q_tot, n_part,
+        x_off, y_off, theta_x, theta_y, name=name, q_species=q_species,
+        m_species=m_species)
 
 
-def get_from_file(file_path, data_format, preserve_prop_dist=False, name=None,
-                  species_name=None, **kwargs):
+def get_from_file(
+    file_path: str,
+    data_format: str,
+    preserve_prop_dist: Optional[bool] = False,
+    name: Optional[str] = None,
+    species_name: Optional[str] = None,
+    **kwargs
+) -> ParticleBunch:
     """Get particle bunch from file.
 
     Parameters
