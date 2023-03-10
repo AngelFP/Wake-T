@@ -223,7 +223,7 @@ class Tracker():
         for i, bunch in enumerate(self.bunches):
             self.bunch_list[i].append(
                 ParticleBunch(
-                    deepcopy(bunch.q),
+                    deepcopy(bunch.w),
                     deepcopy(bunch.x),
                     deepcopy(bunch.y),
                     deepcopy(bunch.xi),
@@ -231,7 +231,9 @@ class Tracker():
                     deepcopy(bunch.py),
                     deepcopy(bunch.pz),
                     prop_distance=deepcopy(bunch.prop_distance),
-                    name=bunch.name
+                    name=deepcopy(bunch.name),
+                    q_species=deepcopy(bunch.q_species),
+                    m_species=deepcopy(bunch.m_species)
                 )
             )
 

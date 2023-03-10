@@ -187,7 +187,7 @@ class TMElement():
         if bunch.theta_ref != 0:
             rot = rotation_matrix_xz(-bunch.theta_ref)
             bunch_mat = np.dot(rot, bunch_mat)
-        return convert_to_ocelot_matrix(bunch_mat, bunch.q, self.gamma_ref)
+        return convert_to_ocelot_matrix(bunch_mat, bunch.w, self.gamma_ref)
 
     def _determine_steps(self):
         if self.n_out is not None:
@@ -227,7 +227,6 @@ class TMElement():
         bunch.x_ref = last_bunch.x_ref
 
     def _create_new_bunch(self, old_bunch, new_bunch_mat, prop_dist):
-        q = old_bunch.q
         if self.theta != 0:
             # angle rotated for prop_dist
             theta_step = self.theta*prop_dist/self.length
@@ -252,9 +251,11 @@ class TMElement():
             new_bunch_mat = np.dot(rot, new_bunch_mat)
         new_bunch_mat[0] += new_x_ref
         # create new bunch
-        new_bunch = ParticleBunch(q, bunch_matrix=new_bunch_mat,
+        new_bunch = ParticleBunch(old_bunch.w, bunch_matrix=new_bunch_mat,
                                   prop_distance=new_prop_dist,
-                                  name=old_bunch.name)
+                                  name=old_bunch.name,
+                                  q_species=old_bunch.q_species,
+                                  m_species=old_bunch.m_species)
         new_bunch.theta_ref = new_theta_ref
         new_bunch.x_ref = new_x_ref
         return new_bunch

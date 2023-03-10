@@ -3,7 +3,7 @@
 import numpy as np
 
 
-def convert_to_ocelot_matrix(bunch_matrix, q, gamma_ref=None):
+def convert_to_ocelot_matrix(bunch_matrix, w, gamma_ref=None):
     """
     Produces a matrix with the phase space coordinates
     (x, x', y, y', xi, dp) from a matrix containing (x, px, y, py, xi, pz).
@@ -16,7 +16,7 @@ def convert_to_ocelot_matrix(bunch_matrix, q, gamma_ref=None):
     pz = bunch_matrix[5]
     g = np.sqrt(1 + px**2 + py**2 + pz**2)
     if gamma_ref is None:
-        gamma_ref = np.average(g, weights=q)
+        gamma_ref = np.average(g, weights=w)
     b_ref = np.sqrt(1 - gamma_ref**(-2))
     dp = (g-gamma_ref)/(gamma_ref*b_ref)
     p_kin = np.sqrt(gamma_ref**2 - 1)

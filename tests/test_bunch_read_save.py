@@ -46,7 +46,13 @@ def test_bunch_read_save():
     for data_format, file_format in zip(data_formats, file_formats):
         # Save bunch.
         save_bunch_to_file(
-            bunch, data_format, output_folder, 'bunch_'+data_format)
+            bunch,
+            data_format,
+            os.path.join(
+                output_folder,
+                'bunch_{}.{}'.format(data_format, file_format)
+            )
+        )
         # Read saved bunch.
         file_path = os.path.join(
             output_folder,
@@ -61,7 +67,7 @@ def test_bunch_read_save():
             bunch_saved.px = bunch_saved.px[1:]
             bunch_saved.py = bunch_saved.py[1:]
             bunch_saved.pz = bunch_saved.pz[1:]
-            bunch_saved.q = bunch_saved.q[1:]
+            bunch_saved.w = bunch_saved.w[1:]
 
         # Check saved bunch is the same as original.
         assert_array_almost_equal(bunch_saved.x, bunch.x)

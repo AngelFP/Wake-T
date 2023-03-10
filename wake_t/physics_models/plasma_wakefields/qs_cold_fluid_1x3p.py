@@ -139,7 +139,7 @@ class NonLinearColdFluidWakefield(RZWakefield):
     def __wakefield_ode_system(self, u_1, u_2, laser_a0, n_beam):
         if self.beam_wakefields:
             return np.array(
-                [u_2, (1+laser_a0**2)/(2*(1+u_1)**2) + n_beam - 1/2])
+                [u_2, (1+laser_a0**2)/(2*(1+u_1)**2) - n_beam - 1/2])
         else:
             return np.array([u_2, (1+laser_a0**2)/(2*(1+u_1)**2) - 1/2])
 
@@ -165,9 +165,9 @@ class NonLinearColdFluidWakefield(RZWakefield):
             x = bunch.x
             y = bunch.y
             xi = bunch.xi
-            q = bunch.q
+            w = bunch.w * (bunch.q_species / ct.e)
             deposit_3d_distribution(
-                xi/s_d, x/s_d, y/s_d, q/ct.e, self.xi_min/s_d, r_fld[0],
+                xi/s_d, x/s_d, y/s_d, w, self.xi_min/s_d, r_fld[0],
                 self.n_xi, self.n_r, dz, dr, beam_hist, p_shape=self.p_shape,
                 use_ruyten=True)
         beam_hist = beam_hist[2:-2, 2:-2]
@@ -227,7 +227,7 @@ class NonLinearColdFluidWakefield(RZWakefield):
         dE_z = np.gradient(E_z, dz, axis=0, edge_order=2)
         v_z = u_z / gamma_fl
         nv_z = rho_fl * v_z
-        integrand = (dE_z - nv_z - beam_hist) * r_fld
+        integrand = (dE_z - nv_z + beam_hist) * r_fld
         subs = integrand / 2
         B_theta = (np.cumsum(integrand, axis=1) - subs) * dr / np.abs(r_fld)
         E_r = W_r + B_theta

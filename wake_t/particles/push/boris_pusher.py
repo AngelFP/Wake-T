@@ -24,6 +24,8 @@ def apply_boris_pusher(bunch, fields, t, dt):
     dt : float
         Time step by which to push the particles.
     """
+    # Calculate particle species constant.
+    q_over_mc = bunch.q_species / (bunch.m_species * ct.c)
     # Get the necessary arrays where the fields  will be gathered.
     ex, ey, ez, bx, by, bz = bunch.get_field_arrays()
     # Advance the particles half of one time steps.
@@ -33,7 +35,8 @@ def apply_boris_pusher(bunch, fields, t, dt):
     gather_fields(fields, bunch.x, bunch.y, bunch.xi, t+dt/2,
                   ex, ey, ez, bx, by, bz)
     # Advances the momentum one time step using the gathered fields.
-    push_momentum(bunch.px, bunch.py, bunch.pz, ex, ey, ez, bx, by, bz, dt)
+    push_momentum(bunch.px, bunch.py, bunch.pz, ex, ey, ez, bx, by, bz, dt,
+                  q_over_mc)
     # Completes the particles push using the updated momentum.
     apply_half_position_push(
         bunch.x, bunch.y, bunch.xi, bunch.px, bunch.py, bunch.pz, dt)
@@ -56,8 +59,8 @@ def apply_half_position_push(x, y, xi, px, py, pz, dt):
 
 
 @njit_serial()
-def push_momentum(px, py, pz, ex, ey, ez, bx, by, bz, dt):
-    k = -ct.e*dt/(ct.m_e*2*ct.c)
+def push_momentum(px, py, pz, ex, ey, ez, bx, by, bz, dt, q_over_mc):
+    k = q_over_mc * dt / 2
 
     for i in range(px.shape[0]):
         # Get particle momentum and fields.
@@ -71,18 +74,18 @@ def push_momentum(px, py, pz, ex, ey, ez, bx, by, bz, dt):
         by_i = by[i]
         bz_i = bz[i]
 
-        p_minus_x = px_i+k*ex_i
-        p_minus_y = py_i+k*ey_i
-        p_minus_z = pz_i+k*ez_i
+        p_minus_x = px_i + k * ex_i
+        p_minus_y = py_i + k * ey_i
+        p_minus_z = pz_i + k * ez_i
         c_over_gamma_med = ct.c / \
             np.sqrt(1 + (p_minus_x**2 + p_minus_y**2 + p_minus_z**2))
-        t_x = k*c_over_gamma_med*bx_i
-        t_y = k*c_over_gamma_med*by_i
-        t_z = k*c_over_gamma_med*bz_i
-        cons_s = 2/(1+t_x**2+t_y**2+t_z**2)
-        s_x = cons_s*t_x
-        s_y = cons_s*t_y
-        s_z = cons_s*t_z
+        t_x = k * c_over_gamma_med * bx_i
+        t_y = k * c_over_gamma_med * by_i
+        t_z = k * c_over_gamma_med * bz_i
+        cons_s = 2/(1 + t_x**2 + t_y**2 + t_z**2)
+        s_x = cons_s * t_x
+        s_y = cons_s * t_y
+        s_z = cons_s * t_z
 
         # Calculate first cross product
         p_xc1 = p_minus_x + p_minus_y*t_z - p_minus_z*t_y

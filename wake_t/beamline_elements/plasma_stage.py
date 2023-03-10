@@ -122,9 +122,10 @@ class PlasmaStage(FieldElement):
         # calculate maximum focusing along stage.
         z = np.linspace(0, self.length, 100)
         n_p = self.density(z)
+        q_over_m = beam.q_species / beam.m_species
         w_p = np.sqrt(max(n_p)*ct.e**2/(ct.m_e*ct.epsilon_0))
         max_kx = (ct.m_e/(2*ct.e*ct.c))*w_p**2
-        w_x = np.sqrt(ct.e*ct.c/ct.m_e * max_kx/min_gamma)
+        w_x = np.sqrt(np.abs(q_over_m*ct.c * max_kx/min_gamma))
         period_x = 1/w_x
         dt = 0.1*period_x
         return dt
