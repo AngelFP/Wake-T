@@ -47,7 +47,7 @@ def test_gaussian_init():
         # Check correct a0.
         z_r = laser_rayleigh_length(w0, l0)
         a0_analytic = a0 / np.sqrt(1 + (z_foc/z_r)**2)
-        a0_env = np.max(np.abs(a_env)) * np.sqrt(2)
+        a0_env = np.max(np.abs(a_env))
         assert math.isclose(a0_env, a0_analytic, rel_tol=1e-4)
 
 
@@ -95,7 +95,7 @@ def test_flattened_gaussian_init():
         # Check correct a0.
         z_r = laser_rayleigh_length(w0, l0)
         a0_analytic = a0 / np.sqrt(1 + (z_foc/z_r)**2)
-        a0_env = np.max(np.abs(a_env)) * np.sqrt(2)
+        a0_env = np.max(np.abs(a_env))
         assert math.isclose(a0_env, a0_analytic, rel_tol=1e-4)
 
 

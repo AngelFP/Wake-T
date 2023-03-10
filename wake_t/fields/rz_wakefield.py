@@ -173,6 +173,7 @@ class RZWakefield(NumericalField):
         fld_position = [0.5, 0.]
         fld_names = ['E', 'B', 'rho']
         fld_comps = [['r', 't', 'z'], ['r', 't', 'z'], None]
+        fld_attrs = [{}, {}, {}]
         fld_arrays = [
             [np.ascontiguousarray(self.e_r.T[2:-2, 2:-2]),
              np.ascontiguousarray(self.e_t.T[2:-2, 2:-2]),
@@ -185,6 +186,7 @@ class RZWakefield(NumericalField):
         if self.laser is not None:
             fld_names += ['a_mod', 'a_phase']
             fld_comps += [None, None]
+            fld_attrs += [{'polarization': self.laser.polarization}, {}]
             fld_arrays += [
                 [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))],
                 [np.ascontiguousarray(np.angle(self.laser.get_envelope().T))]
@@ -193,9 +195,10 @@ class RZWakefield(NumericalField):
 
         # Generate dictionary for openPMD diagnostics.
         diag_data = generate_field_diag_dictionary(
-            fld_names, fld_comps, fld_arrays, fld_comp_pos, grid_labels,
-            grid_spacing, grid_global_offset, fld_solver, fld_solver_params,
-            fld_boundary, fld_boundary_params, part_boundary,
-            part_boundary_params, current_smoothing, charge_correction)
+            fld_names, fld_comps, fld_attrs, fld_arrays, fld_comp_pos,
+            grid_labels, grid_spacing, grid_global_offset, fld_solver,
+            fld_solver_params, fld_boundary, fld_boundary_params,
+            part_boundary, part_boundary_params, current_smoothing,
+            charge_correction)
 
         return diag_data

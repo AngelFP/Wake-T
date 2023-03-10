@@ -26,14 +26,19 @@ class LaserPulse():
     ----------
     l_0 : float
         Laser wavelength in units of m.
+    polarization : str, optional
+        Polarization of the laser pulse. Accepted values are 'linear'
+        (default) or 'circular'.
 
     """
 
     def __init__(
         self,
-        l_0: float
+        l_0: float,
+        polarization: Optional[str] = 'linear'
     ) -> None:
         self.l_0 = l_0
+        self.polarization = polarization
         self.a_env = None
         self.solver_params = None
         self.n_steps = 0
@@ -361,7 +366,7 @@ class GaussianPulse(LaserPulse):
         cep_phase: Optional[float] = 0.,
         polarization: Optional[str] = 'linear'
     ) -> None:
-        super().__init__(l_0)
+        super().__init__(l_0=l_0, polarization=polarization)
         self.xi_c = xi_c
         self.a_0 = a_0
         self.tau = tau
@@ -369,7 +374,6 @@ class GaussianPulse(LaserPulse):
         self.z_foc = z_foc
         self.z_r = np.pi * w_0**2 / l_0
         self.cep_phase = cep_phase
-        self.polarization = polarization
 
     def _envelope_function(self, xi, r, z_pos):
         """
@@ -386,8 +390,6 @@ class GaussianPulse(LaserPulse):
         gaussian_profile = np.exp(exp_cep + exp_r + exp_z)
         # Amplitude
         avg_amplitude = self.a_0
-        if self.polarization == 'linear':
-            avg_amplitude /= np.sqrt(2)
         return avg_amplitude / diff_factor * gaussian_profile
 
 
@@ -441,7 +443,7 @@ class LaguerreGaussPulse(LaserPulse):
         polarization: Optional[str] = 'linear'
     ) -> None:
         # Initialize parent class
-        super().__init__(l_0)
+        super().__init__(l_0=l_0, polarization=polarization)
 
         # If no focal plane position is given, use xi_c
         if z_foc is None:
@@ -457,7 +459,6 @@ class LaguerreGaussPulse(LaserPulse):
         self.w0 = w_0
         self.cep_phase = cep_phase
         self.tau = tau
-        self.polarization = polarization
 
     def _envelope_function(self, xi, r, z_pos):
         """Complex envelope of a Laguerre-Gauss beam."""
@@ -479,8 +480,6 @@ class LaguerreGaussPulse(LaserPulse):
                    * self.laguerre_pm(scaled_radius_squared))
 
         a = self.a0 * profile
-        if self.polarization == 'linear':
-            a /= np.sqrt(2)
         return a
 
 
@@ -537,7 +536,7 @@ class FlattenedGaussianPulse(LaserPulse):
         polarization: Optional[str] = 'linear'
     ) -> None:
         # Initialize parent class.
-        super().__init__(l_0)
+        super().__init__(l_0=l_0, polarization=polarization)
 
         # Store parameters.
         self.xi_c = xi_c
