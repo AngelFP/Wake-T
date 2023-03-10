@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import scipy.constants as ct
 from pytest import approx
@@ -6,6 +8,9 @@ from wake_t.utilities.bunch_generation import get_gaussian_bunch_from_twiss
 from wake_t.fields.analytical_field import AnalyticalField
 from wake_t.beamline_elements import FieldElement
 from wake_t.diagnostics import analyze_bunch
+
+
+tests_output_folder = './tests_output'
 
 
 def b_x(x, y, z, t, bx, constants):
@@ -23,6 +28,9 @@ def b_y(x, y, z, t, by, constants):
 def test_field_element_tracking():
     """Test that tracking in a field element works as expected by tracking
     a bunch through an analytical field (azimuthal magnetic field)"""
+    output_folder = os.path.join(
+        tests_output_folder, 'test_field_element_tracking')
+
     # Set numpy random seed to get reproducible results
     np.random.seed(1)
 
@@ -52,7 +60,8 @@ def test_field_element_tracking():
     )
 
     # Do tracking.
-    element.track(bunch, opmd_diag=True)
+    diag_dir = os.path.join(output_folder, 'diags')
+    element.track(bunch, opmd_diag=True, diag_dir=diag_dir)
 
     # Check that results have not changed.
     bunch_params = analyze_bunch(bunch)
