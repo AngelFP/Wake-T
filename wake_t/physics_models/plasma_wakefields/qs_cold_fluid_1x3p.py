@@ -147,6 +147,10 @@ class NonLinearColdFluidWakefield(RZWakefield):
         # Get laser envelope
         if self.laser is not None:
             a_env = np.abs(self.laser.get_envelope())
+            # If linearly polarized, divide by sqrt(2) so that the
+            # ponderomotive force on the plasma particles is correct.
+            if self.laser.polarization == 'linear':
+                a_env /= np.sqrt(2)
         else:
             a_env = np.zeros((self.n_xi, self.n_r))
 

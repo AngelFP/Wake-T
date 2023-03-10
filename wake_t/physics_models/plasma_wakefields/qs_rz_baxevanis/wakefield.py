@@ -165,15 +165,19 @@ class Quasistatic2DWakefield(RZWakefield):
     def _calculate_wakefield(self, bunches):
         parabolic_coefficient = self.parabolic_coefficient(self.t*ct.c)
 
-        # Get laser envelope
+        # Get square of laser envelope
         if self.laser is not None:
-            a_env = np.abs(self.laser.get_envelope()) ** 2
+            a_env_2 = np.abs(self.laser.get_envelope()) ** 2
+            # If linearly polarized, divide by 2 so that the ponderomotive
+            # force on the plasma particles is correct.
+            if self.laser.polarization == 'linear':
+                a_env_2 /= 2
         else:
-            a_env = np.zeros((self.n_xi, self.n_r))
+            a_env_2 = np.zeros((self.n_xi, self.n_r))
 
         # Calculate plasma wakefields
         calculate_wakefields(
-            a_env, bunches, self.r_max, self.xi_min, self.xi_max,
+            a_env_2, bunches, self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, self.n_p,
             r_max_plasma=self.r_max_plasma,
             parabolic_coefficient=parabolic_coefficient,
