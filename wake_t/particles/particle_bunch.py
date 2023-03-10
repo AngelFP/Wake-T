@@ -111,16 +111,16 @@ class ParticleBunch():
     @property
     def q(self) -> np.ndarray:
         """Get an array with the charge of each macroparticle.
-        
+
         This property is implemented for convenience and for backward
         compatibility.
         """
         return self.w * self.q_species
-    
+
     @q.setter
     def q(self, q_new):
         """Set the total charge of each macroparticle.
-        
+
         This property is implemented for convenience and for backward
         compatibility.
         """
