@@ -116,6 +116,15 @@ class ParticleBunch():
         compatibility.
         """
         return self.w * self.q_species
+    
+    @q.setter
+    def q(self, q_new):
+        """Set the total charge of each macroparticle.
+        
+        This property is implemented for convenience and for backward
+        compatibility.
+        """
+        self.w = np.abs(q_new / self.q_species)
 
     def set_name(self, name):
         """ Set the particle bunch name """
