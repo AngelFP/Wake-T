@@ -303,6 +303,8 @@ class OpenPMDDiagnostics():
             # properly defined in the openPMD standard.
             fld.geometry = Geometry.thetaMode  # Geometry.cylindrical
             fld.set_attribute('fieldSmoothing', 'none')
+            for attr, val in wf_data[field]['attributes'].items():
+                fld.set_attribute(attr, val)
             fld.axis_labels = wf_data[field]['grid']['labels']
             fld.grid_spacing = wf_data[field]['grid']['spacing']
             global_offset = deepcopy(wf_data[field]['grid']['global_offset'])
