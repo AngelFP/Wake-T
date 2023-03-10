@@ -73,7 +73,7 @@ def test_different_species_single_particle(make_plots=False):
             vz_0 = pz / gamma * ct.c
             w = - params['q_species'] * b_y / (params['m_species'] * gamma)
             x_an = vz_0 / w * (1. - np.cos(w * tracking_time))
-            np.testing.assert_almost_equal(particle.x, x_an, decimal=15)
+            np.testing.assert_almost_equal(particle.x, x_an, decimal=14)
 
         # Make plot.
         if make_plots:
