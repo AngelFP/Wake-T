@@ -145,9 +145,10 @@ def calculate_psi_dr_psi_at_particles_bg(
     of the plasma particles. This is done by using Eqs. (29) - (32) in
     the paper by P. Baxevanis and G. Stupakov.
 
-    As indicated in the original paper, the value of the fields at the
-    discontinuities (at the exact radial position of the plasma particles)
-    is calculated as the average between the two neighboring values.
+    Their value at the position of each plasma particle is calculated
+    by doing a linear interpolation between two values at the left and
+    right of the particle. The left point is the middle position between the
+    particle and its closest left neighbor, and the same for the right.
 
     Parameters
     ----------
@@ -169,59 +170,44 @@ def calculate_psi_dr_psi_at_particles_bg(
     # Initialize arrays.
     n_part = r.shape[0]
 
-    # Calculate psi and dr_psi.
-    # Their value at the position of each plasma particle is calculated
-    # by doing a linear interpolation between two values at the left and
-    # right of the particle. The left point is the middle position between the
-    # particle and its closest left neighbor, and the same for the right.
+    # Get initial values for left and right neighbors.
+    r_left = r_neighbor[0]
+    r_right = r_neighbor[1]
+    log_r_right = np.log(r_right)
+    psi_bg_left = psi_bg[0]
+    psi_bg_right = psi_bg[1]
+    psi_left = psi_bg_left
+
+    # Loop over particles.
     for i_sort in range(n_part):
         i = idx[i_sort]
-        im1 = idx[i_sort - 1]
         r_i = r[i]
 
-        r_left = r_neighbor[i_sort]
-        psi_bg_left = psi_bg[i_sort]
-        # dr_psi_bg_left = dr_psi_bg[i]
-        # If this is not the first particle, calculate the left point (r_left)
-        # and the field values there (psi_left and dr_psi_left) as usual.
-        if i_sort > 0:
-            sum_1_left_i = sum_1[im1]
-            sum_2_left_i = sum_2[im1]
-            psi_left = sum_1_left_i*np.log(r_left) - sum_2_left_i + psi_bg_left
-            # dr_psi_left = sum_1_left_i / r_left + dr_psi_bg_left
-        # Otherwise, take r=0 as the location of the left point.
-        else:
-            psi_left = psi_bg_left
-            # dr_psi_left = 0.
-
-        # If this is not the last particle, calculate the r_right as
-        # middle point.
-        # if i_sort < n_part - 1:
-        #     ip1 = idx[i_sort + 1]
-        # else:
-        #     ip1 = -1
+        # Get sums to calculate psi at right neighbor.
         sum_1_right_i = sum_1[i]
         sum_2_right_i = sum_2[i]
-        r_right = r_neighbor[i_sort+1]
-        psi_bg_right = psi_bg[i_sort+1]
-        # dr_psi_bg_right = dr_psi_bg[ip1]
 
-        # Calculate field values ar r_right.
-        psi_right = sum_1_right_i*np.log(r_right) - sum_2_right_i + psi_bg_right
-        # dr_psi_right = sum_1_right_i / r_right + dr_psi_bg_right
+        # Calculate psi at right neighbor.
+        psi_right = sum_1_right_i*log_r_right - sum_2_right_i + psi_bg_right
 
-        # Interpolate psi.
+        # Interpolate psi between left and right neighbors.
         b_1 = (psi_right - psi_left) / (r_right - r_left)
         a_1 = psi_left - b_1*r_left
         psi[i] = a_1 + b_1*r_i
 
-        # Interpolate dr_psi.
-        # b_2 = (dr_psi_right - dr_psi_left) / (r_right - r_left)
-        # a_2 = dr_psi_left - b_2*r_left
-        # dr_psi[i] = a_2 + b_2*r_i
+        # dr_psi is simply the slope used for interpolation.
         dr_psi[i] = b_1
 
-        im1 = i
+        # Update values of next left neighbor with those of the current right
+        # neighbor.
+        r_left = r_right
+        psi_bg_left = psi_bg_right
+        psi_left = psi_right
+
+        # Get values needed for next right neighbor.
+        r_right = r_neighbor[i_sort+2]
+        log_r_right = np.log(r_right)
+        psi_bg_right = psi_bg[i_sort+2]
 
 
 @njit_serial()
