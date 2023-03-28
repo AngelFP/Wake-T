@@ -15,7 +15,8 @@ wakefield_models = {
     'custom_blowout': wf.CustomBlowoutWakefield,
     'focusing_blowout': wf.FocusingBlowoutField,
     'cold_fluid_1d': wf.NonLinearColdFluidWakefield,
-    'quasistatic_2d': wf.Quasistatic2DWakefield
+    'quasistatic_2d': wf.Quasistatic2DWakefield,
+    'quasistatic_2d_ion': wf.Quasistatic2DWakefieldIon,
 }
 
 
