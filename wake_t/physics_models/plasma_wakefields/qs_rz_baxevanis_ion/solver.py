@@ -159,7 +159,8 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
 
         pp.ions_computed = True
 
-        pp.evolve(dxi)
+        if slice_i > 0:
+            pp.evolve(dxi)
         # pp.update_gamma_pz()
 
     # Calculate derived fields (E_z, W_r, and E_r).
