@@ -214,13 +214,14 @@ def calculate_psi_dr_psi_at_particles_bg(
 def calculate_dxi_psi_at_particles_bg(
         r, sum_3, dxi_psi_bg, r_neighbor, idx, dxi_psi):
     """
-    Calculate the wakefield potential and its derivatives at the position
-    of the plasma particles. This is done by using Eqs. (29) - (32) in
+    Calculate the longitudinal derivative of the wakefield potential at the
+    position of the plasma particles. This is done by using Eq. (32) in
     the paper by P. Baxevanis and G. Stupakov.
 
-    As indicated in the original paper, the value of the fields at the
-    discontinuities (at the exact radial position of the plasma particles)
-    is calculated as the average between the two neighboring values.
+    The value at the position of each plasma particle is calculated
+    by doing a linear interpolation between two values at the left and
+    right of the particle. The left point is the middle position between the
+    particle and its closest left neighbor, and the same for the right.
 
     Parameters
     ----------
@@ -234,7 +235,7 @@ def calculate_dxi_psi_at_particles_bg(
     dr_p : float
         Initial spacing between plasma macroparticles. Corresponds also the
         width of the plasma sheet represented by the macroparticle.
-    psi_pp, dr_psi_pp, dxi_psi_pp : ndarray
+    dxi_psi : ndarray
         Arrays where the value of the wakefield potential and its derivatives
         at the location of the plasma particles will be stored.
 
@@ -242,65 +243,36 @@ def calculate_dxi_psi_at_particles_bg(
     # Initialize arrays.
     n_part = r.shape[0]
 
-    # Calculate psi and dr_psi.
-    # Their value at the position of each plasma particle is calculated
-    # by doing a linear interpolation between two values at the left and
-    # right of the particle. The left point is the middle position between the
-    # particle and its closest left neighbor, and the same for the right.
+    # Get initial values for left and right neighbors.
+    r_left = r_neighbor[0]
+    r_right = r_neighbor[1]
+    dxi_psi_bg_left = dxi_psi_bg[0]
+    dxi_psi_bg_right = dxi_psi_bg[1]
+    dxi_psi_left = dxi_psi_bg_left
+
+    # Loop over particles.
     for i_sort in range(n_part):
         i = idx[i_sort]
-        im1 = idx[i_sort - 1]
         r_i = r[i]
-
-        r_left = r_neighbor[i_sort]
-        dxi_psi_bg_left = dxi_psi_bg[i_sort]
-        # dr_psi_bg_left = dr_psi_bg[i]
-        # If this is not the first particle, calculate the left point (r_left)
-        # and the field values there (psi_left and dr_psi_left) as usual.
-        if i_sort > 0:
-            sum_3_left_i = sum_3[im1]
-            dxi_psi_left = - sum_3_left_i + dxi_psi_bg_left
-        else:
-            dxi_psi_left = dxi_psi_bg_left
-
-        # If this is not the last particle, calculate the r_right as
-        # middle point.
-        # if i_sort < n_part - 1:
-        #     ip1 = idx[i_sort + 1]
-        # else:
-        #     ip1 = -1
+        
+        # Calculate value at right neighbor.
         sum_3_right_i = sum_3[i]
-        r_right = r_neighbor[i_sort+1]
-        dxi_psi_bg_right = dxi_psi_bg[i_sort+1]
-        # dr_psi_bg_right = dr_psi_bg[ip1]
-
-        # Calculate field values ar r_right.
         dxi_psi_right = - sum_3_right_i + dxi_psi_bg_right
-        # dr_psi_right = sum_1_right_i / r_right + dr_psi_bg_right
 
-        # Interpolate psi.
+        # Interpolate value between left and right neighbors.
         b_1 = (dxi_psi_right - dxi_psi_left) / (r_right - r_left)
         a_1 = dxi_psi_left - b_1*r_left
         dxi_psi[i] = a_1 + b_1*r_i
 
-        im1 = i
+        # Update values of next left neighbor with those of the current right
+        # neighbor.
+        r_left = r_right
+        dxi_psi_bg_left = dxi_psi_bg_right
+        dxi_psi_left = dxi_psi_right
 
-    # Boundary condition for psi (Force potential to be zero either at the
-    # plasma edge or after the last particle, whichever is further away).
-    # i_N = idx[-1]
-    # psi -= sum_1[i_N]*np.log(r[i_N]) - sum_2[i_N] + psi_bg[i_N]
-    # psi -= psi[i_N]
-
-    # In theory, psi cannot be smaller than -1. However, it has been observed
-    # than in very strong blowouts, near the peak, values below -1 can appear
-    # in this numerical method. In addition, values very close to -1 will lead
-    # to particles with gamma >> 10, which will also lead to problems.
-    # This condition here makes sure that this does not happen, improving
-    # the stability of the solver.
-    # for i in range(n_part):
-    #     # Should only happen close to the peak of very strong blowouts.
-    #     if psi[i] < -0.90:
-    #         psi[i] = -0.90
+        # Get values needed for next right neighbor.
+        r_right = r_neighbor[i_sort+2]
+        dxi_psi_bg_right = dxi_psi_bg[i_sort+2]
 
 
 @njit_serial()
