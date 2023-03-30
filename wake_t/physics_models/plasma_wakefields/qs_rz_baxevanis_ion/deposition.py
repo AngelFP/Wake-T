@@ -64,7 +64,6 @@ def deposit_plasma_particles_linear(r, q, r_min, nr, dr, deposition_array):
 
             # Indices of lowest cell in which the particle will deposit charge.
             ir_cell = int(math.ceil(r_cell)) + 1
-            # ir_cell = min(int(math.ceil(r_cell)) + 1, nr + 2)
 
             # u_r: particle position wrt left neighbor gridpoint in r.
             u_r = r_cell + 2 - ir_cell
@@ -73,17 +72,14 @@ def deposit_plasma_particles_linear(r, q, r_min, nr, dr, deposition_array):
             rsl_0 = 1. - u_r
             rsl_1 = u_r
 
-            if r_cell < 0.:
-                rsl_1 -= rsl_0
-                rsl_0 = 0.
-            elif r_cell > nr - 1:
-                # Force all charge to be deposited below r_max.
-                rsl_0 += rsl_1
-                rsl_1 = 0.
-
             # Add contribution of particle to density array.
             deposition_array[ir_cell + 0] += rsl_0 * w_i
             deposition_array[ir_cell + 1] += rsl_1 * w_i
+
+        # Apply correction on axis (ensures uniform density in a uniform
+        # plasma)
+        deposition_array[2] -= deposition_array[1]
+        deposition_array[1] = 0.
 
 
 @njit_serial(fastmath=True)
@@ -119,28 +115,15 @@ def deposit_plasma_particles_cubic(r, q, r_min, nr, dr, deposition_array):
             rsc_2 = inv_6 * (3. * v_r**3 - 6. * v_r**2 + 4.)
             rsc_3 = inv_6 * u_r ** 3
 
-            # Apply correction on axis (ensures uniform density in a uniform
-            # plasma)
-            if r_cell <= 0.:
-                rsc_3 -= rsc_0
-                rsc_2 -= rsc_1
-                rsc_0 = 0.
-                rsc_1 = 0.
-            elif r_cell <= 1.:
-                rsc_1 -= rsc_0
-                rsc_0 = 0.
-            # Deposit charge above r_max within boundaries.
-            elif r_cell > nr - 1:
-                rsc_0 += rsc_3
-                rsc_1 += rsc_2
-                rsc_2 = 0.
-                rsc_3 = 0.
-            elif r_cell > nr - 2:
-                rsc_2 += rsc_3
-                rsc_3 = 0.
-
             # Add contribution of particle to density array.
             deposition_array[ir_cell + 0] += rsc_0 * w_i
             deposition_array[ir_cell + 1] += rsc_1 * w_i
             deposition_array[ir_cell + 2] += rsc_2 * w_i
             deposition_array[ir_cell + 3] += rsc_3 * w_i
+
+        # Apply correction on axis (ensures uniform density in a uniform
+        # plasma)
+        deposition_array[2] -= deposition_array[1]
+        deposition_array[3] -= deposition_array[0]
+        deposition_array[0] = 0.
+        deposition_array[1] = 0.
