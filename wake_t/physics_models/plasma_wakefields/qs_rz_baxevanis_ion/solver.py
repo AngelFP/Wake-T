@@ -92,6 +92,7 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
     # Field node coordinates.
     r_fld = r_fld / s_d
     xi_fld = xi_fld / s_d
+    log_r_fld = np.log(r_fld)
 
     # Initialize plasma particles.
     pp = PlasmaParticles(
@@ -146,7 +147,7 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
         pp.calculate_ai_bi()
         pp.calculate_b_theta()
 
-        pp.calculate_psi_grid(r_fld, psi[slice_i+2, 2:-2])
+        pp.calculate_psi_grid(r_fld, log_r_fld, psi[slice_i+2, 2:-2])
         pp.calculate_b_theta_grid(r_fld, b_t_bar[slice_i+2, 2:-2])
 
         if ion_motion:

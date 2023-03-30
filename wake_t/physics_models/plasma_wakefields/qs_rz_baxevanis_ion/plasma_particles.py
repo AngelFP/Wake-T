@@ -302,11 +302,11 @@ class PlasmaParticles():
 
     def gather_particle_background(self):
         calculate_psi_and_dr_psi(
-            self._r_neighbor_e, self.r_ion, self.dr_p, self.i_sort_i,
+            self._r_neighbor_e, self._log_r_neighbor_e, self.r_ion, self.dr_p, self.i_sort_i,
             self._sum_1_i, self._sum_2_i, self._psi_bg_i, self._dr_psi_bg_i)
         if self.ion_motion:
             calculate_psi_and_dr_psi(
-                self._r_neighbor_i, self.r_elec, self.dr_p, self.i_sort_e,
+                self._r_neighbor_i, self._log_r_neighbor_i, self.r_elec, self.dr_p, self.i_sort_e,
                 self._sum_1_e, self._sum_2_e, self._psi_bg_e,
                 self._dr_psi_bg_e)
 
@@ -366,12 +366,12 @@ class PlasmaParticles():
     def calculate_psi_dr_psi(self):
         calculate_psi_dr_psi_at_particles_bg(
             self.r_elec, self._sum_1_e, self._sum_2_e,
-            self._psi_bg_i, self._r_neighbor_e,
+            self._psi_bg_i, self._r_neighbor_e, self._log_r_neighbor_e,
             self.i_sort_e, self._psi_e, self._dr_psi_e)
         if self.ion_motion:
             calculate_psi_dr_psi_at_particles_bg(
                 self.r_ion, self._sum_1_i, self._sum_2_i,
-                self._psi_bg_e, self._r_neighbor_i,
+                self._psi_bg_e, self._r_neighbor_i, self._log_r_neighbor_e,
                 self.i_sort_i, self._psi_i, self._dr_psi_i)
 
         # self._i_max = np.argmax(self.r)
@@ -383,11 +383,12 @@ class PlasmaParticles():
         r_max_e = self.r_elec[self.i_sort_e[-1]]
         r_max_i = self.r_ion[self.i_sort_i[-1]]
         self._r_max[:] = max(r_max_e, r_max_i) + self.dr_p/2
+        log_r_max = np.log(self._r_max)
 
         self._psi_max[:] = 0.
 
-        calculate_psi(self._r_max, self.r_elec, self._sum_1_e, self._sum_2_e, self.i_sort_e, self._psi_max)
-        calculate_psi(self._r_max, self.r_ion, self._sum_1_i, self._sum_2_i, self.i_sort_i, self._psi_max)
+        calculate_psi(self._r_max, log_r_max, self.r_elec, self._sum_1_e, self._sum_2_e, self.i_sort_e, self._psi_max)
+        calculate_psi(self._r_max, log_r_max, self.r_ion, self._sum_1_i, self._sum_2_i, self.i_sort_i, self._psi_max)
 
         self._psi_e -= self._psi_max
         if self.ion_motion:
@@ -425,9 +426,9 @@ class PlasmaParticles():
                 self.r_ion, self.r_elec, self._a_0[0], self._a_i_e, self._b_i_e,
                 self.i_sort_i, self.i_sort_e, self._b_t_i)
 
-    def calculate_psi_grid(self, r_eval, psi):
-        calculate_psi(r_eval, self.r_elec, self._sum_1_e, self._sum_2_e, self.i_sort_e, psi)
-        calculate_psi(r_eval, self.r_ion, self._sum_1_i, self._sum_2_i, self.i_sort_i, psi)
+    def calculate_psi_grid(self, r_eval, log_r_eval, psi):
+        calculate_psi(r_eval, log_r_eval, self.r_elec, self._sum_1_e, self._sum_2_e, self.i_sort_e, psi)
+        calculate_psi(r_eval, log_r_eval, self.r_ion, self._sum_1_i, self._sum_2_i, self.i_sort_i, psi)
         psi -= self._psi_max
 
     def calculate_b_theta_grid(self, r_eval, b_theta):
@@ -460,9 +461,11 @@ class PlasmaParticles():
     def determine_neighboring_points(self):
         determine_neighboring_points(
             self.r_elec, self.dr_p, self.i_sort_e, self._r_neighbor_e)
+        self._log_r_neighbor_e = np.log(self._r_neighbor_e)
         if self.ion_motion:
             determine_neighboring_points(
                 self.r_ion, self.dr_p, self.i_sort_i, self._r_neighbor_i)
+            self._log_r_neighbor_i = np.log(self._r_neighbor_i)
 
 
 def radial_integral(f_r):
