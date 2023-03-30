@@ -247,7 +247,7 @@ def determine_neighboring_points(r, dr_p, idx, r_neighbor):
             r_left = (r_im1 + r_i) * 0.5
         # Otherwise, take r=0 as the location of the left point.
         else:
-            r_left = r_i - dr_p * 0.5
+            r_left = max(r_i - dr_p * 0.5, 0.5 * r_i) 
 
         r_im1 = r_i
         r_neighbor[i_sort] = r_left
@@ -326,32 +326,31 @@ def calculate_psi_and_dr_psi(r_eval, log_r_eval, r, dr_p, idx, sum_1_arr, sum_2_
     for j in range(n_points):
         r_j = r_eval[j]
         log_r_j = log_r_eval[j]
-        if r_j > 0:
-            # Get index of last plasma particle with r_i < r_j, continuing from
-            # last particle found in previous iteration.
-            for i_sort in range(i_last, n_part):
-                i = idx[i_sort]
-                r_i = r[i]
-                i_last = i_sort
-                if r_i >= r_j:
-                    i_last -= 1
-                    break
-            # Calculate fields at r_j.
-            if i_last == -1:
-                sum_1_j = 0.
-                sum_2_j = 0.
-                i_last = 0
-            else:
-                i = idx[i_last]
-                sum_1_j = sum_1_arr[i]
-                sum_2_j = sum_2_arr[i]
-            if r_j < r_max_plasma:
-                psi[j] = sum_1_j*log_r_j - sum_2_j
-                dr_psi[j] = sum_1_j / r_j
-            else:
-                psi_max = sum_1_j*log_r_max_plasma - sum_2_j
-                psi[j] = psi_max + sum_1_j * (log_r_j - log_r_max_plasma)
-                dr_psi[j] = psi_max / r_j
+        # Get index of last plasma particle with r_i < r_j, continuing from
+        # last particle found in previous iteration.
+        for i_sort in range(i_last, n_part):
+            i = idx[i_sort]
+            r_i = r[i]
+            i_last = i_sort
+            if r_i >= r_j:
+                i_last -= 1
+                break
+        # Calculate fields at r_j.
+        if i_last == -1:
+            sum_1_j = 0.
+            sum_2_j = 0.
+            i_last = 0
+        else:
+            i = idx[i_last]
+            sum_1_j = sum_1_arr[i]
+            sum_2_j = sum_2_arr[i]
+        if r_j < r_max_plasma:
+            psi[j] = sum_1_j*log_r_j - sum_2_j
+            dr_psi[j] = sum_1_j / r_j
+        else:
+            psi_max = sum_1_j*log_r_max_plasma - sum_2_j
+            psi[j] = psi_max + sum_1_j * (log_r_j - log_r_max_plasma)
+            dr_psi[j] = psi_max / r_j
 
 
 @njit_serial()
@@ -366,24 +365,23 @@ def calculate_dxi_psi(r_eval, r, idx, sum_3_arr, dxi_psi):
     i_last = 0
     for j in range(n_points):
         r_j = r_eval[j]
-        if r_j > 0:
-            # Get index of last plasma particle with r_i < r_j, continuing from
-            # last particle found in previous iteration.
-            for i_sort in range(i_last, n_part):
-                i = idx[i_sort]
-                r_i = r[i]
-                i_last = i_sort
-                if r_i >= r_j:
-                    i_last -= 1
-                    break
-            # Calculate fields at r_j.
-            if i_last == -1:
-                sum_3_j = 0.
-                i_last = 0
-            else:
-                i = idx[i_last]
-                sum_3_j = sum_3_arr[i]
-            dxi_psi[j] = - sum_3_j
+        # Get index of last plasma particle with r_i < r_j, continuing from
+        # last particle found in previous iteration.
+        for i_sort in range(i_last, n_part):
+            i = idx[i_sort]
+            r_i = r[i]
+            i_last = i_sort
+            if r_i >= r_j:
+                i_last -= 1
+                break
+        # Calculate fields at r_j.
+        if i_last == -1:
+            sum_3_j = 0.
+            i_last = 0
+        else:
+            i = idx[i_last]
+            sum_3_j = sum_3_arr[i]
+        dxi_psi[j] = - sum_3_j
 
 
 # @njit_serial()
