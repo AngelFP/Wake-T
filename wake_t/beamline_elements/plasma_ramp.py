@@ -4,12 +4,16 @@ predefined ramp profiles.
 
 """
 
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 from functools import partial
 
 import numpy as np
 
 from wake_t.beamline_elements import PlasmaStage
+
+
+# Define type alias for the ramp profiles.
+Profile = Callable[[float, float, float, float, float], float]
 
 
 def inverse_square_profile(z, decay_length=None, density_top=None,
@@ -57,7 +61,8 @@ class PlasmaRamp(PlasmaStage):
         Longitudinal density profile of the ramp. Possible string values
         are ``'gaussian'``, ``'inverse square'`` and ``'exponential'``.
         A callable might also be provided as a function of the form
-        ``'def func(z)'`` that returns the density value at the given
+        ``'def func(z, decay_length, density_top, density_down,
+        position_down)'`` that returns the density value at the given
         position ``z``.
     ramp_type : string
         Possible types are ``'upramp'`` and ``'downramp'``.
@@ -109,7 +114,7 @@ class PlasmaRamp(PlasmaStage):
     def __init__(
         self,
         length: float,
-        profile: Optional[str] = 'inverse_square',
+        profile: Optional[Union[str, Profile]] = 'inverse_square',
         ramp_type: Optional[str] = 'upramp',
         wakefield_model: Optional[str] = 'focusing_blowout',
         decay_length: Optional[float] = None,
@@ -128,14 +133,14 @@ class PlasmaRamp(PlasmaStage):
         # If a function profile is not provided, generate from presets.
         if not callable(profile):
             if profile in ramp_profiles:
-                ramp_profile = ramp_profiles[profile]
-                profile = partial(
-                    ramp_profile, decay_length=decay_length,
-                    density_top=plasma_dens_top, density_down=plasma_dens_down,
-                    position_down=position_down)
+                profile = ramp_profiles[profile]                
             else:
                 raise ValueError(
                     'Ramp profile "{}" not recognized'.format(profile))
+        profile = partial(
+            profile, decay_length=decay_length,
+            density_top=plasma_dens_top, density_down=plasma_dens_down,
+            position_down=position_down)
         self.profile = profile
         super().__init__(
             length=length,
