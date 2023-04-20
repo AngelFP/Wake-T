@@ -133,7 +133,7 @@ class PlasmaRamp(PlasmaStage):
         # If a function profile is not provided, generate from presets.
         if not callable(profile):
             if profile in ramp_profiles:
-                profile = ramp_profiles[profile]                
+                profile = ramp_profiles[profile]
             else:
                 raise ValueError(
                     'Ramp profile "{}" not recognized'.format(profile))
