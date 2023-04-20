@@ -115,13 +115,25 @@ class LaserPulse():
             'dt': dt / nt,
             'use_phase': use_phase
         }
-        if self.a_env is not None and solver_params != self.solver_params:
-            raise ValueError(
-                'Solver parameters cannot be changed once envelope has been '
-                'initialized.'
-            )
-        else:
-            self.solver_params = solver_params
+        # Check if laser pulse has already been initialized.
+        if self.n_steps > 0:
+            # Check that grid parameters have not changed.
+            if (
+                solver_params['zmin'] != self.solver_params['zmin'] and
+                solver_params['zmax'] != self.solver_params['zmax'] and
+                solver_params['rmax'] != self.solver_params['rmax'] and
+                solver_params['nz'] != self.solver_params['nz'] and
+                solver_params['nr'] != self.solver_params['nr']
+            ):
+                raise ValueError(
+                    'Laser envelope grid parameters cannot be changed once '
+                    'envelope has been initialized.'
+                )
+            # If time step has changed, set `n_steps` to 0 so that the
+            # non-centered envelope solver is used for the next step.
+            if solver_params['dt'] != self.solver_params['dt']:
+                self.n_steps = 0
+        self.solver_params = solver_params
 
     def initialize_envelope(self) -> None:
         """Initialize laser envelope arrays."""
