@@ -4,7 +4,6 @@ openPMD output.
 """
 import os
 from typing import Optional, List
-from copy import deepcopy
 
 import numpy as np
 import scipy.constants as ct
