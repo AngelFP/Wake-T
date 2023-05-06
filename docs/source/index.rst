@@ -6,8 +6,8 @@
 Wake-T |release| documentation
 ==============================
 
-.. |travis| image:: https://travis-ci.org/AngelFP/Wake-T.svg?branch=dev
-   :target: https://travis-ci.org/AngelFP/Wake-T
+.. |tests| image:: https://github.com/AngelFP/Wake-T/actions/workflows/test-package.yml/badge.svg
+   :target: https://github.com/AngelFP/Wake-T/actions
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/Wake-T.svg?logo=python&logoColor=white
    :target: https://pypi.org/project/Wake-T/
@@ -18,7 +18,7 @@ Wake-T |release| documentation
 .. |license| image:: https://img.shields.io/github/license/AngelFP/Wake-T
    :target: https://github.com/AngelFP/Wake-T/blob/master/LICENSE
 
-|travis| |codefactor| |PyPI| |license|
+|tests| |codefactor| |PyPI| |license|
 
 .. grid:: 2
     :gutter: 2
