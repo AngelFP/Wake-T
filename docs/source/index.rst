@@ -20,80 +20,79 @@ Wake-T |release| documentation
 
 |travis| |codefactor| |PyPI| |license|
 
-.. panels::
-    :card: + intro-card text-center
-    :column: col-lg-6 col-md-6 col-sm-6 col-xs-12 p-2 d-flex
+.. grid:: 2
+    :gutter: 2
 
-    ---
+    .. grid-item-card:: User guide
+        :text-align: center
 
-    **User guide**
-    ^^^^^^^^^^^^^^
+        Instructions for getting the code up and running and basic information of
+        the key concepts behind Wake-T.
 
-    Instructions for getting the code up and running and basic information of
-    the key concepts behind Wake-T.
+        +++
 
-    +++
+        .. button-ref:: user_guide/index
+            :expand:
+            :color: primary
+            :click-parent:
 
-    .. link-button:: user_guide/index
-            :type: ref
-            :text: To the user guide
-            :classes: btn-outline-primary btn-block stretched-link
+            To the user guide
 
-    ---
+    .. grid-item-card:: Tutorials
+        :text-align: center
+              
+        Step-by-step tutorials covering the functionality of Wake-T.
 
-    **Tutorials**
-    ^^^^^^^^^^^^
+        +++
 
-    Step-by-step tutorials covering the functionality of Wake-T.
+        .. button-ref:: tutorials/index
+            :expand:
+            :color: primary
+            :click-parent:
 
-    +++
+            To the tutorials
 
-    .. link-button:: tutorials/index
-            :type: ref
-            :text: To the tutorials
-            :classes: btn-outline-primary btn-block stretched-link
+    .. grid-item-card:: Examples
+        :text-align: center
 
-    ---
+        Explore quick examples showcasing how to use the code.
 
-    **Examples**
-    ^^^^^^^^^^^^
+        +++
 
-    Explore quick examples showcasing how to use the code.
+        .. button-ref:: examples/index
+            :expand:
+            :color: primary
+            :click-parent:
 
-    +++
+            To the examples
 
-    .. link-button:: examples/index
-            :type: ref
-            :text: To the examples
-            :classes: btn-outline-primary btn-block stretched-link
+    .. grid-item-card:: API reference
+        :text-align: center
+        
+        Detailed documentation of the Wake-T API.
 
-    ---
+        +++
 
-    **API reference**
-    ^^^^^^^^^^^^^^^^^
+        .. button-ref:: api/index
+            :expand:
+            :color: primary
+            :click-parent:
 
-    Detailed documentation of the Wake-T API.
+            To the reference guide
 
-    +++
+    .. grid-item-card:: Development
+        :text-align: center
+        
+        Guidelines for contributing to Wake-T.
 
-    .. link-button:: api/index
-            :type: ref
-            :text: To the reference guide
-            :classes: btn-outline-primary btn-block stretched-link
+        +++
 
-    ---
+        .. button-ref:: development
+            :expand:
+            :color: primary
+            :click-parent:
 
-    **Development**
-    ^^^^^^^^^^^^^^^
-
-    Guidelines for contributing to Wake-T.
-
-    +++
-
-    .. link-button:: development
-            :type: ref
-            :text: To the development guide
-            :classes: btn-outline-primary btn-block stretched-link
+            To the development guide
 
 
 .. toctree::

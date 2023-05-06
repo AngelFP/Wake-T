@@ -39,7 +39,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.coverage',
     # 'sphinx.ext.intersphinx',
-    'sphinx_panels',
+    'sphinx_design',
     'sphinx_gallery.gen_gallery',
     'numpydoc'
 ]
@@ -84,9 +84,6 @@ html_theme_options = {
         },
     ]
 }
-
-# Prevent panels extension from modifying page style.
-panels_add_bootstrap_css = False
 
 # Do not show type hints.
 autodoc_typehints = 'none'
