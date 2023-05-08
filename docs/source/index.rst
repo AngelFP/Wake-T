@@ -80,20 +80,6 @@ Wake-T |release| documentation
 
             To the reference guide
 
-    .. grid-item-card:: Development
-        :text-align: center
-        
-        Guidelines for contributing to Wake-T.
-
-        +++
-
-        .. button-ref:: development
-            :expand:
-            :color: primary
-            :click-parent:
-
-            To the development guide
-
 
 .. toctree::
    :hidden:
@@ -103,7 +89,6 @@ Wake-T |release| documentation
    tutorials/index
    examples/index
    api/index
-   development
 
 
 

@@ -1,4 +1,0 @@
-Development
-===========
-
-🚧🚧 Page under construction 🚧🚧
