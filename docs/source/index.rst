@@ -23,20 +23,19 @@ Wake-T |release| documentation
 .. grid:: 2
     :gutter: 2
 
-    .. grid-item-card:: User guide
+    .. grid-item-card:: Getting started
         :text-align: center
 
-        Instructions for getting the code up and running and basic information of
-        the key concepts behind Wake-T.
+        Get the code up and running.
 
         +++
 
-        .. button-ref:: user_guide/index
+        .. button-ref:: getting_started/index
             :expand:
             :color: primary
             :click-parent:
 
-            To the user guide
+            To the guide
 
     .. grid-item-card:: Tutorials
         :text-align: center
@@ -85,7 +84,7 @@ Wake-T |release| documentation
    :hidden:
    :maxdepth: 4
 
-   user_guide/index
+   getting_started/index
    tutorials/index
    examples/index
    api/index

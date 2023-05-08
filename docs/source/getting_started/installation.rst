@@ -1,3 +1,5 @@
+.. _installation_ref:
+
 Installation
 ============
 Wake-T is tested on Python 3.7 and above, so make sure to have an up-to-date version
