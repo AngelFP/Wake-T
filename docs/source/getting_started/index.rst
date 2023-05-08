@@ -13,6 +13,13 @@ for more detailed instructions, including guides for installing Wake-T in HPC
 clusters, check the :ref:`installation_ref` section.
 
 
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   installation
+
+
 Citing Wake-T
 -------------
 If your usage of Wake-T leads to a scientific publication, please consider
