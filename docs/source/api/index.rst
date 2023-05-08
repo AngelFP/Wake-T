@@ -1,7 +1,8 @@
 API reference
 =============
 
-🚧🚧 Page under construction 🚧🚧
+This section contains the detailed documentation of the main classes and
+methods needed to perform simulations with Wake-T.
 
 .. toctree::
    :maxdepth: 3
