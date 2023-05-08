@@ -34,8 +34,8 @@ using ``pip``::
     
 Latest (development) version from GitHub
 ----------------------------------------
-.. image:: https://travis-ci.org/AngelFP/Wake-T.svg?branch=dev
-   :target: https://travis-ci.org/AngelFP/Wake-T
+.. image:: https://github.com/AngelFP/Wake-T/actions/workflows/test-package.yml/badge.svg
+   :target: https://github.com/AngelFP/Wake-T/actions
 
 The latest release on PyPI might not be fully up to date with the newest additions
 to the code. If you want to stay at the bleeding edge of new features and bug fixes
