@@ -1,7 +1,7 @@
 Examples
 ========
 
-🚧🚧 Page under construction 🚧🚧
+Example scripts ready to run basic simulations.
 
 .. toctree::
    :maxdepth: 2
