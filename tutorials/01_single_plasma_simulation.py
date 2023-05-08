@@ -244,13 +244,8 @@ bunch.show()
 # To finalize the tutorial, we will visualize the output data using the
 # openpmd-viewer.
 #
-# .. warning::
-#   When using the ``openpmd-viewer``, make sure to set ``backend='h5py'`` in
-#   the ``OpenPMDTimeSeries`` and ``LpaDiagnostics``. Otherwise, the
-#   ``'openpmd-api'`` backend, which currently does not work with Wake-T data,
-#   will be selected.
 
 from openpmd_viewer.addons import LpaDiagnostics
 
-diags = LpaDiagnostics('tutorial_01_diags/hdf5', backend='h5py')
+diags = LpaDiagnostics('tutorial_01_diags/hdf5')
 diags.get_field('rho', iteration=3, plot=True, vmin=-1e5)

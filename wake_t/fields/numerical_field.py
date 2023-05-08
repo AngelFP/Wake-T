@@ -56,7 +56,7 @@ class NumericalField(Field):
         Parameters
         ----------
         bunches : list
-            List of ``ParticleBunch``es that can be used to recompute/update
+            List of ``ParticleBunch`` that can be used to recompute/update
             the fields.
         """
         if not self.initialized:
