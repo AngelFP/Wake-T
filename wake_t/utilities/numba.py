@@ -1,7 +1,14 @@
 """This module contains custom definitions of the numba decorators."""
 
 import os
-from numba import njit
+from numba import njit, __version__ as numba_version
+
+
+if numba_version == '0.57.0':
+    raise RuntimeError(
+        'Wake-T is incompatible with numba 0.57.0.\n'
+        'Please install either a later or an earlier version.'
+    )
 
 
 # Check if the environment variable WAKET_DISABLE_CACHING is set to 1
