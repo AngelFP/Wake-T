@@ -10,9 +10,7 @@ from wake_t.utilities.numba import njit_serial
 def evolve_plasma_ab5(
         dxi, r, pr, gamma, m, q,
         nabla_a2_pp, b_theta_0_pp, b_theta_pp, psi_pp, dr_psi_pp,
-        # dr_arrays, dpr_arrays,
-        dr_1, dr_2, dr_3, dr_4, dr_5,
-        dpr_1, dpr_2, dpr_3, dpr_4, dpr_5
+        dr, dpr
         ):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
@@ -36,48 +34,30 @@ def evolve_plasma_ab5(
         particles at the 5 slices previous to the next one.
     """
 
-    # dr_1, dr_2, dr_3, dr_4, dr_5 = dr_arrays
-    # dpr_1, dpr_2, dpr_3, dpr_4, dpr_5 = dpr_arrays
-
     calculate_derivatives(
         pr, gamma, m, q, b_theta_0_pp, nabla_a2_pp, b_theta_pp,
-        psi_pp, dr_psi_pp, dr_1, dpr_1
+        psi_pp, dr_psi_pp, dr[0], dpr[0]
     )
 
     # Push radial position.
-    apply_ab5(r, dxi, dr_1, dr_2, dr_3, dr_4, dr_5)
+    apply_ab5(r, dxi, dr)
 
     # Push radial momentum.
-    apply_ab5(pr, dxi, dpr_1, dpr_2, dpr_3, dpr_4, dpr_5)
+    apply_ab5(pr, dxi, dpr)
 
     # Shift derivatives for next step (i.e., the derivative at step i will be
     # the derivative at step i+i in the next iteration.)
-    # dr_arrays[:] = [dr_5, dr_1, dr_2, dr_3, dr_4]
-    # dpr_arrays[:] = [dpr_5, dpr_1, dpr_2, dpr_3, dpr_4]
-    dr_5[:] = dr_4
-    dr_4[:] = dr_3
-    dr_3[:] = dr_2
-    dr_2[:] = dr_1
-    dpr_5[:] = dpr_4
-    dpr_4[:] = dpr_3
-    dpr_3[:] = dpr_2
-    dpr_2[:] = dpr_1
+    for i in range(4):
+        dr[i+1] = dr[i]
+        dpr[i+1] = dpr[i]
 
     # If a particle has crossed the axis, mirror it.
     idx_neg = np.where(r < 0.)
     if idx_neg[0].size > 0:
         r[idx_neg] *= -1.
         pr[idx_neg] *= -1.
-        dr_1[idx_neg] *= -1.
-        dr_2[idx_neg] *= -1.
-        dr_3[idx_neg] *= -1.
-        dr_4[idx_neg] *= -1.
-        dr_5[idx_neg] *= -1.
-        dpr_1[idx_neg] *= -1.
-        dpr_2[idx_neg] *= -1.
-        dpr_3[idx_neg] *= -1.
-        dpr_4[idx_neg] *= -1.
-        dpr_5[idx_neg] *= -1.
+        dr[idx_neg] *= -1.
+        dpr[idx_neg] *= -1.
 
 
 @njit_serial()
@@ -120,7 +100,7 @@ def calculate_derivatives(
 
 
 @njit_serial()
-def apply_ab5(x, dt, dx_1, dx_2, dx_3, dx_4, dx_5):
+def apply_ab5(x, dt, dx):
     """Apply the Adams-Bashforth method of 5th order to evolve `x`.
 
     Parameters
@@ -129,8 +109,8 @@ def apply_ab5(x, dt, dx_1, dx_2, dx_3, dx_4, dx_5):
         Array containing the variable to be advanced.
     dt : _type_
         Discretization step size.
-    dx_1, dx_2, dx_3, dx_4, dx_5 : ndarray
-        Arrays containing the derivatives of `x` at the five previous steps.
+    dx : ndarray
+        Array containing the derivatives of `x` at the five previous steps.
     """
     # inv_720 = 1. / 720.
     # for i in range(x.shape[0]):
@@ -149,6 +129,6 @@ def apply_ab5(x, dt, dx_1, dx_2, dx_3, dx_4, dx_5):
     inv_24 = 1. / 2.
     for i in range(x.shape[0]):
         x[i] += dt * (
-            3. * dx_1[i] - 1. * dx_2[i]) * inv_24
+            3. * dx[0, i] - 1. * dx[1, i]) * inv_24
     # for i in range(x.shape[0]):
     #     x[i] += dt * dx_1[i]
