@@ -298,9 +298,9 @@ def calculate_ai_bi_from_axis(r, A, B, C, K, U, idx, a_0_arr, a_i_arr,
         a_0 += a_0_diff
         a_0_arr[0] = a_0
 
-        i_stop = n_part
-
         # Calculate a_i (in T_i) and b_i (in P_i) as functions of a_0_diff.
+        i_stop = n_part
+        im1 = 0
         for i_sort in range(i_start, n_part):
             i = idx[i_sort]
             T_old = a_i_arr[i]
@@ -313,6 +313,9 @@ def calculate_ai_bi_from_axis(r, A, B, C, K, U, idx, a_0_arr, a_i_arr,
             # Also pass test if this is the first number of this iteration
             # to avoid an infinite loop or if this is the last number
             # to computer as that is zero by construction
+            # Angel: if T_old + K_old (small number) is less than 10 orders
+            # of magnitude smaller than T_old - K_old (big number), then we
+            # have enough precision (from simulation tests).
             if (i_sort == i_start or i_sort == (n_part-1) or
                     abs(T_old + K_old) >= 1e-10 * abs(T_old - K_old) and
                     abs(P_old + U_old) >= 1e-10 * abs(P_old - U_old)):
@@ -321,14 +324,13 @@ def calculate_ai_bi_from_axis(r, A, B, C, K, U, idx, a_0_arr, a_i_arr,
                 a_i_arr[i] = T_old + K_old
                 b_i_arr[i] = P_old + U_old
             else:
-                # Stop this iteration, go to the next one
+                # If the precision is not sufficient, stop this iteration
+                # and rescale T_im1 and P_im1 for the next one.
                 i_stop = i_sort
+                T_im1 = a_i_arr[im1]
+                P_im1 = b_i_arr[im1]
                 break
-
-        if i_stop < n_part:
-            # Set T_im1 and T_im1 properly for the next iteration
-            T_im1 = a_i_arr[idx[i_stop-1]]
-            P_im1 = b_i_arr[idx[i_stop-1]]
+            im1 = i
 
         # Start the next iteration where this one stopped
         i_start = i_stop
