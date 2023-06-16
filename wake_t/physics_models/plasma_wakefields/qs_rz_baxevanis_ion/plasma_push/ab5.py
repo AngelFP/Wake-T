@@ -6,11 +6,14 @@ import numpy as np
 from wake_t.utilities.numba import njit_serial
 
 
-# @njit_serial()
+@njit_serial()
 def evolve_plasma_ab5(
         dxi, r, pr, gamma, m, q,
         nabla_a2_pp, b_theta_0_pp, b_theta_pp, psi_pp, dr_psi_pp,
-        dr_arrays, dpr_arrays):
+        # dr_arrays, dpr_arrays,
+        dr_1, dr_2, dr_3, dr_4, dr_5,
+        dpr_1, dpr_2, dpr_3, dpr_4, dpr_5
+        ):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
     using an Adams-Bashforth method of 5th order.
@@ -33,8 +36,8 @@ def evolve_plasma_ab5(
         particles at the 5 slices previous to the next one.
     """
 
-    dr_1, dr_2, dr_3, dr_4, dr_5 = dr_arrays
-    dpr_1, dpr_2, dpr_3, dpr_4, dpr_5 = dpr_arrays
+    # dr_1, dr_2, dr_3, dr_4, dr_5 = dr_arrays
+    # dpr_1, dpr_2, dpr_3, dpr_4, dpr_5 = dpr_arrays
 
     calculate_derivatives(
         pr, gamma, m, q, b_theta_0_pp, nabla_a2_pp, b_theta_pp,
@@ -49,16 +52,16 @@ def evolve_plasma_ab5(
 
     # Shift derivatives for next step (i.e., the derivative at step i will be
     # the derivative at step i+i in the next iteration.)
-    dr_arrays[:] = [dr_5, dr_1, dr_2, dr_3, dr_4]
-    dpr_arrays[:] = [dpr_5, dpr_1, dpr_2, dpr_3, dpr_4]
-    # dr_5[:] = dr_4
-    # dr_4[:] = dr_3
-    # dr_3[:] = dr_2
-    # dr_2[:] = dr_1
-    # dpr_5[:] = dpr_4
-    # dpr_4[:] = dpr_3
-    # dpr_3[:] = dpr_2
-    # dpr_2[:] = dpr_1
+    # dr_arrays[:] = [dr_5, dr_1, dr_2, dr_3, dr_4]
+    # dpr_arrays[:] = [dpr_5, dpr_1, dpr_2, dpr_3, dpr_4]
+    dr_5[:] = dr_4
+    dr_4[:] = dr_3
+    dr_3[:] = dr_2
+    dr_2[:] = dr_1
+    dpr_5[:] = dpr_4
+    dpr_4[:] = dpr_3
+    dpr_3[:] = dpr_2
+    dpr_2[:] = dpr_1
 
     # If a particle has crossed the axis, mirror it.
     idx_neg = np.where(r < 0.)
