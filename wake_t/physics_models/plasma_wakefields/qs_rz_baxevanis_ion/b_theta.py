@@ -215,8 +215,8 @@ def calculate_b_theta(r_fld, a_0, a_i, b_i, r, idx, b_theta):
 
 
 @njit_serial(error_model='numpy')
-def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
-                              nabla_a2, idx, a_0_arr, a_i_arr, b_i_arr):
+def calculate_ai_bi_from_axis(r, A, B, C, K, U, idx, a_0_arr, a_i_arr,
+                              b_i_arr):
     """
     Calculate the values of a_i and b_i which are needed to determine
     b_theta at any r position.
@@ -260,42 +260,11 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
     """
     n_part = r.shape[0]
 
-    # Preallocate arrays
-    K = np.empty(n_part)
-    U = np.empty(n_part)
-
-    # Establish initial conditions (K_0 = 1, U_0 = 0, O_0 = 0, P_0 = 0)
-    K_im1 = 1.
-    U_im1 = 0.
+    # Establish initial conditions (T_0 = 0, P_0 = 0)
     T_im1 = 0.
     P_im1 = 0.
 
     a_0 = 0.
-
-    for i_sort in range(n_part):
-        i = idx[i_sort]
-        r_i = r[i]
-        q_i = q[i]
-        psi_i = psi[i]
-
-        a = 1. + psi_i
-        b = 1. / (r_i * a)
-
-        A_i = q_i * b
-
-        l_i = (1. + 0.5 * A_i * r_i)
-        m_i = 0.5 * A_i / r_i
-        n_i = -0.5 * A_i * r_i ** 3
-        o_i = (1. - 0.5 * A_i * r_i)
-
-        K_i = l_i * K_im1 + m_i * U_im1
-        U_i = n_i * K_im1 + o_i * U_im1
-
-        K[i] = K_i
-        U[i] = U_i
-
-        K_im1 = K_i
-        U_im1 = U_i
 
     i_start = 0
 
@@ -305,30 +274,9 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
         for i_sort in range(i_start, n_part):
             i = idx[i_sort]
             r_i = r[i]
-            pr_i = pr[i]
-            q_i = q[i]
-            gamma_i = gamma[i]
-            psi_i = psi[i]
-            dr_psi_i = dr_psi[i]
-            dxi_psi_i = dxi_psi[i]
-            b_theta_0_i = b_theta_0[i]
-            nabla_a2_i = nabla_a2[i]
-
-            a = 1. + psi_i
-            a2 = a * a
-            a3 = a2 * a
-            b = 1. / (r_i * a)
-            c = 1. / (r_i * a2)
-            pr_i2 = pr_i * pr_i
-
-            A_i = q_i * b
-            B_i = q_i * (- (gamma_i * dr_psi_i) * c
-                         + (pr_i2 * dr_psi_i) / (r_i * a3)
-                         + (pr_i * dxi_psi_i) * c
-                         + pr_i2 / (r_i * r_i * a2)
-                         + b_theta_0_i * b
-                         + nabla_a2_i * c * 0.5)
-            C_i = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
+            A_i = A[i]
+            B_i = B[i]
+            C_i = C[i]
 
             l_i = (1. + 0.5 * A_i * r_i)
             m_i = 0.5 * A_i / r_i
@@ -346,7 +294,7 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
             P_im1 = P_i
 
         # Calculate a_0_diff.
-        a_0_diff = - T_im1 / K_im1
+        a_0_diff = - T_im1 / K[i]
         a_0 += a_0_diff
         a_0_arr[0] = a_0
 
@@ -384,3 +332,106 @@ def calculate_ai_bi_from_axis(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
         # Start the next iteration where this one stopped
         i_start = i_stop
+
+
+@njit_serial(error_model='numpy')
+def calculate_ABC(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
+                  nabla_a2, idx, A, B, C):
+    n_part = r.shape[0]
+
+    for i_sort in range(n_part):
+        i = idx[i_sort]
+        r_i = r[i]
+        pr_i = pr[i]
+        q_i = q[i]
+        gamma_i = gamma[i]
+        psi_i = psi[i]
+        dr_psi_i = dr_psi[i]
+        dxi_psi_i = dxi_psi[i]
+        b_theta_0_i = b_theta_0[i]
+        nabla_a2_i = nabla_a2[i]
+
+        a = 1. + psi_i
+        a2 = a * a
+        a3 = a2 * a
+        b = 1. / (r_i * a)
+        c = 1. / (r_i * a2)
+        pr_i2 = pr_i * pr_i
+
+        A[i] = q_i * b
+        B[i] = q_i * (- (gamma_i * dr_psi_i) * c
+                      + (pr_i2 * dr_psi_i) / (r_i * a3)
+                      + (pr_i * dxi_psi_i) * c
+                      + pr_i2 / (r_i * r_i * a2)
+                      + b_theta_0_i * b
+                      + nabla_a2_i * c * 0.5)
+        C[i] = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
+
+
+@njit_serial(error_model='numpy')
+def calculate_KU(r, A, idx, K, U):
+    """
+    Calculate the values of a_i and b_i which are needed to determine
+    b_theta at any r position.
+
+    For details about the input parameters see method 'calculate_b_theta'.
+
+    The values of a_i and b_i are calculated as follows, using Eqs. (26) and
+    (27) from the paper of P. Baxevanis and G. Stupakov:
+
+        Write a_i and b_i as linear system of a_0:
+
+            a_i = K_i * a_0_diff + T_i
+            b_i = U_i * a_0_diff + P_i
+
+
+        Where (im1 stands for subindex i-1):
+
+            K_i = (1 + A_i*r_i/2) * K_im1  +  A_i/(2*r_i)     * U_im1
+            U_i = (-A_i*r_i**3/2) * K_im1  +  (1 - A_i*r_i/2) * U_im1
+
+            T_i = ( (1 + A_i*r_i/2) * T_im1  +  A_i/(2*r_i)     * P_im1  +
+                    (2*Bi + Ai*Ci)/4 )
+            P_i = ( (-A_i*r_i**3/2) * T_im1  +  (1 - A_i*r_i/2) * P_im1  +
+                    r_i*(4*Ci - 2*Bi*r_i - Ai*Ci*r_i)/4 )
+
+        With initial conditions:
+
+            K_0 = 1
+            U_0 = 0
+            T_0 = 0
+            P_0 = 0
+
+        Then a_0 can be determined by imposing a_N = 0:
+
+            a_N = K_N * a_0_diff + T_N = 0 <=> a_0_diff = - T_N / K_N
+
+        If the precision of a_i and b_i becomes too low, then T_i and P_i are
+        recalculated with an initial guess equal to a_i and b_i, as well as a
+        new a_0_diff.
+
+    """
+    n_part = r.shape[0]
+
+    # Establish initial conditions (K_0 = 1, U_0 = 0)
+    K_im1 = 1.
+    U_im1 = 0.
+
+    for i_sort in range(n_part):
+        i = idx[i_sort]
+        r_i = r[i]
+        A_i = A[i]
+
+        l_i = (1. + 0.5 * A_i * r_i)
+        m_i = 0.5 * A_i / r_i
+        n_i = -0.5 * A_i * r_i ** 3
+        o_i = (1. - 0.5 * A_i * r_i)
+
+        K_i = l_i * K_im1 + m_i * U_im1
+        U_i = n_i * K_im1 + o_i * U_im1
+
+        K[i] = K_i
+        U[i] = U_i
+
+        K_im1 = K_i
+        U_im1 = U_i
