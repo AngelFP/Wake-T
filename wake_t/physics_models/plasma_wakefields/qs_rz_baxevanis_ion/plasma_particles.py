@@ -33,6 +33,7 @@ spec = [
     ('n_elec', int64),
     ('n_part', int64),
     ('dr_p', float64),
+    ('max_gamma', float64),
     ('ion_motion', boolean),
     ('ions_computed', boolean),
 
@@ -135,7 +136,7 @@ class PlasmaParticles():
     """
 
     def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc,
-                 nr, ion_motion=True, pusher='ab5', shape='linear'):
+                 nr, max_gamma=10., ion_motion=True, pusher='ab5', shape='linear'):
         # Calculate total number of plasma particles.
         n_elec = int(np.round(r_max_plasma / dr * ppc))
         n_part = n_elec * 2
@@ -155,6 +156,7 @@ class PlasmaParticles():
         self.n_elec = n_elec
         self.n_part = n_part
         self.shape = shape
+        self.max_gamma = max_gamma
         # self.r_grid = r_grid
         self.nr = nr
         self.ion_motion = ion_motion
@@ -413,7 +415,7 @@ class PlasmaParticles():
             )
             # if np.max(self.pz_elec/self.gamma_elec) > 0.999:
             #     print('p'+str(np.max(self.pz_elec/self.gamma_elec)))
-            idx_keep = np.where(self.gamma_elec >= 25)
+            idx_keep = np.where(self.gamma_elec >= self.max_gamma)
             if idx_keep[0].size > 0:
                 self.pz_elec[idx_keep] = 0.
                 self.gamma_elec[idx_keep] = 1.

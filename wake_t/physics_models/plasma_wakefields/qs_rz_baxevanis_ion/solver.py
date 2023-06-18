@@ -110,10 +110,11 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
                               dr, dxi, p_shape, b_t_beam)
     
     
-    do_plasma_loop(r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
-                   plasma_pusher, p_shape, ion_motion, n_xi, a2, nabla_a2,
-                   b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho,
-                   chi, dxi)
+    do_plasma_loop(
+        r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
+        plasma_pusher, p_shape, max_gamma, ion_motion, n_xi, a2, nabla_a2,
+        b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho, chi, dxi
+    )
 
 
     # Calculate derived fields (E_z, W_r, and E_r).
@@ -127,13 +128,14 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
 
 @njit_serial()
 def do_plasma_loop(r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
-                   plasma_pusher, p_shape, ion_motion, n_xi, a2, nabla_a2,
-                   b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho,
+                   plasma_pusher, p_shape, max_gamma, ion_motion, n_xi, a2,
+                   nabla_a2, b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho,
                    chi, dxi):
     # Initialize plasma particles.
     pp = PlasmaParticles(
         r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
-        ion_motion, plasma_pusher, p_shape)
+        max_gamma, ion_motion, plasma_pusher, p_shape
+    )
     pp.initialize()
 
     # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
