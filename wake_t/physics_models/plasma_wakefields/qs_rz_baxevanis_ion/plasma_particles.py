@@ -23,7 +23,20 @@ from .plasma_push.ab5 import evolve_plasma_ab5
 
 
 spec = [
+    ('nr', int64),
+    ('dr', float64),
+    ('shape', string),
+    ('pusher', string),
+    ('r_max', float64),
+    ('r_max_plasma', float64),
+    ('parabolic_coefficient', float64),
+    ('ppc', int64),
+    ('n_elec', int64),
+    ('n_part', int64),
     ('dr_p', float64),
+    ('ion_motion', boolean),
+    ('ions_computed', boolean),
+
     ('r', float64[::1]),
     ('pr', float64[::1]),
     ('pz', float64[::1]),
@@ -31,6 +44,7 @@ spec = [
     ('q', float64[::1]),
     ('q_species', float64[::1]),
     ('m', float64[::1]),
+
     ('r_elec', float64[::1]),
     ('pr_elec', float64[::1]),
     ('q_elec', float64[::1]),
@@ -47,10 +61,18 @@ spec = [
     ('q_species_ion', float64[::1]),
     ('m_ion', float64[::1]),
     ('i_sort_i', int64[::1]),
+
+    ('_psi', float64[::1]),
+    ('_dr_psi', float64[::1]),
+    ('_dxi_psi', float64[::1]),
     ('_a2', float64[::1]),
     ('_nabla_a2', float64[::1]),
     ('_b_t_0', float64[::1]),
     ('_b_t', float64[::1]),
+    ('_r_max', float64[::1]),
+    ('_psi_max', float64[::1]),
+    ('_dr', float64[:, ::1]),
+    ('_dpr', float64[:, ::1]),
     ('_a2_e', float64[::1]),
     ('_b_t_0_e', float64[::1]),
     ('_nabla_a2_e', float64[::1]),
@@ -76,6 +98,7 @@ spec = [
     ('_a_i', float64[::1]),
     ('_b_i', float64[::1]),
     ('_a_0', float64[::1]),
+
     ('_sum_1_i', float64[::1]),
     ('_sum_2_i', float64[::1]),
     ('_sum_3_i', float64[::1]),
@@ -86,25 +109,6 @@ spec = [
     ('_dr_psi_i', float64[::1]),
     ('_dxi_psi_i', float64[::1]),
     ('_b_t_i', float64[::1]),
-    ('_psi', float64[::1]),
-    ('_dr_psi', float64[::1]),
-    ('_dxi_psi', float64[::1]),
-    ('ion_motion', boolean),
-    ('ions_computed', boolean),
-    ('_r_max', float64[::1]),
-    ('_psi_max', float64[::1]),
-    ('nr', int64),
-    ('dr', float64),
-    ('shape', string),
-    ('pusher', string),
-    ('r_max', float64),
-    ('r_max_plasma', float64),
-    ('parabolic_coefficient', float64),
-    ('ppc', int64),
-    ('n_elec', int64),
-    ('n_part', int64),
-    ('_dr', float64[:, ::1]),
-    ('_dpr', float64[:, ::1]),
 ]
 
 @jitclass(spec)
@@ -204,9 +208,6 @@ class PlasmaParticles():
         # Allocate arrays needed for the particle pusher.
         if self.pusher == 'ab5':
             self._allocate_ab5_arrays()
-        # elif self.pusher == 'rk4':
-        #     self._allocate_rk4_arrays()
-        #     self._allocate_rk4_field_arrays()
 
     def sort(self):
         self.i_sort_e = np.argsort(self.r_elec)
@@ -237,32 +238,20 @@ class PlasmaParticles():
         self._b_t_e = self._b_t[:self.n_elec]
         self._b_t_i = self._b_t[self.n_elec:]
         self._b_t_0_e = self._b_t_0[:self.n_elec]
-        # self._b_t_0_i = self._b_t_0[self.n_elec:]
         self._nabla_a2_e = self._nabla_a2[:self.n_elec]
-        # self._nabla_a2_i = self._nabla_a2[self.n_elec:]
         self._a2_e = self._a2[:self.n_elec]
-        # self._a2_i = self._a2[self.n_elec:]
-        # self._sum_1 = np.zeros(self.n_part)
-        # self._sum_2 = np.zeros(self.n_part)
-        # self._sum_3 = np.zeros(self.n_part)
         self._sum_1_e = np.zeros(self.n_elec)
         self._sum_2_e = np.zeros(self.n_elec)
         self._sum_3_e = np.zeros(self.n_elec)
         self._sum_1_i = np.zeros(self.n_elec)
         self._sum_2_i = np.zeros(self.n_elec)
         self._sum_3_i = np.zeros(self.n_elec)
-        # self._rho = np.zeros(self.n_part)
-        # self._psi_bg_grid_e = np.zeros(self.nr + 4)
-        # self._dr_psi_bg_grid_e = np.zeros(self.nr + 4)
-        # self._psi_bg_grid_i = np.zeros(self.nr + 4)
-        # self._dr_psi_bg_grid_i = np.zeros(self.nr + 4)        
         self._psi_bg_e = np.zeros(self.n_elec+1)
         self._dr_psi_bg_e = np.zeros(self.n_elec+1)
         self._dxi_psi_bg_e = np.zeros(self.n_elec+1)
         self._psi_bg_i = np.zeros(self.n_elec+1)
         self._dr_psi_bg_i = np.zeros(self.n_elec+1)
         self._dxi_psi_bg_i = np.zeros(self.n_elec+1)
-        # self._chi = np.zeros(self.n_part)
         self._a_0 = np.zeros(1)
         self._a_i = np.zeros(self.n_elec)
         self._b_i = np.zeros(self.n_elec)
@@ -271,19 +260,11 @@ class PlasmaParticles():
         self._C = np.zeros(self.n_elec)
         self._K = np.zeros(self.n_elec)
         self._U = np.zeros(self.n_elec)
-        # self._i_left = np.zeros(self.n_part, dtype=np.int)
-        # self._i_right = np.zeros(self.n_part, dtype=np.int)
         self._r_neighbor_e = np.zeros(self.n_elec+1)
         self._r_neighbor_i = np.zeros(self.n_elec+1)
 
         self._r_max = np.zeros(1)
         self._psi_max = np.zeros(1)
-        # self._dxi_psi_max = np.zeros(1)
-
-        # self._field_arrays = [
-        #     self._a2, self._nabla_a2, self._b_t_0, self._b_t,
-        #     self._psi, self._dr_psi, self._dxi_psi
-        # ]
 
     def _allocate_ab5_arrays(self):
         """Allocate the arrays needed for the 5th order Adams-Bashforth pusher.
@@ -300,70 +281,6 @@ class PlasmaParticles():
         self._dr = np.zeros((5, size))
         self._dpr = np.zeros((5, size))
 
-    # def _allocate_rk4_arrays(self):
-    #     """Allocate the arrays needed for the 4th order Runge-Kutta pusher.
-
-    #     The RK4 pusher needs the derivatives of r and pr for each particle at
-    #     the current slice and at 3 intermediate substeps. This method allocates
-    #     the arrays that will store these derivatives.
-    #     """
-    #     self._dr_1 = np.zeros(self.n_part)
-    #     self._dr_2 = np.zeros(self.n_part)
-    #     self._dr_3 = np.zeros(self.n_part)
-    #     self._dr_4 = np.zeros(self.n_part)
-    #     self._dpr_1 = np.zeros(self.n_part)
-    #     self._dpr_2 = np.zeros(self.n_part)
-    #     self._dpr_3 = np.zeros(self.n_part)
-    #     self._dpr_4 = np.zeros(self.n_part)
-    #     self._dr_arrays = [self._dr_1, self._dr_2, self._dr_3, self._dr_4]
-    #     self._dpr_arrays = [
-    #         self._dpr_1, self._dpr_2, self._dpr_3, self._dpr_4]
-
-    # def _allocate_rk4_field_arrays(self):
-    #     """Allocate field arrays needed by the 4th order Runge-Kutta pusher.
-
-    #     In order to compute the derivatives of r and pr at the 3 subteps
-    #     of the RK4 pusher, the field values at the location of the particles
-    #     in these substeps are needed. This method allocates the arrays
-    #     that will store these field values.
-    #     """
-    #     self._a2_2 = np.zeros(self.n_part)
-    #     self._nabla_a2_2 = np.zeros(self.n_part)
-    #     self._b_t_0_2 = np.zeros(self.n_part)
-    #     self._b_t_2 = np.zeros(self.n_part)
-    #     self._psi_2 = np.zeros(self.n_part)
-    #     self._dr_psi_2 = np.zeros(self.n_part)
-    #     self._dxi_psi_2 = np.zeros(self.n_part)
-    #     self._a2_3 = np.zeros(self.n_part)
-    #     self._nabla_a2_3 = np.zeros(self.n_part)
-    #     self._b_t_0_3 = np.zeros(self.n_part)
-    #     self._b_t_3 = np.zeros(self.n_part)
-    #     self._psi_3 = np.zeros(self.n_part)
-    #     self._dr_psi_3 = np.zeros(self.n_part)
-    #     self._dxi_psi_3 = np.zeros(self.n_part)
-    #     self._a2_4 = np.zeros(self.n_part)
-    #     self._nabla_a2_4 = np.zeros(self.n_part)
-    #     self._b_t_0_4 = np.zeros(self.n_part)
-    #     self._b_t_4 = np.zeros(self.n_part)
-    #     self._psi_4 = np.zeros(self.n_part)
-    #     self._dr_psi_4 = np.zeros(self.n_part)
-    #     self._dxi_psi_4 = np.zeros(self.n_part)
-    #     self._rk4_flds = [
-    #         [self._a2, self._nabla_a2, self._b_t_0, self._b_t,
-    #          self._psi, self._dr_psi, self._dxi_psi],
-    #         [self._a2_2, self._nabla_a2_2, self._b_t_0_2, self._b_t_2,
-    #          self._psi_2, self._dr_psi_2, self._dxi_psi_2],
-    #         [self._a2_3, self._nabla_a2_3, self._b_t_0_3, self._b_t_3,
-    #          self._psi_3, self._dr_psi_3, self._dxi_psi_3],
-    #         [self._a2_4, self._nabla_a2_4, self._b_t_0_4, self._b_t_4,
-    #          self._psi_4, self._dr_psi_4, self._dxi_psi_4]
-    #     ]
-
-# @njit_serial()
-# def deposit_rho_pp(pp, rho, r_fld, nr, dr):
-#     w_rho = pp.q / (1 - pp.pz/pp.gamma)
-#     deposit_plasma_particles(pp.r, w_rho, r_fld[0], nr, dr, rho, pp.shape)
-#     rho[2: -2] /= r_fld * dr
 
 @njit_serial()
 def deposit_rho_e_pp(pp, rho, r_fld, nr, dr):
