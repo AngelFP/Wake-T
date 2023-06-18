@@ -2,23 +2,22 @@
 
 import numpy as np
 import scipy.constants as ct
-import matplotlib.pyplot as plt
 from numba.experimental import jitclass
 from numba.core.types import float64, int64, string, boolean
 
 from wake_t.utilities.numba import njit_serial
 from .psi_and_derivatives import (
-    calculate_psi,
-    calculate_cumulative_sums, calculate_cumulative_sum_1, calculate_cumulative_sum_2, calculate_cumulative_sum_3,
-    calculate_psi_dr_psi_at_particles_bg,
+    calculate_psi, calculate_cumulative_sum_1, calculate_cumulative_sum_2,
+    calculate_cumulative_sum_3, calculate_psi_dr_psi_at_particles_bg,
     determine_neighboring_points, calculate_psi_and_dr_psi, calculate_dxi_psi,
-    calculate_dxi_psi_at_particles_bg)
+    calculate_dxi_psi_at_particles_bg
+)
 from .deposition import deposit_plasma_particles
-from .gather import gather_sources, gather_psi_bg, gather_dr_psi_bg
-from .b_theta import (calculate_ai_bi_from_axis,
-                      calculate_b_theta_at_particles, calculate_b_theta,
-                      calculate_b_theta_at_ions,
-                      calculate_ABC, calculate_KU)
+from .gather import gather_sources
+from .b_theta import (
+    calculate_ai_bi_from_axis, calculate_b_theta_at_particles,
+    calculate_b_theta, calculate_b_theta_at_ions, calculate_ABC, calculate_KU
+)
 from .plasma_push.ab5 import evolve_plasma_ab5
 
 
@@ -216,21 +215,26 @@ class PlasmaParticles():
 
     def determine_neighboring_points(self):
         determine_neighboring_points(
-            self.r_elec, self.dr_p, self.i_sort_e, self._r_neighbor_e)
+            self.r_elec, self.dr_p, self.i_sort_e, self._r_neighbor_e
+        )
         self._log_r_neighbor_e = np.log(self._r_neighbor_e)
         if self.ion_motion:
             determine_neighboring_points(
-                self.r_ion, self.dr_p, self.i_sort_i, self._r_neighbor_i)
+                self.r_ion, self.dr_p, self.i_sort_i, self._r_neighbor_i
+            )
             self._log_r_neighbor_i = np.log(self._r_neighbor_i)
 
     def gather_sources(self, a2, nabla_a2, b_theta, r_min, r_max, dr):
         if self.ion_motion:
-            gather_sources(a2, nabla_a2, b_theta, r_min, r_max, dr,
-                           self.r, self._a2, self._nabla_a2, self._b_t_0)
+            gather_sources(
+                a2, nabla_a2, b_theta, r_min, r_max, dr,
+                self.r, self._a2, self._nabla_a2, self._b_t_0
+            )
         else:
-            gather_sources(a2, nabla_a2, b_theta, r_min, r_max, dr,
-                           self.r_elec, self._a2_e, self._nabla_a2_e,
-                           self._b_t_0_e)
+            gather_sources(
+                a2, nabla_a2, b_theta, r_min, r_max, dr,
+                self.r_elec, self._a2_e, self._nabla_a2_e, self._b_t_0_e
+            )
             
     def calculate_fields(self):
         self._calculate_cumulative_sums_psi_dr_psi()
@@ -289,7 +293,10 @@ class PlasmaParticles():
             rho[2: -2] /= r_fld * dr
 
     def deposit_chi(self, chi, r_fld, nr, dr):
-        w_chi = self.q_elec / ((1 - self.pz_elec/self.gamma_elec)) / self.gamma_elec
+        w_chi = (
+            self.q_elec / (1 - self.pz_elec / self.gamma_elec) /
+            self.gamma_elec
+        )
         # w_chi = self.q / (self.dr * self.r * (1 - self.pz/self.gamma)) / (self.gamma * self.m)
         # w_chi = w_chi[:self.n_elec]
         # r_elec = self.r[:self.n_elec]
@@ -342,14 +349,16 @@ class PlasmaParticles():
             
     def _calculate_psi_dr_psi(self):
         calculate_psi_dr_psi_at_particles_bg(
-            self.r_elec, self._sum_1_e, self._sum_2_e,
-            self._psi_bg_i, self._r_neighbor_e, self._log_r_neighbor_e,
-            self.i_sort_e, self._psi_e, self._dr_psi_e)
+            self.r_elec, self._sum_1_e, self._sum_2_e, self._psi_bg_i,
+            self._r_neighbor_e, self._log_r_neighbor_e, self.i_sort_e,
+            self._psi_e, self._dr_psi_e
+        )
         if self.ion_motion:
             calculate_psi_dr_psi_at_particles_bg(
-                self.r_ion, self._sum_1_i, self._sum_2_i,
-                self._psi_bg_e, self._r_neighbor_i, self._log_r_neighbor_e,
-                self.i_sort_i, self._psi_i, self._dr_psi_i)        
+                self.r_ion, self._sum_1_i, self._sum_2_i, self._psi_bg_e,
+                self._r_neighbor_i, self._log_r_neighbor_e, self.i_sort_i,
+                self._psi_i, self._dr_psi_i
+            )        
 
         r_max_e = self.r_elec[self.i_sort_e[-1]]
         r_max_i = self.r_ion[self.i_sort_i[-1]]
@@ -376,11 +385,13 @@ class PlasmaParticles():
     def _calculate_dxi_psi(self):            
         calculate_dxi_psi_at_particles_bg(
             self.r_elec, self._sum_3_e, self._dxi_psi_bg_i, self._r_neighbor_e,
-            self.i_sort_e, self._dxi_psi_e)
+            self.i_sort_e, self._dxi_psi_e
+        )
         if self.ion_motion:
             calculate_dxi_psi_at_particles_bg(
-                self.r_ion, self._sum_3_i, self._dxi_psi_bg_e, self._r_neighbor_i,
-                self.i_sort_i, self._dxi_psi_i)
+                self.r_ion, self._sum_3_i, self._dxi_psi_bg_e,
+                self._r_neighbor_i, self.i_sort_i, self._dxi_psi_i
+            )
 
         # Apply boundary condition (dxi_psi = 0 after last particle).
         self._dxi_psi += (self._sum_3_e[self.i_sort_e[-1]] +
@@ -393,11 +404,13 @@ class PlasmaParticles():
         if self.ion_motion:
             update_gamma_and_pz(
                 self.gamma, self.pz, self.pr,
-                self._a2, self._psi, self.q_species, self.m)
+                self._a2, self._psi, self.q_species, self.m
+            )
         else:
             update_gamma_and_pz(
                 self.gamma_elec, self.pz_elec, self.pr_elec,
-                self._a2_e, self._psi_e, self.q_species_elec, self.m_elec)
+                self._a2_e, self._psi_e, self.q_species_elec, self.m_elec
+            )
             # if np.max(self.pz_elec/self.gamma_elec) > 0.999:
             #     print('p'+str(np.max(self.pz_elec/self.gamma_elec)))
             idx_keep = np.where(self.gamma_elec >= 25)
@@ -517,6 +530,9 @@ def update_gamma_and_pz(gamma, pz, pr, a2, psi, q, m):
     for i in range(pr.shape[0]):
         q_over_m = q[i] / m[i]
         psi_i = psi[i] * q_over_m
-        pz_i = (1 + pr[i]**2 + q_over_m**2 * a2[i] - (1+psi_i)**2) / (2 * (1+psi_i))
+        pz_i = (
+            (1 + pr[i] ** 2 + q_over_m ** 2 * a2[i] - (1 + psi_i) ** 2) /
+            (2 * (1 + psi_i))
+        )
         pz[i] = pz_i
         gamma[i] = 1. + pz_i + psi_i
