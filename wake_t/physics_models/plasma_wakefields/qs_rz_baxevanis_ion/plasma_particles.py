@@ -214,6 +214,224 @@ class PlasmaParticles():
         if self.ion_motion or not self.ions_computed:
             self.i_sort_i = np.argsort(self.r_ion)
 
+    def determine_neighboring_points(self):
+        determine_neighboring_points(
+            self.r_elec, self.dr_p, self.i_sort_e, self._r_neighbor_e)
+        self._log_r_neighbor_e = np.log(self._r_neighbor_e)
+        if self.ion_motion:
+            determine_neighboring_points(
+                self.r_ion, self.dr_p, self.i_sort_i, self._r_neighbor_i)
+            self._log_r_neighbor_i = np.log(self._r_neighbor_i)
+
+    def gather_sources(self, a2, nabla_a2, b_theta, r_min, r_max, dr):
+        if self.ion_motion:
+            gather_sources(a2, nabla_a2, b_theta, r_min, r_max, dr,
+                           self.r, self._a2, self._nabla_a2, self._b_t_0)
+        else:
+            gather_sources(a2, nabla_a2, b_theta, r_min, r_max, dr,
+                           self.r_elec, self._a2_e, self._nabla_a2_e,
+                           self._b_t_0_e)
+            
+    def calculate_fields(self):
+        self._calculate_cumulative_sums_psi_dr_psi()
+        self._gather_particle_background_psi_dr_psi()
+        self._calculate_psi_dr_psi()
+        self._calculate_cumulative_sum_dxi_psi()
+        self._gather_particle_background_dxi_psi()
+        self._calculate_dxi_psi()
+        self._update_gamma_pz()
+        self._calculate_ai_bi()
+        self._calculate_b_theta()
+
+    def calculate_psi_at_grid(self, r_eval, log_r_eval, psi):
+        calculate_psi(
+            r_eval, log_r_eval, self.r_elec, self._sum_1_e, self._sum_2_e,
+            self.i_sort_e, psi
+        )
+        calculate_psi(
+            r_eval, log_r_eval, self.r_ion, self._sum_1_i, self._sum_2_i,
+            self.i_sort_i, psi
+        )
+        psi -= self._psi_max
+
+    def calculate_b_theta_at_grid(self, r_eval, b_theta):
+        calculate_b_theta(
+            r_eval, self._a_0[0], self._a_i, self._b_i, self.r_elec,
+            self.i_sort_e, b_theta
+        )
+
+    def evolve(self, dxi):
+        if self.ion_motion:
+            evolve_plasma_ab5(
+                dxi, self.r, self.pr, self.gamma, self.m, self.q_species,
+                self._nabla_a2, self._b_t_0, self._b_t, self._psi,
+                self._dr_psi, self._dr, self._dpr
+            )
+        else:
+            evolve_plasma_ab5(
+                dxi, self.r_elec, self.pr_elec, self.gamma_elec, self.m_elec,
+                self.q_species_elec, self._nabla_a2_e, self._b_t_0_e,
+                self._b_t_e, self._psi_e, self._dr_psi_e, self._dr, self._dpr
+            )
+
+    def deposit_rho(self, rho, r_fld, nr, dr):
+        if self.ion_motion:
+            w_rho = self.q / (1 - self.pz/self.gamma)
+            deposit_plasma_particles(
+                self.r, w_rho, r_fld[0], nr, dr, rho, self.shape
+            )
+            rho[2: -2] /= r_fld * dr
+        else:            
+            w_rho = self.q_elec / (1 - self.pz_elec/self.gamma_elec)
+            deposit_plasma_particles(
+                self.r_elec, w_rho, r_fld[0], nr, dr, rho, self.shape
+            )
+            rho[2: -2] /= r_fld * dr
+
+    def deposit_chi(self, chi, r_fld, nr, dr):
+        w_chi = self.q_elec / ((1 - self.pz_elec/self.gamma_elec)) / self.gamma_elec
+        # w_chi = self.q / (self.dr * self.r * (1 - self.pz/self.gamma)) / (self.gamma * self.m)
+        # w_chi = w_chi[:self.n_elec]
+        # r_elec = self.r[:self.n_elec]
+        deposit_plasma_particles(
+            self.r_elec, w_chi, r_fld[0], nr, dr, chi, self.shape
+        )
+        chi[2: -2] /= r_fld * dr
+
+    def _calculate_cumulative_sums_psi_dr_psi(self):
+        calculate_cumulative_sum_1(self.q_elec, self.i_sort_e, self._sum_1_e)
+        calculate_cumulative_sum_2(self.r_elec, self.q_elec, self.i_sort_e,
+                                   self._sum_2_e)
+        if self.ion_motion or not self.ions_computed:           
+            calculate_cumulative_sum_1(self.q_ion, self.i_sort_i,
+                                       self._sum_1_i)
+            calculate_cumulative_sum_2(self.r_ion, self.q_ion, self.i_sort_i,
+                                       self._sum_2_i)
+            
+    def _calculate_cumulative_sum_dxi_psi(self):
+        calculate_cumulative_sum_3(
+            self.r_elec, self.pr_elec, self.q_elec, self._psi_e, self.i_sort_e,
+            self._sum_3_e)
+        if self.ion_motion or not self.ions_computed:
+            calculate_cumulative_sum_3(
+            self.r_ion, self.pr_ion, self.q_ion, self._psi_i, self.i_sort_i,
+            self._sum_3_i)
+
+    def _gather_particle_background_psi_dr_psi(self):
+        calculate_psi_and_dr_psi(
+            self._r_neighbor_e, self._log_r_neighbor_e, self.r_ion, self.dr_p,
+            self.i_sort_i, self._sum_1_i, self._sum_2_i, self._psi_bg_i,
+            self._dr_psi_bg_i
+        )
+        if self.ion_motion:
+            calculate_psi_and_dr_psi(
+                self._r_neighbor_i, self._log_r_neighbor_i, self.r_elec,
+                self.dr_p, self.i_sort_e, self._sum_1_e, self._sum_2_e,
+                self._psi_bg_e, self._dr_psi_bg_e)
+            
+    def _gather_particle_background_dxi_psi(self):
+        calculate_dxi_psi(
+            self._r_neighbor_e, self.r_ion, self.i_sort_i, self._sum_3_i,
+            self._dxi_psi_bg_i
+        )
+        if self.ion_motion:
+            calculate_dxi_psi(
+                self._r_neighbor_i, self.r_elec, self.i_sort_e, self._sum_3_e,
+                self._dxi_psi_bg_e
+            )
+            
+    def _calculate_psi_dr_psi(self):
+        calculate_psi_dr_psi_at_particles_bg(
+            self.r_elec, self._sum_1_e, self._sum_2_e,
+            self._psi_bg_i, self._r_neighbor_e, self._log_r_neighbor_e,
+            self.i_sort_e, self._psi_e, self._dr_psi_e)
+        if self.ion_motion:
+            calculate_psi_dr_psi_at_particles_bg(
+                self.r_ion, self._sum_1_i, self._sum_2_i,
+                self._psi_bg_e, self._r_neighbor_i, self._log_r_neighbor_e,
+                self.i_sort_i, self._psi_i, self._dr_psi_i)        
+
+        r_max_e = self.r_elec[self.i_sort_e[-1]]
+        r_max_i = self.r_ion[self.i_sort_i[-1]]
+        self._r_max[:] = max(r_max_e, r_max_i) + self.dr_p/2
+        log_r_max = np.log(self._r_max)
+
+        self._psi_max[:] = 0.
+
+        calculate_psi(
+            self._r_max, log_r_max, self.r_elec, self._sum_1_e, self._sum_2_e,
+            self.i_sort_e, self._psi_max
+        )
+        calculate_psi(
+            self._r_max, log_r_max, self.r_ion, self._sum_1_i, self._sum_2_i,
+            self.i_sort_i, self._psi_max
+        )
+
+        self._psi_e -= self._psi_max
+        if self.ion_motion:
+            self._psi_i -= self._psi_max
+        
+        self._psi[self._psi < -0.9] = -0.9
+
+    def _calculate_dxi_psi(self):            
+        calculate_dxi_psi_at_particles_bg(
+            self.r_elec, self._sum_3_e, self._dxi_psi_bg_i, self._r_neighbor_e,
+            self.i_sort_e, self._dxi_psi_e)
+        if self.ion_motion:
+            calculate_dxi_psi_at_particles_bg(
+                self.r_ion, self._sum_3_i, self._dxi_psi_bg_e, self._r_neighbor_i,
+                self.i_sort_i, self._dxi_psi_i)
+
+        # Apply boundary condition (dxi_psi = 0 after last particle).
+        self._dxi_psi += (self._sum_3_e[self.i_sort_e[-1]] +
+                            self._sum_3_i[self.i_sort_i[-1]])
+
+        self._dxi_psi[self._dxi_psi < -3.] = -3.
+        self._dxi_psi[self._dxi_psi > 3.] = 3.
+
+    def _update_gamma_pz(self):
+        if self.ion_motion:
+            update_gamma_and_pz(
+                self.gamma, self.pz, self.pr,
+                self._a2, self._psi, self.q_species, self.m)
+        else:
+            update_gamma_and_pz(
+                self.gamma_elec, self.pz_elec, self.pr_elec,
+                self._a2_e, self._psi_e, self.q_species_elec, self.m_elec)
+            # if np.max(self.pz_elec/self.gamma_elec) > 0.999:
+            #     print('p'+str(np.max(self.pz_elec/self.gamma_elec)))
+            idx_keep = np.where(self.gamma_elec >= 25)
+            if idx_keep[0].size > 0:
+                self.pz_elec[idx_keep] = 0.
+                self.gamma_elec[idx_keep] = 1.
+                self.pr_elec[idx_keep] = 0.
+        
+    def _calculate_ai_bi(self):
+        calculate_ABC(
+            self.r_elec, self.pr_elec, self.q_elec, self.gamma_elec,
+            self._psi_e, self._dr_psi_e, self._dxi_psi_e, self._b_t_0_e,
+            self._nabla_a2_e, self.i_sort_e, self._A, self._B, self._C
+        )
+        calculate_KU(self.r_elec, self._A, self.i_sort_e, self._K, self._U)
+        calculate_ai_bi_from_axis(
+            self.r_elec, self._A, self._B, self._C, self._K, self._U,
+            self.i_sort_e, self._a_0, self._a_i, self._b_i
+        )
+
+    def _calculate_b_theta(self):
+        calculate_b_theta_at_particles(
+            self.r_elec, self._a_0[0], self._a_i, self._b_i,
+            self._r_neighbor_e, self.i_sort_e, self._b_t_e
+        )
+        if self.ion_motion:
+            # calculate_b_theta_at_particles(
+            #     self.r_ion, self._a_0, self._a_i, self._b_i,
+            #     self._r_neighbor_i, self.i_sort_i, self._b_t_i)
+            calculate_b_theta_at_ions(
+                self.r_ion, self.r_elec, self._a_0[0], self._a_i, self._b_i,
+                self.i_sort_i, self.i_sort_e, self._b_t_i
+            )
+    
     def _allocate_field_arrays(self):
         """Allocate arrays for the fields experienced by the particles.
 
@@ -277,372 +495,8 @@ class PlasmaParticles():
             size = self.n_part
         else:
             size = self.n_elec
-
         self._dr = np.zeros((5, size))
         self._dpr = np.zeros((5, size))
-
-
-@njit_serial()
-def deposit_rho_e_pp(pp, rho, r_fld, nr, dr):
-    w_rho = pp.q_elec / (1 - pp.pz_elec/pp.gamma_elec)
-    deposit_plasma_particles(pp.r_elec, w_rho, r_fld[0], nr, dr, rho, pp.shape)
-    rho[2: -2] /= r_fld * dr
-
-@njit_serial()
-def deposit_rho_i_pp(pp, rho, r_fld, nr, dr):
-    w_rho = pp.q_ion / ((1 - pp.pz_ion/pp.gamma_ion))
-    deposit_plasma_particles(pp.r_ion, w_rho, r_fld[0], nr, dr, rho, pp.shape)
-    rho[2: -2] /= r_fld * dr
-
-@njit_serial()
-def gather_particle_background_pp(pp):
-    calculate_psi_and_dr_psi(
-        pp._r_neighbor_e, pp._log_r_neighbor_e, pp.r_ion, pp.dr_p, pp.i_sort_i,
-        pp._sum_1_i, pp._sum_2_i, pp._psi_bg_i, pp._dr_psi_bg_i)
-    if pp.ion_motion:
-        calculate_psi_and_dr_psi(
-            pp._r_neighbor_i, pp._log_r_neighbor_i, pp.r_elec, pp.dr_p, pp.i_sort_e,
-            pp._sum_1_e, pp._sum_2_e, pp._psi_bg_e,
-            pp._dr_psi_bg_e)
-
-@njit_serial()
-def gather_particle_background_dxi_psi_pp(pp):
-    calculate_dxi_psi(
-        pp._r_neighbor_e, pp.r_ion, pp.i_sort_i, pp._sum_3_i,
-        pp._dxi_psi_bg_i)
-    if pp.ion_motion:
-        calculate_dxi_psi(
-            pp._r_neighbor_i, pp.r_elec, pp.i_sort_e, pp._sum_3_e,
-            pp._dxi_psi_bg_e)
-
-@njit_serial()
-def deposit_chi_pp(pp, chi, r_fld, nr, dr):
-    w_chi = pp.q_elec / ((1 - pp.pz_elec/pp.gamma_elec)) / pp.gamma_elec
-    # w_chi = pp.q / (pp.dr * pp.r * (1 - pp.pz/pp.gamma)) / (pp.gamma * pp.m)
-    # w_chi = w_chi[:pp.n_elec]
-    # r_elec = pp.r[:pp.n_elec]
-    deposit_plasma_particles(pp.r_elec, w_chi, r_fld[0], nr, dr, chi, pp.shape)
-    chi[2: -2] /= r_fld * dr
-
-@njit_serial()
-def gather_sources_pp(pp, a2, nabla_a2, b_theta, r_min, r_max, dr):
-    if pp.ion_motion:
-        gather_sources(a2, nabla_a2, b_theta, r_min, r_max, dr, pp.r,
-                        pp._a2, pp._nabla_a2, pp._b_t_0)
-    else:
-        gather_sources(a2, nabla_a2, b_theta, r_min, r_max, dr, pp.r_elec,
-                        pp._a2_e, pp._nabla_a2_e, pp._b_t_0_e)
-
-
-@njit_serial()
-def calculate_cumulative_sums_pp(pp):
-    # calculate_cumulative_sums(pp.r_elec, pp.q_elec, pp.i_sort_e,
-    #                           pp._sum_1_e, pp._sum_2_e)
-    calculate_cumulative_sum_1(pp.q_elec, pp.i_sort_e, pp._sum_1_e)
-    calculate_cumulative_sum_2(pp.r_elec, pp.q_elec, pp.i_sort_e, pp._sum_2_e)
-    if pp.ion_motion or not pp.ions_computed:
-        # calculate_cumulative_sums(pp.r_ion, pp.q_ion, pp.i_sort_i,
-        #                         pp._sum_1_i, pp._sum_2_i)            
-        calculate_cumulative_sum_1(pp.q_ion, pp.i_sort_i, pp._sum_1_i)
-        calculate_cumulative_sum_2(pp.r_ion, pp.q_ion, pp.i_sort_i, pp._sum_2_i)
-
-@njit_serial()
-def calculate_cumulative_sum_3_pp(pp):
-    calculate_cumulative_sum_3(
-        pp.r_elec, pp.pr_elec, pp.q_elec, pp._psi_e, pp.i_sort_e,
-        pp._sum_3_e)
-    if pp.ion_motion or not pp.ions_computed:
-        calculate_cumulative_sum_3(
-        pp.r_ion, pp.pr_ion, pp.q_ion, pp._psi_i, pp.i_sort_i,
-        pp._sum_3_i)
-
-@njit_serial()
-def calculate_ai_bi_pp(pp):
-    calculate_ABC(
-        pp.r_elec, pp.pr_elec, pp.q_elec, pp.gamma_elec,
-        pp._psi_e, pp._dr_psi_e, pp._dxi_psi_e, pp._b_t_0_e,
-        pp._nabla_a2_e, pp.i_sort_e, pp._A, pp._B, pp._C)
-    calculate_KU(pp.r_elec, pp._A, pp.i_sort_e, pp._K, pp._U)
-    calculate_ai_bi_from_axis(
-        pp.r_elec, pp._A, pp._B, pp._C, pp._K, pp._U, pp.i_sort_e, pp._a_0, pp._a_i,
-        pp._b_i)
-    
-@njit_serial()
-def calculate_psi_dr_psi_pp(pp):
-    calculate_psi_dr_psi_at_particles_bg(
-        pp.r_elec, pp._sum_1_e, pp._sum_2_e,
-        pp._psi_bg_i, pp._r_neighbor_e, pp._log_r_neighbor_e,
-        pp.i_sort_e, pp._psi_e, pp._dr_psi_e)
-    if pp.ion_motion:
-        calculate_psi_dr_psi_at_particles_bg(
-            pp.r_ion, pp._sum_1_i, pp._sum_2_i,
-            pp._psi_bg_e, pp._r_neighbor_i, pp._log_r_neighbor_e,
-            pp.i_sort_i, pp._psi_i, pp._dr_psi_i)
-
-    # pp._i_max = np.argmax(pp.r)
-    # pp._psi_max = pp._psi[pp._i_max]
-    # pp._psi -= pp._psi_max
-
-    
-
-    r_max_e = pp.r_elec[pp.i_sort_e[-1]]
-    r_max_i = pp.r_ion[pp.i_sort_i[-1]]
-    pp._r_max[:] = max(r_max_e, r_max_i) + pp.dr_p/2
-    log_r_max = np.log(pp._r_max)
-
-    pp._psi_max[:] = 0.
-
-    calculate_psi(pp._r_max, log_r_max, pp.r_elec, pp._sum_1_e, pp._sum_2_e, pp.i_sort_e, pp._psi_max)
-    calculate_psi(pp._r_max, log_r_max, pp.r_ion, pp._sum_1_i, pp._sum_2_i, pp.i_sort_i, pp._psi_max)
-
-    pp._psi_e -= pp._psi_max
-    if pp.ion_motion:
-        pp._psi_i -= pp._psi_max
-    
-    pp._psi[pp._psi < -0.9] = -0.9
-    # if np.max(pp._dr_psi_e) > 1:
-    #     print(np.abs(np.max(pp._dr_psi)))     
-
-@njit_serial()
-def calculate_dxi_psi_pp(pp):            
-    calculate_dxi_psi_at_particles_bg(
-        pp.r_elec, pp._sum_3_e, pp._dxi_psi_bg_i, pp._r_neighbor_e,
-        pp.i_sort_e, pp._dxi_psi_e)
-    if pp.ion_motion:
-        calculate_dxi_psi_at_particles_bg(
-            pp.r_ion, pp._sum_3_i, pp._dxi_psi_bg_e, pp._r_neighbor_i,
-            pp.i_sort_i, pp._dxi_psi_i)
-
-    # Apply boundary condition (dxi_psi = 0 after last particle).
-    pp._dxi_psi += (pp._sum_3_e[pp.i_sort_e[-1]] +
-                        pp._sum_3_i[pp.i_sort_i[-1]])
-
-    pp._dxi_psi[pp._dxi_psi < -3.] = -3.
-    pp._dxi_psi[pp._dxi_psi > 3.] = 3.
-
-@njit_serial()
-def calculate_b_theta_pp(pp):
-    calculate_b_theta_at_particles(
-        pp.r_elec, pp._a_0[0], pp._a_i, pp._b_i,
-        pp._r_neighbor_e, pp.i_sort_e, pp._b_t_e)
-    if pp.ion_motion:
-        # calculate_b_theta_at_particles(
-        #     pp.r_ion, pp._a_0, pp._a_i, pp._b_i,
-        #     pp._r_neighbor_i, pp.i_sort_i, pp._b_t_i)
-        calculate_b_theta_at_ions(
-            pp.r_ion, pp.r_elec, pp._a_0[0], pp._a_i, pp._b_i,
-            pp.i_sort_i, pp.i_sort_e, pp._b_t_i)
-
-@njit_serial()
-def calculate_psi_grid_pp(pp, r_eval, log_r_eval, psi):
-    calculate_psi(r_eval, log_r_eval, pp.r_elec, pp._sum_1_e, pp._sum_2_e, pp.i_sort_e, psi)
-    calculate_psi(r_eval, log_r_eval, pp.r_ion, pp._sum_1_i, pp._sum_2_i, pp.i_sort_i, psi)
-    psi -= pp._psi_max
-
-@njit_serial()
-def calculate_b_theta_grid_pp(pp, r_eval, b_theta):
-    calculate_b_theta(r_eval, pp._a_0[0], pp._a_i, pp._b_i,
-                        pp.r_elec, pp.i_sort_e, b_theta)
-
-@njit_serial()
-def evolve(pp, dxi):
-    if pp.ion_motion:
-        evolve_plasma_ab5(dxi, pp.r, pp.pr, pp.gamma, pp.m, pp.q_species, pp._nabla_a2,
-                        pp._b_t_0, pp._b_t, pp._psi, pp._dr_psi, 
-                        pp._dr, pp._dpr
-                        )
-    else:
-        evolve_plasma_ab5(dxi, pp.r_elec, pp.pr_elec, pp.gamma_elec, pp.m_elec, pp.q_species_elec, pp._nabla_a2_e,
-                        pp._b_t_0_e, pp._b_t_e, pp._psi_e, pp._dr_psi_e, 
-                        pp._dr, pp._dpr
-                        )
-
-@njit_serial()
-def update_gamma_pz_pp(pp):
-    if pp.ion_motion:
-        update_gamma_and_pz(
-            pp.gamma, pp.pz, pp.pr,
-            pp._a2, pp._psi, pp.q_species, pp.m)
-    else:
-        update_gamma_and_pz(
-            pp.gamma_elec, pp.pz_elec, pp.pr_elec,
-            pp._a2_e, pp._psi_e, pp.q_species_elec, pp.m_elec)
-        # if np.max(pp.pz_elec/pp.gamma_elec) > 0.999:
-        #     print('p'+str(np.max(pp.pz_elec/pp.gamma_elec)))
-        idx_keep = np.where(pp.gamma_elec >= 25)
-        if idx_keep[0].size > 0:
-            pp.pz_elec[idx_keep] = 0.
-            pp.gamma_elec[idx_keep] = 1.
-            pp.pr_elec[idx_keep] = 0.
-
-@njit_serial()
-def determine_neighboring_points_pp(pp):
-    determine_neighboring_points(
-        pp.r_elec, pp.dr_p, pp.i_sort_e, pp._r_neighbor_e)
-    pp._log_r_neighbor_e = np.log(pp._r_neighbor_e)
-    if pp.ion_motion:
-        determine_neighboring_points(
-            pp.r_ion, pp.dr_p, pp.i_sort_i, pp._r_neighbor_i)
-        pp._log_r_neighbor_i = np.log(pp._r_neighbor_i)
-
-
-# def radial_integral(f_r):
-#     subs = f_r / 2
-#     subs += f_r[0]/4
-#     return (np.cumsum(f_r) - subs)
-
-
-@njit_serial()
-def all_work(
-        pp,
-        r_fld, log_r_fld, psi_grid, b_theta_grid,
-        rho_e, rho_i, rho, chi
-    ):
-    # pp.determine_neighboring_points()
-    determine_neighboring_points(
-        pp.r_elec, pp.dr_p, pp.i_sort_e, pp._r_neighbor_e)
-    _log_r_neighbor_e = np.log(pp._r_neighbor_e)
-    if pp.ion_motion:
-        determine_neighboring_points(
-            pp.r_ion, pp.dr_p, pp.i_sort_i, pp._r_neighbor_i)
-        _log_r_neighbor_i = np.log(pp._r_neighbor_i)
-
-    # pp.calculate_cumulative_sums()
-    calculate_cumulative_sum_1(pp.q_elec, pp.i_sort_e, pp._sum_1_e)
-    calculate_cumulative_sum_2(pp.r_elec, pp.q_elec, pp.i_sort_e, pp._sum_2_e)
-    if pp.ion_motion or not pp.ions_computed:           
-        calculate_cumulative_sum_1(pp.q_ion, pp.i_sort_i, pp._sum_1_i)
-        calculate_cumulative_sum_2(pp.r_ion, pp.q_ion, pp.i_sort_i, pp._sum_2_i)
-      
-    # pp.gather_particle_background()
-    calculate_psi_and_dr_psi(
-        pp._r_neighbor_e, _log_r_neighbor_e, pp.r_ion, pp.dr_p, pp.i_sort_i,
-        pp._sum_1_i, pp._sum_2_i, pp._psi_bg_i, pp._dr_psi_bg_i)
-    if pp.ion_motion:
-        calculate_psi_and_dr_psi(
-            pp._r_neighbor_i, _log_r_neighbor_i, pp.r_elec, pp.dr_p, pp.i_sort_e,
-            pp._sum_1_e, pp._sum_2_e, pp._psi_bg_e,
-            pp._dr_psi_bg_e)
-
-    # pp.calculate_psi_dr_psi()
-    calculate_psi_dr_psi_at_particles_bg(
-        pp.r_elec, pp._sum_1_e, pp._sum_2_e,
-        pp._psi_bg_i, pp._r_neighbor_e, _log_r_neighbor_e,
-        pp.i_sort_e, pp._psi_e, pp._dr_psi_e)
-    if pp.ion_motion:
-        calculate_psi_dr_psi_at_particles_bg(
-            pp.r_ion, pp._sum_1_i, pp._sum_2_i,
-            pp._psi_bg_e, pp._r_neighbor_i, _log_r_neighbor_e,
-            pp.i_sort_i, pp._psi_i, pp._dr_psi_i)
-    r_max_e = pp.r_elec[pp.i_sort_e[-1]]
-    r_max_i = pp.r_ion[pp.i_sort_i[-1]]
-    pp._r_max[:] = max(r_max_e, r_max_i) + pp.dr_p/2
-    log_r_max = np.log(pp._r_max)
-    pp._psi_max[:] = 0.
-    calculate_psi(pp._r_max, log_r_max, pp.r_elec, pp._sum_1_e, pp._sum_2_e, pp.i_sort_e, pp._psi_max)
-    calculate_psi(pp._r_max, log_r_max, pp.r_ion, pp._sum_1_i, pp._sum_2_i, pp.i_sort_i, pp._psi_max)
-    pp._psi_e -= pp._psi_max
-    if pp.ion_motion:
-        pp._psi_i -= pp._psi_max
-    pp._psi[pp._psi < -0.9] = -0.9
-
-    # pp.calculate_cumulative_sum_3()
-    calculate_cumulative_sum_3(
-        pp.r_elec, pp.pr_elec, pp.q_elec, pp._psi_e, pp.i_sort_e,
-        pp._sum_3_e)
-    if pp.ion_motion or not pp.ions_computed:
-        calculate_cumulative_sum_3(
-        pp.r_ion, pp.pr_ion, pp.q_ion, pp._psi_i, pp.i_sort_i,
-        pp._sum_3_i)
-
-    # pp.gather_particle_background_dxi_psi()
-    calculate_dxi_psi(
-        pp._r_neighbor_e, pp.r_ion, pp.i_sort_i, pp._sum_3_i,
-        pp._dxi_psi_bg_i)
-    if pp.ion_motion:
-        calculate_dxi_psi(
-            pp._r_neighbor_i, pp.r_elec, pp.i_sort_e, pp._sum_3_e,
-            pp._dxi_psi_bg_e)
-        
-    # pp.calculate_dxi_psi()
-    calculate_dxi_psi_at_particles_bg(
-        pp.r_elec, pp._sum_3_e, pp._dxi_psi_bg_i, pp._r_neighbor_e,
-        pp.i_sort_e, pp._dxi_psi_e)
-    if pp.ion_motion:
-        calculate_dxi_psi_at_particles_bg(
-            pp.r_ion, pp._sum_3_i, pp._dxi_psi_bg_e, pp._r_neighbor_i,
-            pp.i_sort_i, pp._dxi_psi_i)
-
-    # Apply boundary condition (dxi_psi = 0 after last particle).
-    pp._dxi_psi += (pp._sum_3_e[pp.i_sort_e[-1]] +
-                        pp._sum_3_i[pp.i_sort_i[-1]])
-
-    pp._dxi_psi[pp._dxi_psi < -3.] = -3.
-    pp._dxi_psi[pp._dxi_psi > 3.] = 3.
-
-    # pp.update_gamma_pz()
-    if pp.ion_motion:
-        update_gamma_and_pz(
-            pp.gamma, pp.pz, pp.pr,
-            pp._a2, pp._psi, pp.q_species, pp.m)
-    else:
-        update_gamma_and_pz(
-            pp.gamma_elec, pp.pz_elec, pp.pr_elec,
-            pp._a2_e, pp._psi_e, pp.q_species_elec, pp.m_elec)
-        idx_keep = np.where(pp.gamma_elec >= 25)
-        if idx_keep[0].size > 0:
-            pp.pz_elec[idx_keep] = 0.
-            pp.gamma_elec[idx_keep] = 1.
-            pp.pr_elec[idx_keep] = 0.
-
-    # pp.calculate_ai_bi()
-    calculate_ABC(
-        pp.r_elec, pp.pr_elec, pp.q_elec, pp.gamma_elec,
-        pp._psi_e, pp._dr_psi_e, pp._dxi_psi_e, pp._b_t_0_e,
-        pp._nabla_a2_e, pp.i_sort_e, pp._A, pp._B, pp._C)
-    calculate_KU(pp.r_elec, pp._A, pp.i_sort_e, pp._K, pp._U)
-    calculate_ai_bi_from_axis(
-        pp.r_elec, pp._A, pp._B, pp._C, pp._K, pp._U, pp.i_sort_e, pp._a_0,pp. _a_i,
-        pp._b_i)
-    
-    # pp.calculate_b_theta()
-    calculate_b_theta_at_particles(
-        pp.r_elec, pp._a_0[0], pp._a_i, pp._b_i,
-        pp._r_neighbor_e, pp.i_sort_e, pp._b_t_e)
-    if pp.ion_motion:
-        calculate_b_theta_at_ions(
-            pp.r_ion, pp.r_elec, pp._a_0[0], pp._a_i, pp._b_i,
-            pp.i_sort_i, pp.i_sort_e, pp._b_t_i)
-        
-    # pp.calculate_psi_grid(r_fld, log_r_fld, psi[slice_i+2, 2:-2])
-    calculate_psi(r_fld, log_r_fld, pp.r_elec, pp._sum_1_e, pp._sum_2_e, pp.i_sort_e, psi_grid)
-    calculate_psi(r_fld, log_r_fld, pp.r_ion, pp._sum_1_i, pp._sum_2_i, pp.i_sort_i, psi_grid)
-    psi_grid -= pp._psi_max
-    
-    # pp.calculate_b_theta_grid(r_fld, b_t_bar[slice_i+2, 2:-2])
-    calculate_b_theta(r_fld, pp._a_0[0], pp._a_i, pp._b_i, pp.r_elec, pp.i_sort_e, b_theta_grid)
-
-    if pp.ion_motion:
-    #     pp.deposit_rho_e(rho_e[slice_i+2], r_fld, n_r, dr)
-        w_rho = pp.q_elec / (1 - pp.pz_elec/pp.gamma_elec)
-        deposit_plasma_particles(pp.r_elec, w_rho, r_fld[0], pp.nr, pp.dr, rho_e, pp.shape)
-        rho_e[2: -2] /= r_fld * pp.dr
-
-    #     pp.deposit_rho_i(rho_i[slice_i+2], r_fld, n_r, dr)
-        w_rho = pp.q_ion / ((1 - pp.pz_ion/pp.gamma_ion))
-        deposit_plasma_particles(pp.r_ion, w_rho, r_fld[0], pp.nr, pp.dr, rho_i, pp.shape)
-        rho_i[2: -2] /= r_fld * pp.dr
-        rho += rho_e + rho_i
-    else:
-    #     pp.deposit_rho_e(rho[slice_i+2], r_fld, n_r, dr)
-        w_rho = pp.q_elec / (1 - pp.pz_elec/pp.gamma_elec)
-        deposit_plasma_particles(pp.r_elec, w_rho, r_fld[0], pp.nr, pp.dr, rho, pp.shape)
-        rho[2: -2] /= r_fld * pp.dr
-
-    # pp.deposit_chi(chi[slice_i+2], r_fld, n_r, dr)
-    w_chi = pp.q_elec / ((1 - pp.pz_elec/pp.gamma_elec)) / pp.gamma_elec
-    deposit_plasma_particles(pp.r_elec, w_chi, r_fld[0], pp.nr, pp.dr, chi, pp.shape)
-    chi[2: -2] /= r_fld * pp.dr
 
 
 @njit_serial()

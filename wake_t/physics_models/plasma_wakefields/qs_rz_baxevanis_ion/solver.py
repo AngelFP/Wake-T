@@ -12,16 +12,7 @@ import aptools.plasma_accel.general_equations as ge
 import matplotlib.pyplot as plt
 
 from wake_t.utilities.other import radial_gradient
-from .plasma_particles import (
-    PlasmaParticles, all_work, evolve, gather_sources_pp,
-    determine_neighboring_points_pp,
-    calculate_cumulative_sums_pp, gather_particle_background_pp,
-    calculate_psi_dr_psi_pp, calculate_cumulative_sum_3_pp,
-    gather_particle_background_dxi_psi_pp, calculate_dxi_psi_pp,
-    update_gamma_pz_pp,
-    calculate_ai_bi_pp, calculate_b_theta_pp,
-    calculate_psi_grid_pp, calculate_b_theta_grid_pp,
-    deposit_rho_e_pp, deposit_rho_i_pp, deposit_chi_pp)
+from .plasma_particles import PlasmaParticles
 from wake_t.utilities.numba import njit_serial
 from wake_t.particles.deposition import deposit_3d_distribution
 
@@ -81,9 +72,6 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
     """
     rho, chi, E_r, E_z, B_t, xi_fld, r_fld = fld_arrays
 
-    rho_e = np.zeros_like(rho)
-    rho_i = np.zeros_like(rho)
-
     s_d = ge.plasma_skin_depth(n_p * 1e-6)
     r_max = r_max / s_d
     xi_min = xi_min / s_d
@@ -124,7 +112,7 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
     
     do_plasma_loop(r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
                    plasma_pusher, p_shape, ion_motion, n_xi, a2, nabla_a2,
-                   b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho_e, rho_i, rho,
+                   b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho,
                    chi, dxi)
 
 
@@ -136,10 +124,11 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
     B_t[:] = (b_t_bar + b_t_beam) * E_0 / ct.c
     E_r[:] = W_r + B_t * ct.c
 
+
 @njit_serial()
 def do_plasma_loop(r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
                    plasma_pusher, p_shape, ion_motion, n_xi, a2, nabla_a2,
-                   b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho_e, rho_i, rho,
+                   b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho,
                    chi, dxi):
     # Initialize plasma particles.
     pp = PlasmaParticles(
@@ -154,47 +143,26 @@ def do_plasma_loop(r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
 
         pp.sort()
 
-        # pp.determine_neighboring_points_pp()
-        determine_neighboring_points_pp(pp)
+        pp.determine_neighboring_points()
 
-        # pp.gather_sources()
-        gather_sources_pp(pp,
+        pp.gather_sources(
             a2[slice_i+2], nabla_a2[slice_i+2],
-            b_t_beam[slice_i+2], r_fld[0], r_fld[-1], dr)
-        
-        # pp.compute_all()
-        calculate_cumulative_sums_pp(pp)
-        gather_particle_background_pp(pp)
-        calculate_psi_dr_psi_pp(pp)
+            b_t_beam[slice_i+2], r_fld[0], r_fld[-1], dr
+        )
 
-        calculate_cumulative_sum_3_pp(pp)
-        gather_particle_background_dxi_psi_pp(pp)
-        calculate_dxi_psi_pp(pp)
-        update_gamma_pz_pp(pp)
-        calculate_ai_bi_pp(pp)
-        calculate_b_theta_pp(pp)
+        pp.calculate_fields()
 
-        calculate_psi_grid_pp(pp, r_fld, log_r_fld, psi[slice_i+2, 2:-2])
-        calculate_b_theta_grid_pp(pp, r_fld, b_t_bar[slice_i+2, 2:-2])
+        pp.calculate_psi_at_grid(r_fld, log_r_fld, psi[slice_i+2, 2:-2])
+        pp.calculate_b_theta_at_grid(r_fld, b_t_bar[slice_i+2, 2:-2])
 
-        if pp.ion_motion:
-            deposit_rho_e_pp(pp, rho_e[slice_i+2], r_fld, n_r, dr)
-            deposit_rho_i_pp(pp, rho_i[slice_i+2], r_fld, n_r, dr)
-            rho[slice_i+2] += rho_e[slice_i+2] + rho_i[slice_i+2]
-        else:
-            deposit_rho_e_pp(pp, rho[slice_i+2], r_fld, n_r, dr)
-        deposit_chi_pp(pp, chi[slice_i+2], r_fld, n_r, dr)
-
-        # all_work(pp, r_fld, log_r_fld,
-        #             psi[slice_i+2, 2:-2], b_t_bar[slice_i+2, 2:-2],
-        #             rho_e[slice_i+2], rho_i[slice_i+2], rho[slice_i+2],
-        #             chi[slice_i+2])
+        pp.deposit_rho(rho[slice_i+2], r_fld, n_r, dr)
+        pp.deposit_chi(chi[slice_i+2], r_fld, n_r, dr)
 
         pp.ions_computed = True
 
         if slice_i > 0:
-            # pp.evol()
-            evolve(pp, dxi)
+            pp.evolve(dxi)
+
 
 def calculate_beam_source(
         bunch, n_p, n_r, n_xi, r_min, xi_min, dr, dxi, p_shape, b_t):
