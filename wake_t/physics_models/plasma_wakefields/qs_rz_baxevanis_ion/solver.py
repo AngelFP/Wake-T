@@ -109,13 +109,13 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
         calculate_beam_source(bunch, n_p, n_r, n_xi, r_fld[0], xi_fld[0],
                               dr, dxi, p_shape, b_t_beam)
     
-    
-    do_plasma_loop(
+    # Calculate plasma response (including density, susceptibility, potential
+    # and magnetic field)
+    calculate_plasma_response(
         r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
         plasma_pusher, p_shape, max_gamma, ion_motion, n_xi, a2, nabla_a2,
         b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho, chi, dxi
     )
-
 
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
@@ -127,10 +127,12 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
 
 
 @njit_serial()
-def do_plasma_loop(r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
-                   plasma_pusher, p_shape, max_gamma, ion_motion, n_xi, a2,
-                   nabla_a2, b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho,
-                   chi, dxi):
+def calculate_plasma_response(
+    r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
+    plasma_pusher, p_shape, max_gamma, ion_motion, n_xi, a2,
+    nabla_a2, b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho,
+    chi, dxi
+):
     # Initialize plasma particles.
     pp = PlasmaParticles(
         r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
