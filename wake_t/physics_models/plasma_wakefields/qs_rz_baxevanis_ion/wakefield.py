@@ -87,6 +87,13 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         5th order).
     ion_motion : bool, optional
         Whether to allow the plasma ions to move. By default, False.
+    ion_mass : float, optional
+        Mass of the plasma ions. By default, the mass of a proton.
+    ion_charge : float, optional
+        Charge of the plasma ions. By default, the charge of a proton.
+    electron_charge : float, optional
+        Charge of the plasma electrons released by each ionized plasma atom or
+        molecule. By default, the charge of an electron.
     laser : LaserPulse, optional
         Laser driver of the plasma stage.
     laser_evolution : bool, optional
@@ -134,6 +141,9 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         max_gamma: Optional[float] = 10,
         plasma_pusher: Optional[str] = 'rk4',
         ion_motion: Optional[bool] = False,
+        ion_mass: Optional[float] = ct.m_p,
+        ion_charge: Optional[float] = ct.e,
+        electron_charge: Optional[float] = -ct.e,
         laser: Optional[LaserPulse] = None,
         laser_evolution: Optional[bool] = True,
         laser_envelope_substeps: Optional[int] = 1,
@@ -149,6 +159,9 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self.max_gamma = max_gamma
         self.plasma_pusher = plasma_pusher
         self.ion_motion = ion_motion
+        self.ion_mass = ion_mass
+        self.ion_charge = ion_charge
+        self.electron_charge = electron_charge
         super().__init__(
             density_function=density_function,
             r_max=r_max,
@@ -188,6 +201,8 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             parabolic_coefficient=parabolic_coefficient,
             p_shape=self.p_shape, max_gamma=self.max_gamma,
             plasma_pusher=self.plasma_pusher, ion_motion=self.ion_motion,
+            ion_mass=self.ion_mass, ion_charge=self.ion_charge,
+            electron_charge=self.electron_charge,
             fld_arrays=[self.rho, self.rho_e, self.rho_i, self.chi, self.e_r,
                         self.e_z, self.b_t, self.xi_fld, self.r_fld]
         )

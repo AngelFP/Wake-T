@@ -35,6 +35,9 @@ spec = [
     ('dr_p', float64),
     ('max_gamma', float64),
     ('ion_motion', boolean),
+    ('ion_mass', float64),
+    ('ion_charge', float64),
+    ('electron_charge', float64),
     ('ions_computed', boolean),
 
     ('r', float64[::1]),
@@ -135,7 +138,9 @@ class PlasmaParticles():
     """
 
     def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc,
-                 nr, max_gamma=10., ion_motion=True, pusher='ab5', shape='linear'):
+                 nr, max_gamma=10., ion_motion=True, ion_mass=ct.m_p,
+                 ion_charge=ct.e, electron_charge=-ct.e, pusher='ab5',
+                 shape='linear'):
         # Calculate total number of plasma particles.
         n_elec = int(np.round(r_max_plasma / dr * ppc))
         n_part = n_elec * 2
@@ -159,6 +164,9 @@ class PlasmaParticles():
         # self.r_grid = r_grid
         self.nr = nr
         self.ion_motion = ion_motion
+        self.ion_mass = ion_mass
+        self.ion_charge = ion_charge
+        self.electron_charge = electron_charge
 
     def initialize(self):
         """Initialize column of plasma particles."""
@@ -171,9 +179,9 @@ class PlasmaParticles():
         gamma = np.ones(self.n_elec)
         q = self.dr_p * r + self.dr_p * self.parabolic_coefficient * r**3
         m_e = np.ones(self.n_elec)
-        m_i = np.ones(self.n_elec) * ct.m_p / ct.m_e
-        q_species_e = np.ones(self.n_elec)
-        q_species_i = np.ones(self.n_elec) * -1
+        m_i = np.ones(self.n_elec) * self.ion_mass / ct.m_e
+        q_species_e = np.ones(self.n_elec) * self.electron_charge / (-ct.e)
+        q_species_i = np.ones(self.n_elec) * self.ion_charge / (-ct.e)
 
         self.r = np.concatenate((r, r))
         self.pr = np.concatenate((pr, pr))
