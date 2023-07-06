@@ -37,8 +37,9 @@ class RZWakefield(NumericalField):
         only updated every time the simulation window advances by
         10 micron. By default ``dz_fields=xi_max-xi_min``, i.e., the
         length the simulation box.
-    ion_motion : bool, optional
-        Whether the model allows the plasma ion to be mobile.
+    species_rho_diags : bool, optional
+        Whether the model should save the charge density of each plasma species
+        separately.
     laser : LaserPulse, optional
         Laser driver of the plasma stage.
     laser_evolution : bool, optional
@@ -75,7 +76,7 @@ class RZWakefield(NumericalField):
         n_r: int,
         n_xi: int,
         dz_fields=None,
-        ion_motion: Optional[bool] = False,
+        species_rho_diags: Optional[bool] = False,
         laser: Optional[LaserPulse] = None,
         laser_evolution: Optional[bool] = True,
         laser_envelope_substeps: Optional[int] = 1,
@@ -92,7 +93,7 @@ class RZWakefield(NumericalField):
         self.laser_envelope_nxi = laser_envelope_nxi
         self.laser_envelope_nr = laser_envelope_nr
         self.laser_envelope_use_phase = laser_envelope_use_phase
-        self.ion_motion = ion_motion
+        self.species_rho_diags = species_rho_diags
         self.r_max = r_max
         self.xi_min = xi_min
         self.xi_max = xi_max
@@ -146,7 +147,7 @@ class RZWakefield(NumericalField):
         self.e_z[:] = 0.
         self.e_r[:] = 0.
         self.b_t[:] = 0.
-        if self.ion_motion:
+        if self.species_rho_diags:
             self.rho_e[:] = 0.
             self.rho_i[:] = 0.
         self._calculate_wakefield(bunches)
@@ -193,7 +194,7 @@ class RZWakefield(NumericalField):
              np.ascontiguousarray(self.b_z.T[2:-2, 2:-2])],
             [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * rho_norm]
         ]
-        if self.ion_motion:
+        if self.species_rho_diags:
             fld_names += ['rho_e', 'rho_i']
             fld_comps += [None, None]
             fld_attrs += [{}, {}]

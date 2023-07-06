@@ -148,6 +148,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self.p_shape = p_shape
         self.max_gamma = max_gamma
         self.plasma_pusher = plasma_pusher
+        self.ion_motion = ion_motion
         super().__init__(
             density_function=density_function,
             r_max=r_max,
@@ -156,7 +157,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             n_r=n_r,
             n_xi=n_xi,
             dz_fields=dz_fields,
-            ion_motion = ion_motion,
+            species_rho_diags=True,
             laser=laser,
             laser_evolution=laser_evolution,
             laser_envelope_substeps=laser_envelope_substeps,
