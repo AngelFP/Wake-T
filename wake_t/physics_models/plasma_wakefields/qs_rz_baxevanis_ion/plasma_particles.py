@@ -69,8 +69,6 @@ spec = [
     ('_nabla_a2', float64[::1]),
     ('_b_t_0', float64[::1]),
     ('_b_t', float64[::1]),
-    ('_r_max', float64[::1]),
-    ('_psi_max', float64[::1]),
     ('_dr', float64[:, ::1]),
     ('_dpr', float64[:, ::1]),
     ('_a2_e', float64[::1]),
@@ -98,6 +96,7 @@ spec = [
     ('_a_i', float64[::1]),
     ('_b_i', float64[::1]),
     ('_a_0', float64[::1]),
+    ('_psi_max', float64),
 
     ('_sum_1_i', float64[::1]),
     ('_sum_2_i', float64[::1]),
@@ -364,22 +363,13 @@ class PlasmaParticles():
                 self.r_ion, self._sum_1_i, self._sum_2_i, self._psi_bg_e,
                 self._r_neighbor_i, self._log_r_neighbor_i, self.i_sort_i,
                 self._psi_i, self._dr_psi_i
-            )        
+            )
 
-        r_max_e = self.r_elec[self.i_sort_e[-1]]
-        r_max_i = self.r_ion[self.i_sort_i[-1]]
-        self._r_max[:] = max(r_max_e, r_max_i) + self.dr_p/2
-        log_r_max = np.log(self._r_max)
-
-        self._psi_max[:] = 0.
-
-        calculate_psi(
-            self._r_max, log_r_max, self.r_elec, self._sum_1_e, self._sum_2_e,
-            self.i_sort_e, self._psi_max
-        )
-        calculate_psi(
-            self._r_max, log_r_max, self.r_ion, self._sum_1_i, self._sum_2_i,
-            self.i_sort_i, self._psi_max
+        # Apply boundary condition (psi=0) after last plasma particle (assumes
+        # that the total electron and ion charge are the same). 
+        self._psi_max = - (
+            self._sum_2_e[self.i_sort_e[-1]] +
+            self._sum_2_i[self.i_sort_i[-1]]
         )
 
         self._psi_e -= self._psi_max
@@ -500,8 +490,7 @@ class PlasmaParticles():
         self._r_neighbor_e = np.zeros(self.n_elec+1)
         self._r_neighbor_i = np.zeros(self.n_elec+1)
 
-        self._r_max = np.zeros(1)
-        self._psi_max = np.zeros(1)
+        self._psi_max = 0.
 
     def _allocate_ab5_arrays(self):
         """Allocate the arrays needed for the 5th order Adams-Bashforth pusher.
