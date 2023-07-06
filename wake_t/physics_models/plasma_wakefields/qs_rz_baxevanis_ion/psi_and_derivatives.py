@@ -95,12 +95,9 @@ def calculate_psi_dr_psi_at_particles_bg(
     # Initialize arrays.
     n_part = r.shape[0]
 
-    # Get initial values for left and right neighbors.
+    # Get initial values for left neighbors.
     r_left = r_neighbor[0]
-    r_right = r_neighbor[1]
-    log_r_right = log_r_neighbor[1]
     psi_bg_left = psi_bg[0]
-    psi_bg_right = psi_bg[1]
     psi_left = psi_bg_left
 
     # Loop over particles.
@@ -111,6 +108,11 @@ def calculate_psi_dr_psi_at_particles_bg(
         # Get sums to calculate psi at right neighbor.
         sum_1_right_i = sum_1[i]
         sum_2_right_i = sum_2[i]
+
+        # Get values at right neighbor.
+        r_right = r_neighbor[i_sort + 1]
+        log_r_right = log_r_neighbor[i_sort + 1]
+        psi_bg_right = psi_bg[i_sort + 1]
 
         # Calculate psi at right neighbor.
         psi_right = sum_1_right_i*log_r_right - sum_2_right_i + psi_bg_right
@@ -128,11 +130,6 @@ def calculate_psi_dr_psi_at_particles_bg(
         r_left = r_right
         psi_bg_left = psi_bg_right
         psi_left = psi_right
-
-        # Get values needed for next right neighbor.
-        r_right = r_neighbor[i_sort+2]
-        log_r_right = log_r_neighbor[i_sort+2]
-        psi_bg_right = psi_bg[i_sort+2]
 
 
 @njit_serial()
@@ -168,11 +165,9 @@ def calculate_dxi_psi_at_particles_bg(
     # Initialize arrays.
     n_part = r.shape[0]
 
-    # Get initial values for left and right neighbors.
+    # Get initial values for left neighbors.
     r_left = r_neighbor[0]
-    r_right = r_neighbor[1]
     dxi_psi_bg_left = dxi_psi_bg[0]
-    dxi_psi_bg_right = dxi_psi_bg[1]
     dxi_psi_left = dxi_psi_bg_left
 
     # Loop over particles.
@@ -181,6 +176,8 @@ def calculate_dxi_psi_at_particles_bg(
         r_i = r[i]
         
         # Calculate value at right neighbor.
+        r_right = r_neighbor[i_sort + 1]
+        dxi_psi_bg_right = dxi_psi_bg[i_sort + 1]
         sum_3_right_i = sum_3[i]
         dxi_psi_right = - sum_3_right_i + dxi_psi_bg_right
 
@@ -194,10 +191,6 @@ def calculate_dxi_psi_at_particles_bg(
         r_left = r_right
         dxi_psi_bg_left = dxi_psi_bg_right
         dxi_psi_left = dxi_psi_right
-
-        # Get values needed for next right neighbor.
-        r_right = r_neighbor[i_sort+2]
-        dxi_psi_bg_right = dxi_psi_bg[i_sort+2]
 
 
 @njit_serial()
