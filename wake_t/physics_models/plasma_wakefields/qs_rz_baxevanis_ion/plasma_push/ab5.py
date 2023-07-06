@@ -52,12 +52,12 @@ def evolve_plasma_ab5(
         dpr[i+1] = dpr[i]
 
     # If a particle has crossed the axis, mirror it.
-    idx_neg = np.where(r < 0.)
-    if idx_neg[0].size > 0:
+    idx_neg = np.where(r < 0.)[0]
+    if idx_neg.size > 0:
         r[idx_neg] *= -1.
         pr[idx_neg] *= -1.
-        dr[idx_neg] *= -1.
-        dpr[idx_neg] *= -1.
+        dr[:, idx_neg] *= -1.
+        dpr[:, idx_neg] *= -1.
 
 
 @njit_serial()
@@ -92,7 +92,7 @@ def calculate_derivatives(
     for i in range(pr.shape[0]):
         q_over_m = q[i] / m[i]
         psi_i = psi[i] * q_over_m
-        dpr[i] = (gamma[i] * dr_psi[i] * q_over_m / (1. + psi_i)
+        dpr[i] = (gamma[i] * dr_psi[i] / (1. + psi_i)
                   - b_theta_bar[i]
                   - b_theta_0[i]
                   - nabla_a2[i] / (2. * (1. + psi_i))) * q_over_m
