@@ -419,11 +419,11 @@ class PlasmaParticles():
             )
             # if np.max(self.pz_elec/self.gamma_elec) > 0.999:
             #     print('p'+str(np.max(self.pz_elec/self.gamma_elec)))
-            idx_keep = np.where(self.gamma_elec >= self.max_gamma)
-            if idx_keep[0].size > 0:
-                self.pz_elec[idx_keep] = 0.
-                self.gamma_elec[idx_keep] = 1.
-                self.pr_elec[idx_keep] = 0.
+        idx_keep = np.where(self.gamma_elec >= self.max_gamma)
+        if idx_keep[0].size > 0:
+            self.pz_elec[idx_keep] = 0.
+            self.gamma_elec[idx_keep] = 1.
+            self.pr_elec[idx_keep] = 0.
         
     def _calculate_ai_bi(self):
         calculate_ABC(
