@@ -362,7 +362,7 @@ class PlasmaParticles():
         if self.ion_motion:
             calculate_psi_dr_psi_at_particles_bg(
                 self.r_ion, self._sum_1_i, self._sum_2_i, self._psi_bg_e,
-                self._r_neighbor_i, self._log_r_neighbor_e, self.i_sort_i,
+                self._r_neighbor_i, self._log_r_neighbor_i, self.i_sort_i,
                 self._psi_i, self._dr_psi_i
             )        
 
