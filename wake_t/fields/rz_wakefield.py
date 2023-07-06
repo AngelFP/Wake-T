@@ -58,6 +58,8 @@ class RZWakefield(NumericalField):
         Determines whether to take into account the terms related to the
         longitudinal derivative of the complex phase in the envelope
         solver.
+    ion_motion : bool, optional
+        Whether the model allows the plasma ion to be mobile.
     model_name : str, optional
         Name of the wakefield model. This will be stored in the openPMD
         diagnostics.
@@ -79,6 +81,7 @@ class RZWakefield(NumericalField):
         laser_envelope_nxi: Optional[int] = None,
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
+        ion_motion: Optional[bool] = False,
         model_name: Optional[str] = ''
     ) -> None:
         dz_fields = xi_max - xi_min if dz_fields is None else dz_fields
@@ -89,6 +92,7 @@ class RZWakefield(NumericalField):
         self.laser_envelope_nxi = laser_envelope_nxi
         self.laser_envelope_nr = laser_envelope_nr
         self.laser_envelope_use_phase = laser_envelope_use_phase
+        self.ion_motion = ion_motion
         self.r_max = r_max
         self.xi_min = xi_min
         self.xi_max = xi_max
@@ -117,6 +121,8 @@ class RZWakefield(NumericalField):
 
         # Initialize field arrays
         self.rho = np.zeros((self.n_xi+4, self.n_r+4))
+        self.rho_e = np.zeros((self.n_xi+4, self.n_r+4))
+        self.rho_i = np.zeros((self.n_xi+4, self.n_r+4))
         self.chi = np.zeros((self.n_xi+4, self.n_r+4))
         self.e_z = np.zeros((self.n_xi+4, self.n_r+4))
         self.e_r = np.zeros((self.n_xi+4, self.n_r+4))
@@ -140,6 +146,9 @@ class RZWakefield(NumericalField):
         self.e_z[:] = 0.
         self.e_r[:] = 0.
         self.b_t[:] = 0.
+        if self.ion_motion:
+            self.rho_e[:] = 0.
+            self.rho_i[:] = 0.
         self._calculate_wakefield(bunches)
 
     def _calculate_wakefield(self, bunches):
@@ -174,6 +183,7 @@ class RZWakefield(NumericalField):
         fld_names = ['E', 'B', 'rho']
         fld_comps = [['r', 't', 'z'], ['r', 't', 'z'], None]
         fld_attrs = [{}, {}, {}]
+        rho_norm =  self.n_p * (-ct.e)
         fld_arrays = [
             [np.ascontiguousarray(self.e_r.T[2:-2, 2:-2]),
              np.ascontiguousarray(self.e_t.T[2:-2, 2:-2]),
@@ -181,8 +191,16 @@ class RZWakefield(NumericalField):
             [np.ascontiguousarray(self.b_r.T[2:-2, 2:-2]),
              np.ascontiguousarray(self.b_t.T[2:-2, 2:-2]),
              np.ascontiguousarray(self.b_z.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * self.n_p * (-ct.e)]
+            [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * rho_norm]
         ]
+        if self.ion_motion:
+            fld_names += ['rho_e', 'rho_i']
+            fld_comps += [None, None]
+            fld_attrs += [{}, {}]
+            fld_arrays += [
+                [np.ascontiguousarray(self.rho_e.T[2:-2, 2:-2]) * rho_norm],
+                [np.ascontiguousarray(self.rho_i.T[2:-2, 2:-2]) * rho_norm]
+            ]
         if self.laser is not None:
             fld_names += ['a_mod', 'a_phase']
             fld_comps += [None, None]
