@@ -280,19 +280,23 @@ class PlasmaParticles():
                 self._b_t_e, self._psi_e, self._dr_psi_e, self._dr, self._dpr
             )
 
-    def deposit_rho(self, rho, r_fld, nr, dr):
+    def deposit_rho(self, rho, rho_e, rho_i, r_fld, nr, dr):
+        # Deposit electrons
+        w_rho_e = self.q_elec / (1 - self.pz_elec/self.gamma_elec)
+        deposit_plasma_particles(
+            self.r_elec, w_rho_e, r_fld[0], nr, dr, rho, self.shape
+        )
+        rho[2: -2] /= r_fld * dr
+
         if self.ion_motion:
-            w_rho = self.q / (1 - self.pz/self.gamma)
+            # Deposit ions
+            w_rho_i = self.q_ion / (1 - self.pz_ion/self.gamma_ion)
             deposit_plasma_particles(
-                self.r, w_rho, r_fld[0], nr, dr, rho, self.shape
+                self.r_ion, w_rho_i, r_fld[0], nr, dr, rho_i, self.shape
             )
-            rho[2: -2] /= r_fld * dr
-        else:            
-            w_rho = self.q_elec / (1 - self.pz_elec/self.gamma_elec)
-            deposit_plasma_particles(
-                self.r_elec, w_rho, r_fld[0], nr, dr, rho, self.shape
-            )
-            rho[2: -2] /= r_fld * dr
+            rho_i[2: -2] /= r_fld * dr
+            rho_e[:] = rho
+            rho[:] += rho_i
 
     def deposit_chi(self, chi, r_fld, nr, dr):
         w_chi = (

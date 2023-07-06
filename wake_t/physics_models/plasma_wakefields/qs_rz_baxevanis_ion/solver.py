@@ -70,7 +70,7 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
         and `'ab5'`.
 
     """
-    rho, chi, E_r, E_z, B_t, xi_fld, r_fld = fld_arrays
+    rho, rho_e, rho_i, chi, E_r, E_z, B_t, xi_fld, r_fld = fld_arrays
 
     s_d = ge.plasma_skin_depth(n_p * 1e-6)
     r_max = r_max / s_d
@@ -114,7 +114,7 @@ def calculate_wakefields(laser_a2, bunches, r_max, xi_min, xi_max,
     calculate_plasma_response(
         r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
         plasma_pusher, p_shape, max_gamma, ion_motion, n_xi, a2, nabla_a2,
-        b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho, chi, dxi
+        b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho, rho_e, rho_i, chi, dxi
     )
 
     # Calculate derived fields (E_z, W_r, and E_r).
@@ -131,7 +131,7 @@ def calculate_plasma_response(
     r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
     plasma_pusher, p_shape, max_gamma, ion_motion, n_xi, a2,
     nabla_a2, b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho,
-    chi, dxi
+    rho_e, rho_i, chi, dxi
 ):
     # Initialize plasma particles.
     pp = PlasmaParticles(
@@ -159,7 +159,8 @@ def calculate_plasma_response(
         pp.calculate_psi_at_grid(r_fld, log_r_fld, psi[slice_i+2, 2:-2])
         pp.calculate_b_theta_at_grid(r_fld, b_t_bar[slice_i+2, 2:-2])
 
-        pp.deposit_rho(rho[slice_i+2], r_fld, n_r, dr)
+        pp.deposit_rho(rho[slice_i+2], rho_e[slice_i+2], rho_i[slice_i+2],
+                       r_fld, n_r, dr)
         pp.deposit_chi(chi[slice_i+2], r_fld, n_r, dr)
 
         pp.ions_computed = True

@@ -37,6 +37,8 @@ class RZWakefield(NumericalField):
         only updated every time the simulation window advances by
         10 micron. By default ``dz_fields=xi_max-xi_min``, i.e., the
         length the simulation box.
+    ion_motion : bool, optional
+        Whether the model allows the plasma ion to be mobile.
     laser : LaserPulse, optional
         Laser driver of the plasma stage.
     laser_evolution : bool, optional
@@ -58,8 +60,6 @@ class RZWakefield(NumericalField):
         Determines whether to take into account the terms related to the
         longitudinal derivative of the complex phase in the envelope
         solver.
-    ion_motion : bool, optional
-        Whether the model allows the plasma ion to be mobile.
     model_name : str, optional
         Name of the wakefield model. This will be stored in the openPMD
         diagnostics.
@@ -75,13 +75,13 @@ class RZWakefield(NumericalField):
         n_r: int,
         n_xi: int,
         dz_fields=None,
+        ion_motion: Optional[bool] = False,
         laser: Optional[LaserPulse] = None,
         laser_evolution: Optional[bool] = True,
         laser_envelope_substeps: Optional[int] = 1,
         laser_envelope_nxi: Optional[int] = None,
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
-        ion_motion: Optional[bool] = False,
         model_name: Optional[str] = ''
     ) -> None:
         dz_fields = xi_max - xi_min if dz_fields is None else dz_fields

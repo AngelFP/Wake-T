@@ -85,6 +85,8 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         The pusher used to evolve the plasma particles. Possible values
         are ``'rk4'`` (Runge-Kutta 4th order) or ``'ab5'`` (Adams-Bashforth
         5th order).
+    ion_motion : bool, optional
+        Whether to allow the plasma ions to move. By default, False.
     laser : LaserPulse, optional
         Laser driver of the plasma stage.
     laser_evolution : bool, optional
@@ -146,7 +148,6 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self.p_shape = p_shape
         self.max_gamma = max_gamma
         self.plasma_pusher = plasma_pusher
-        self.ion_motion = ion_motion
         super().__init__(
             density_function=density_function,
             r_max=r_max,
@@ -155,6 +156,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             n_r=n_r,
             n_xi=n_xi,
             dz_fields=dz_fields,
+            ion_motion = ion_motion,
             laser=laser,
             laser_evolution=laser_evolution,
             laser_envelope_substeps=laser_envelope_substeps,
@@ -185,8 +187,9 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             parabolic_coefficient=parabolic_coefficient,
             p_shape=self.p_shape, max_gamma=self.max_gamma,
             plasma_pusher=self.plasma_pusher, ion_motion=self.ion_motion,
-            fld_arrays=[self.rho, self.chi, self.e_r, self.e_z, self.b_t,
-                        self.xi_fld, self.r_fld])
+            fld_arrays=[self.rho, self.rho_e, self.rho_i, self.chi, self.e_r,
+                        self.e_z, self.b_t, self.xi_fld, self.r_fld]
+        )
 
     def _get_parabolic_coefficient_fn(self, parabolic_coefficient):
         """ Get parabolic_coefficient profile function """
