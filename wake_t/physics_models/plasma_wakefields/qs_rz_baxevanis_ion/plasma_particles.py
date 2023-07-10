@@ -23,6 +23,7 @@ from .plasma_push.ab5 import evolve_plasma_ab5
 
 spec = [
     ('nr', int64),
+    ('nz', int64),
     ('dr', float64),
     ('shape', string),
     ('pusher', string),
@@ -39,6 +40,7 @@ spec = [
     ('ion_charge', float64),
     ('electron_charge', float64),
     ('ions_computed', boolean),
+    ('store_history', boolean),
 
     ('r', float64[::1]),
     ('pr', float64[::1]),
@@ -47,6 +49,11 @@ spec = [
     ('q', float64[::1]),
     ('q_species', float64[::1]),
     ('m', float64[::1]),
+
+    ('i_push', int64),
+    ('r_hist', float64[:, ::1]),
+    ('pr_hist', float64[:, ::1]),
+    ('pz_hist', float64[:, ::1]),
 
     ('r_elec', float64[::1]),
     ('pr_elec', float64[::1]),
@@ -113,6 +120,7 @@ spec = [
     ('_b_t_i', float64[::1]),
 ]
 
+
 @jitclass(spec)
 class PlasmaParticles():
     """
@@ -138,9 +146,9 @@ class PlasmaParticles():
     """
 
     def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc,
-                 nr, max_gamma=10., ion_motion=True, ion_mass=ct.m_p,
+                 nr, nz, max_gamma=10., ion_motion=True, ion_mass=ct.m_p,
                  ion_charge=ct.e, electron_charge=-ct.e, pusher='ab5',
-                 shape='linear'):
+                 shape='linear', store_history=False):
         # Calculate total number of plasma particles.
         n_elec = int(np.round(r_max_plasma / dr * ppc))
         n_part = n_elec * 2
@@ -163,10 +171,12 @@ class PlasmaParticles():
         self.max_gamma = max_gamma
         # self.r_grid = r_grid
         self.nr = nr
+        self.nz = nz
         self.ion_motion = ion_motion
         self.ion_mass = ion_mass
         self.ion_charge = ion_charge
         self.electron_charge = electron_charge
+        self.store_history = store_history
 
     def initialize(self):
         """Initialize column of plasma particles."""
@@ -190,6 +200,11 @@ class PlasmaParticles():
         self.q = np.concatenate((q, -q))
         self.q_species = np.concatenate((q_species_e, q_species_i))
         self.m = np.concatenate((m_e, m_i))
+
+        self.r_hist = np.zeros((self.nz, self.n_part))
+        self.pr_hist = np.zeros((self.nz, self.n_part))
+        self.pz_hist = np.zeros((self.nz, self.n_part))
+        self.i_push = 0
 
         self.r_elec = self.r[:self.n_elec]
         self.pr_elec = self.pr[:self.n_elec]
@@ -274,6 +289,8 @@ class PlasmaParticles():
         )
 
     def evolve(self, dxi):
+        if self.store_history and self.i_push == 0:
+            self._store_current_step()
         if self.ion_motion:
             evolve_plasma_ab5(
                 dxi, self.r, self.pr, self.gamma, self.m, self.q_species,
@@ -286,6 +303,9 @@ class PlasmaParticles():
                 self.q_species_elec, self._nabla_a2_e, self._b_t_0_e,
                 self._b_t_e, self._psi_e, self._dr_psi_e, self._dr, self._dpr
             )
+        self.i_push += 1
+        if self.store_history:
+            self._store_current_step()
 
     def deposit_rho(self, rho, rho_e, rho_i, r_fld, nr, dr):
         # Deposit electrons
@@ -315,6 +335,11 @@ class PlasmaParticles():
             self.r_elec, w_chi, r_fld[0], nr, dr, chi, self.shape
         )
         chi[2: -2] /= r_fld * dr
+
+    def _store_current_step(self):
+        self.r_hist[-1 - self.i_push] = self.r
+        self.pr_hist[-1 - self.i_push] = self.pr
+        self.pz_hist[-1 - self.i_push] = self.pz
 
     def _calculate_cumulative_sums_psi_dr_psi(self):
         calculate_cumulative_sum_1(self.q_elec, self.i_sort_e, self._sum_1_e)

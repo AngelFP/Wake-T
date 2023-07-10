@@ -143,13 +143,13 @@ def calculate_plasma_response(
     plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass, ion_charge,
     electron_charge, n_xi, a2,
     nabla_a2, b_t_beam, r_fld, log_r_fld, psi, b_t_bar, rho,
-    rho_e, rho_i, chi, dxi
+    rho_e, rho_i, chi, dxi, store_plasma_history=False
 ):
     # Initialize plasma particles.
     pp = PlasmaParticles(
-        r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
+        r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r, n_xi,
         max_gamma, ion_motion, ion_mass, ion_charge, electron_charge,
-        plasma_pusher, p_shape
+        plasma_pusher, p_shape, store_plasma_history
     )
     pp.initialize()
 
