@@ -104,6 +104,12 @@ class OpenPMDDiagnostics():
             f_data = field.get_openpmd_diagnostics_data(it.time)
             if f_data is not None:
                 self._write_fields(it, f_data)
+                # Some field models might also have their own species
+                # (e.g. plasma particles).
+                if 'species' in f_data.keys():
+                    for species in f_data['species']:
+                        s_data = f_data[species]
+                        self._write_species(it, s_data)
 
         # Flush data and increase counter for next step.
         opmd_series.flush()
@@ -137,56 +143,38 @@ class OpenPMDDiagnostics():
         # Could these attributes be only added in the time steps in which they
         # are actually used?
 
-        # Get arrays.
-        x = np.ascontiguousarray(species_data['x'])
-        y = np.ascontiguousarray(species_data['y'])
-        z = np.ascontiguousarray(species_data['z'])
-        px = np.ascontiguousarray(species_data['px'])
-        py = np.ascontiguousarray(species_data['py'])
-        pz = np.ascontiguousarray(species_data['pz'])
+        if species_data['geometry'] == '3d_cartesian':
+            components = ['x', 'y', 'z']
+        if species_data['geometry'] == 'rz':
+            components = ['r', 'z']
+
+        # Generate datasets for each component and prepare to write.
+        for component in components:
+            array = np.ascontiguousarray(species_data[component])
+            pos_offset = species_data['z_off'] if component == 'z' else 0.
+            dataset = Dataset(array.dtype, extent=array.shape)
+            offset = Dataset(np.dtype('float64'), extent=[1])
+            particles['position'][component].reset_dataset(dataset)
+            particles['positionOffset'][component].reset_dataset(offset)
+            particles['position'][component].store_chunk(array)
+            particles['positionOffset'][component].make_constant(pos_offset)
+        for component in components:
+            pc = 'p' + component
+            array = np.ascontiguousarray(species_data[pc])
+            dataset = Dataset(array.dtype, extent=array.shape)
+            particles['momentum'][component].reset_dataset(dataset)
+            particles['momentum'][component].store_chunk(array)
+
+        # Do the same with geometry-independent data.
         w = np.ascontiguousarray(species_data['w'])
         q = species_data['q']
         m = species_data['m']
-        z_off = species_data['z_off']
-
-        # Generate datasets.
-        d_x = Dataset(x.dtype, extent=x.shape)
-        d_y = Dataset(y.dtype, extent=y.shape)
-        d_z = Dataset(z.dtype, extent=z.shape)
-        d_px = Dataset(px.dtype, extent=px.shape)
-        d_py = Dataset(py.dtype, extent=py.shape)
-        d_pz = Dataset(pz.dtype, extent=pz.shape)
         d_w = Dataset(w.dtype, extent=w.shape)
         d_q = Dataset(np.dtype('float64'), extent=[1])
         d_m = Dataset(np.dtype('float64'), extent=[1])
-        d_xoff = Dataset(np.dtype('float64'), extent=[1])
-        d_yoff = Dataset(np.dtype('float64'), extent=[1])
-        d_zoff = Dataset(np.dtype('float64'), extent=[1])
-
-        # Record data.
-        particles['position']['x'].reset_dataset(d_x)
-        particles['position']['y'].reset_dataset(d_y)
-        particles['position']['z'].reset_dataset(d_z)
-        particles['positionOffset']['x'].reset_dataset(d_xoff)
-        particles['positionOffset']['y'].reset_dataset(d_yoff)
-        particles['positionOffset']['z'].reset_dataset(d_zoff)
-        particles['momentum']['x'].reset_dataset(d_px)
-        particles['momentum']['y'].reset_dataset(d_py)
-        particles['momentum']['z'].reset_dataset(d_pz)
         particles['weighting'][SCALAR].reset_dataset(d_w)
         particles['charge'][SCALAR].reset_dataset(d_q)
         particles['mass'][SCALAR].reset_dataset(d_m)
-
-        # Prepare for writting.
-        particles['position']['x'].store_chunk(x)
-        particles['position']['y'].store_chunk(y)
-        particles['position']['z'].store_chunk(z)
-        particles['positionOffset']['x'].make_constant(0.)
-        particles['positionOffset']['y'].make_constant(0.)
-        particles['positionOffset']['z'].make_constant(z_off)
-        particles['momentum']['x'].store_chunk(px)
-        particles['momentum']['y'].store_chunk(py)
-        particles['momentum']['z'].store_chunk(pz)
         particles['weighting'][SCALAR].store_chunk(w)
         particles['charge'][SCALAR].make_constant(q)
         particles['mass'][SCALAR].make_constant(m)
