@@ -19,6 +19,7 @@ def gather_fields(
     bx: np.ndarray,
     by: np.ndarray,
     bz: np.ndarray,
+    bunch_name: str
 ) -> None:
     """Gather all fields at the specified locations and time.
 
@@ -46,6 +47,8 @@ def gather_fields(
         1D array where the gathered By values will be stored
     bz : ndarray
         1D array where the gathered Bz values will be stored
+    bunch_name : str
+        Name of the bunch that is gathering the fields
     """
     # Initially, set all field values to zero.
     ex[:] = 0.
@@ -57,4 +60,4 @@ def gather_fields(
 
     # Gather contributions from all fields.
     for field in fields:
-        field.gather(x, y, z, t, ex, ey, ez, bx, by, bz)
+        field.gather(x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name)

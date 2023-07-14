@@ -33,7 +33,7 @@ def apply_boris_pusher(bunch, fields, t, dt):
         bunch.x, bunch.y, bunch.xi, bunch.px, bunch.py, bunch.pz, dt)
     # Gather fields at this position.
     gather_fields(fields, bunch.x, bunch.y, bunch.xi, t+dt/2,
-                  ex, ey, ez, bx, by, bz)
+                  ex, ey, ez, bx, by, bz, bunch.name)
     # Advances the momentum one time step using the gathered fields.
     push_momentum(bunch.px, bunch.py, bunch.pz, ex, ey, ez, bx, by, bz, dt,
                   q_over_mc)

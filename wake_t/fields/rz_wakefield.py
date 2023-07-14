@@ -156,7 +156,7 @@ class RZWakefield(NumericalField):
         """To be implemented by the subclasses."""
         raise NotImplementedError
 
-    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name):
         dr = self.r_fld[1] - self.r_fld[0]
         dxi = self.xi_fld[1] - self.xi_fld[0]
         gather_main_fields_cyl_linear(
