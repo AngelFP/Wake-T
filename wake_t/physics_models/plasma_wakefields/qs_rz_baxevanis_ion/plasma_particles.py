@@ -37,8 +37,7 @@ spec = [
     ('max_gamma', float64),
     ('ion_motion', boolean),
     ('ion_mass', float64),
-    ('ion_charge', float64),
-    ('electron_charge', float64),
+    ('free_electrons_per_ion', int64),
     ('ions_computed', boolean),
     ('store_history', boolean),
 
@@ -52,8 +51,18 @@ spec = [
 
     ('i_push', int64),
     ('r_hist', float64[:, ::1]),
+    ('xi_hist', float64[:, ::1]),
     ('pr_hist', float64[:, ::1]),
     ('pz_hist', float64[:, ::1]),
+    ('w_hist', float64[:, ::1]),
+    ('sum_1_hist', float64[:, ::1]),
+    ('sum_2_hist', float64[:, ::1]),
+    ('i_sort_hist', int64[:, ::1]),
+    ('psi_max_hist', float64[::1]),
+    ('a_i_hist', float64[:, ::1]),
+    ('b_i_hist', float64[:, ::1]),
+    ('a_0_hist', float64[::1]),
+    ('xi_current', float64),
 
     ('r_elec', float64[::1]),
     ('pr_elec', float64[::1]),
@@ -88,6 +97,8 @@ spec = [
     ('_r_neighbor_i', float64[::1]),
     ('_log_r_neighbor_e', float64[::1]),
     ('_log_r_neighbor_i', float64[::1]),
+    ('_sum_1', float64[::1]),
+    ('_sum_2', float64[::1]),
     ('_sum_1_e', float64[::1]),
     ('_sum_2_e', float64[::1]),
     ('_sum_3_e', float64[::1]),
@@ -147,7 +158,7 @@ class PlasmaParticles():
 
     def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc,
                  nr, nz, max_gamma=10., ion_motion=True, ion_mass=ct.m_p,
-                 ion_charge=ct.e, electron_charge=-ct.e, pusher='ab5',
+                 free_electrons_per_ion=1, pusher='ab5',
                  shape='linear', store_history=False):
         # Calculate total number of plasma particles.
         n_elec = int(np.round(r_max_plasma / dr * ppc))
@@ -174,8 +185,7 @@ class PlasmaParticles():
         self.nz = nz
         self.ion_motion = ion_motion
         self.ion_mass = ion_mass
-        self.ion_charge = ion_charge
-        self.electron_charge = electron_charge
+        self.free_electrons_per_ion = free_electrons_per_ion
         self.store_history = store_history
 
     def initialize(self):
@@ -188,10 +198,11 @@ class PlasmaParticles():
         pz = np.zeros(self.n_elec)
         gamma = np.ones(self.n_elec)
         q = self.dr_p * r + self.dr_p * self.parabolic_coefficient * r**3
+        q *= self.free_electrons_per_ion
         m_e = np.ones(self.n_elec)
         m_i = np.ones(self.n_elec) * self.ion_mass / ct.m_e
-        q_species_e = np.ones(self.n_elec) * self.electron_charge / (-ct.e)
-        q_species_i = np.ones(self.n_elec) * self.ion_charge / (-ct.e)
+        q_species_e = np.ones(self.n_elec)
+        q_species_i = - np.ones(self.n_elec) * self.free_electrons_per_ion
 
         self.r = np.concatenate((r, r))
         self.pr = np.concatenate((pr, pr))
@@ -202,9 +213,19 @@ class PlasmaParticles():
         self.m = np.concatenate((m_e, m_i))
 
         self.r_hist = np.zeros((self.nz, self.n_part))
+        self.xi_hist = np.zeros((self.nz, self.n_part))
         self.pr_hist = np.zeros((self.nz, self.n_part))
         self.pz_hist = np.zeros((self.nz, self.n_part))
+        self.w_hist = np.zeros((self.nz, self.n_part))
+        self.sum_1_hist = np.zeros((self.nz, self.n_part))
+        self.sum_2_hist = np.zeros((self.nz, self.n_part))
+        self.i_sort_hist = np.zeros((self.nz, self.n_part), dtype=np.int64)
+        self.psi_max_hist = np.zeros(self.nz)
+        self.a_i_hist = np.zeros((self.nz, self.n_elec))
+        self.b_i_hist = np.zeros((self.nz, self.n_elec))
+        self.a_0_hist = np.zeros(self.nz)
         self.i_push = 0
+        self.xi_current = 0.
 
         self.r_elec = self.r[:self.n_elec]
         self.pr_elec = self.pr[:self.n_elec]
@@ -289,8 +310,6 @@ class PlasmaParticles():
         )
 
     def evolve(self, dxi):
-        if self.store_history and self.i_push == 0:
-            self._store_current_step()
         if self.ion_motion:
             evolve_plasma_ab5(
                 dxi, self.r, self.pr, self.gamma, self.m, self.q_species,
@@ -304,8 +323,7 @@ class PlasmaParticles():
                 self._b_t_e, self._psi_e, self._dr_psi_e, self._dr, self._dpr
             )
         self.i_push += 1
-        if self.store_history:
-            self._store_current_step()
+        self.xi_current -= dxi
 
     def deposit_rho(self, rho, rho_e, rho_i, r_fld, nr, dr):
         # Deposit electrons
@@ -336,10 +354,58 @@ class PlasmaParticles():
         )
         chi[2: -2] /= r_fld * dr
 
-    def _store_current_step(self):
+    def get_history(self):
+        """Get the history of the evolution of the plasma particles.
+
+        This method is needed because instances the `PlasmaParticles`
+        themselves cannot be returned by a JIT compiled method (they can, but
+        then the method cannot be cached, resulting in slower performance).
+        Otherwise, the natural choice would have been to simply access the
+        history arrays directly.
+
+        The history is returned in three different typed dictionaries. This is
+        again due to a Numba limitation, where each dictionary can only store
+        items of the same kind.
+
+        Returns
+        -------
+        Tuple
+            Three dictionaries containing the particle history.
+        """
+        hist_float_2d = {
+            'r_hist': self.r_hist,
+            'xi_hist': self.xi_hist,
+            'pr_hist': self.pr_hist,
+            'pz_hist': self.pz_hist,
+            'w_hist': self.w_hist,
+            'sum_1_hist': self.sum_1_hist,
+            'sum_2_hist': self.sum_2_hist,
+            'a_i_hist': self.a_i_hist,
+            'b_i_hist': self.b_i_hist,
+        }
+        hist_float_1d = {
+            'a_0_hist': self.a_0_hist,
+            'psi_max_hist': self.psi_max_hist
+        }
+        hist_int_2d = {
+            'i_sort_hist': self.i_sort_hist,
+        }
+        return hist_float_2d, hist_float_1d, hist_int_2d
+
+    def store_current_step(self):
         self.r_hist[-1 - self.i_push] = self.r
+        self.xi_hist[-1 - self.i_push] = self.xi_current
         self.pr_hist[-1 - self.i_push] = self.pr
         self.pz_hist[-1 - self.i_push] = self.pz
+        self.w_hist[-1 - self.i_push] = self.q / (1 - self.pz/self.gamma)
+        self.sum_1_hist[-1 - self.i_push] = self._sum_1
+        self.sum_2_hist[-1 - self.i_push] = self._sum_2
+        self.i_sort_hist[-1 - self.i_push, :self.n_elec] = self.i_sort_e
+        self.i_sort_hist[-1 - self.i_push, self.n_elec:] = self.i_sort_i
+        self.psi_max_hist[-1 - self.i_push] = self._psi_max
+        self.a_i_hist[-1 - self.i_push] = self._a_i
+        self.b_i_hist[-1 - self.i_push] = self._b_i
+        self.a_0_hist[-1 - self.i_push] = self._a_0[0]
 
     def _calculate_cumulative_sums_psi_dr_psi(self):
         calculate_cumulative_sum_1(self.q_elec, self.i_sort_e, self._sum_1_e)
@@ -487,6 +553,8 @@ class PlasmaParticles():
         self._psi = np.zeros(self.n_part)
         self._dr_psi = np.zeros(self.n_part)
         self._dxi_psi = np.zeros(self.n_part)
+        self._sum_1 = np.zeros(self.n_part)
+        self._sum_2 = np.zeros(self.n_part)
         self._psi_e = self._psi[:self.n_elec]
         self._dr_psi_e = self._dr_psi[:self.n_elec]
         self._dxi_psi_e = self._dxi_psi[:self.n_elec]
@@ -498,11 +566,11 @@ class PlasmaParticles():
         self._b_t_0_e = self._b_t_0[:self.n_elec]
         self._nabla_a2_e = self._nabla_a2[:self.n_elec]
         self._a2_e = self._a2[:self.n_elec]
-        self._sum_1_e = np.zeros(self.n_elec)
-        self._sum_2_e = np.zeros(self.n_elec)
+        self._sum_1_e = self._sum_1[:self.n_elec]
+        self._sum_2_e = self._sum_2[:self.n_elec]
         self._sum_3_e = np.zeros(self.n_elec)
-        self._sum_1_i = np.zeros(self.n_elec)
-        self._sum_2_i = np.zeros(self.n_elec)
+        self._sum_1_i = self._sum_1[self.n_elec:]
+        self._sum_2_i = self._sum_2[self.n_elec:]
         self._sum_3_i = np.zeros(self.n_elec)
         self._psi_bg_e = np.zeros(self.n_elec+1)
         self._dr_psi_bg_e = np.zeros(self.n_elec+1)
