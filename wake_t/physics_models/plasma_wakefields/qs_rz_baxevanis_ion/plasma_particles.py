@@ -13,7 +13,7 @@ from .psi_and_derivatives import (
     calculate_dxi_psi_at_particles_bg
 )
 from .deposition import deposit_plasma_particles
-from .gather import gather_sources
+from .gather import gather_bunch_sources, gather_laser_sources
 from .b_theta import (
     calculate_ai_bi_from_axis, calculate_b_theta_at_particles,
     calculate_b_theta, calculate_b_theta_at_ions, calculate_ABC, calculate_KU
@@ -269,17 +269,36 @@ class PlasmaParticles():
             )
             self._log_r_neighbor_i = np.log(self._r_neighbor_i)
 
-    def gather_sources(self, a2, nabla_a2, b_theta, r_min, r_max, dr):
+    def gather_laser_sources(self, a2, nabla_a2, r_min, r_max, dr):
         if self.ion_motion:
-            gather_sources(
-                a2, nabla_a2, b_theta, r_min, r_max, dr,
-                self.r, self._a2, self._nabla_a2, self._b_t_0
+            gather_laser_sources(
+                a2, nabla_a2, r_min, r_max, dr,
+                self.r, self._a2, self._nabla_a2
             )
         else:
-            gather_sources(
-                a2, nabla_a2, b_theta, r_min, r_max, dr,
-                self.r_elec, self._a2_e, self._nabla_a2_e, self._b_t_0_e
+            gather_laser_sources(
+                a2, nabla_a2, r_min, r_max, dr,
+                self.r_elec, self._a2_e, self._nabla_a2_e
             )
+
+    def gather_bunch_sources(self, source_arrays, source_xi_indices,
+                             source_metadata, slice_i):
+        self._b_t_0[:] = 0.
+        for i in range(len(source_arrays)):
+            array = source_arrays[i]
+            idx = source_xi_indices[i]
+            md = source_metadata[i]
+            r_min = md[0]
+            r_max = md[1]
+            dr = md[2]
+            if slice_i in idx:
+                xi_index = slice_i + 2 - idx[0]
+                if self.ion_motion:
+                    gather_bunch_sources(array[xi_index], r_min, r_max, dr,
+                                         self.r, self._b_t_0)
+                else:
+                    gather_bunch_sources(array[xi_index], r_min, r_max, dr,
+                                         self.r_elec, self._b_t_0_e)
             
     def calculate_fields(self):
         self._calculate_cumulative_sums_psi_dr_psi()
