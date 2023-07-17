@@ -1,9 +1,13 @@
 from typing import Optional, Callable
 
 import numpy as np
+from numba.typed import List
 import scipy.constants as ct
+import aptools.plasma_accel.general_equations as ge
 
 from .solver import calculate_wakefields
+from .b_theta_bunch import calculate_bunch_source
+from .adaptive_grid import AdaptiveGrid
 from wake_t.fields.rz_wakefield import RZWakefield
 from wake_t.physics_models.laser.laser_pulse import LaserPulse
 
@@ -142,14 +146,15 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         plasma_pusher: Optional[str] = 'rk4',
         ion_motion: Optional[bool] = False,
         ion_mass: Optional[float] = ct.m_p,
-        ion_charge: Optional[float] = ct.e,
-        electron_charge: Optional[float] = -ct.e,
+        free_electrons_per_ion: Optional[int] = 1,
         laser: Optional[LaserPulse] = None,
         laser_evolution: Optional[bool] = True,
         laser_envelope_substeps: Optional[int] = 1,
         laser_envelope_nxi: Optional[int] = None,
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
+        use_adaptive_grids: Optional[bool] = False,
+        adaptive_grid_nr: Optional[int] = 16
     ) -> None:
         self.ppc = ppc
         self.r_max_plasma = r_max_plasma
@@ -160,8 +165,10 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self.plasma_pusher = plasma_pusher
         self.ion_motion = ion_motion
         self.ion_mass = ion_mass
-        self.ion_charge = ion_charge
-        self.electron_charge = electron_charge
+        self.free_electrons_per_ion = free_electrons_per_ion
+        self.use_adaptive_grids = use_adaptive_grids
+        self.adaptive_grid_nr = adaptive_grid_nr
+        self.bunch_grids = {}
         super().__init__(
             density_function=density_function,
             r_max=r_max,
@@ -180,6 +187,11 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             model_name='quasistatic_2d_ion'
         )
 
+    def _initialize_properties(self, bunches):
+        super()._initialize_properties(bunches)
+        # Add bunch source array (needed if not using adaptive grids).
+        self.b_t_bunch = np.zeros((self.n_xi+4, self.n_r+4))
+
     def _calculate_wakefield(self, bunches):
         parabolic_coefficient = self.parabolic_coefficient(self.t*ct.c)
 
@@ -193,18 +205,66 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         else:
             a_env_2 = np.zeros((self.n_xi, self.n_r))
 
+        # Calculate bunch sources and create adaptive grids if needed.
+        store_plasma_history = False
+        bunch_source_arrays = List()
+        bunch_source_xi_indices = List()
+        bunch_source_metadata = List()
+        if self.use_adaptive_grids:
+            s_d = ge.plasma_skin_depth(self.n_p * 1e-6)
+            store_plasma_history = True
+            # Get radial grid resolution.
+            if isinstance(self.adaptive_grid_nr, list):
+                assert len(self.adaptive_grid_nr) == len(bunches), (
+                    'Several resolutions for the adaptive grids have been '
+                    'given, but they do not match the number of tracked '
+                    'bunches'
+                )
+                nr_grids = self.adaptive_grid_nr
+            else:
+                nr_grids = [self.adaptive_grid_nr] * len(bunches)
+            # Create adaptive grids for each bunch.
+            for bunch, nr in zip(bunches, nr_grids):
+                if bunch.name not in self.bunch_grids:
+                    self.bunch_grids[bunch.name] = AdaptiveGrid(
+                        bunch.x, bunch.y, bunch.xi, bunch.name, nr,
+                        self.xi_fld)
+            # Calculate bunch sources at each grid.
+            for bunch in bunches:
+                grid = self.bunch_grids[bunch.name]
+                grid.calculate_bunch_source(bunch, self.n_p, self.p_shape)
+                bunch_source_arrays.append(grid.b_t_bunch)
+                bunch_source_xi_indices.append(grid.i_grid)
+                bunch_source_metadata.append(
+                    np.array([grid.r_grid[0], grid.r_grid[-1], grid.dr]) / s_d)
+        else:
+            # If not using adaptive grids, add all sources to the same array.
+            for bunch in bunches:
+                calculate_bunch_source(bunch, self.n_p, self.n_r, self.n_xi,
+                                       self.r_fld[0], self.xi_fld[0], self.dr,
+                                       self.dxi, self.p_shape, self.b_t_bunch)
+
+            bunch_source_arrays.append(self.b_t_bunch)
+            bunch_source_xi_indices.append(np.arange(self.n_xi))
+            bunch_source_metadata.append(
+                np.array([self.r_fld[0], self.r_fld[-1], self.dr]) / s_d)
+
         # Calculate plasma wakefields
-        calculate_wakefields(
-            a_env_2, bunches, self.r_max, self.xi_min, self.xi_max,
+        self.pp = calculate_wakefields(
+            a_env_2, self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, self.n_p,
             r_max_plasma=self.r_max_plasma,
             parabolic_coefficient=parabolic_coefficient,
             p_shape=self.p_shape, max_gamma=self.max_gamma,
             plasma_pusher=self.plasma_pusher, ion_motion=self.ion_motion,
-            ion_mass=self.ion_mass, ion_charge=self.ion_charge,
-            electron_charge=self.electron_charge,
+            ion_mass=self.ion_mass,
+            free_electrons_per_ion=self.free_electrons_per_ion,
             fld_arrays=[self.rho, self.rho_e, self.rho_i, self.chi, self.e_r,
-                        self.e_z, self.b_t, self.xi_fld, self.r_fld]
+                        self.e_z, self.b_t, self.xi_fld, self.r_fld],
+            bunch_source_arrays=bunch_source_arrays,
+            bunch_source_xi_indices=bunch_source_xi_indices,
+            bunch_source_metadata=bunch_source_metadata,
+            store_plasma_history=store_plasma_history
         )
 
     def _get_parabolic_coefficient_fn(self, parabolic_coefficient):
@@ -219,3 +279,61 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             raise ValueError(
                 'Type {} not supported for parabolic_coefficient.'.format(
                     type(parabolic_coefficient)))
+
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name):
+        # If using adaptive grids, gather fields from them.
+        if self.use_adaptive_grids:
+            grid = self.bunch_grids[bunch_name]
+            grid.update_if_needed(x, y, z)
+            grid.calculate_fields(self.n_p, self.pp)
+            grid.gather_fields(x, y, z, ex, ey, ez, bx, by, bz)
+        # Otherwise, use base implementation.
+        else:
+            super()._gather(x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name)
+
+    def _get_openpmd_diagnostics_data(self, global_time):
+        diag_data = super()._get_openpmd_diagnostics_data(global_time)
+        # Add fields from adaptive grids to openpmd diagnostics.
+        if self.use_adaptive_grids:
+            for _, grid in self.bunch_grids.items():
+                grid_data = grid.get_openpmd_data(global_time)
+                diag_data['fields'] += grid_data['fields']
+                for field in grid_data['fields']:
+                    diag_data[field] = grid_data[field]
+        # Add plasma particles to openpmd diagnostics.
+        particle_diags = self._get_plasma_particle_diagnostics(global_time)
+        diag_data = {**diag_data, **particle_diags}
+        diag_data['species'] = list(particle_diags.keys())
+        return diag_data
+
+    def _get_plasma_particle_diagnostics(self, global_time):
+        """Return dict with plasma particle diagnostics."""
+        n_elec = int(self.pp['r_hist'].shape[-1] / 2)
+        s_d = ge.plasma_skin_depth(self.n_p * 1e-6)
+        diag_dict = {}
+        diag_dict['plasma_electrons'] = {
+            'r': self.pp['r_hist'][:, :n_elec] * s_d,
+            'z': self.pp['xi_hist'][:, :n_elec] * s_d + self.xi_max,
+            'pr': self.pp['pr_hist'][:, :n_elec] * ct.m_e * ct.c,
+            'pz': self.pp['pz_hist'][:, :n_elec] * ct.m_e * ct.c,
+            'w': self.pp['w_hist'][:, :n_elec] * self.n_p,
+            'q': - ct.e,
+            'm': ct.m_e,
+            'name': 'plasma_electrons',
+            'z_off': global_time * ct.c,
+            'geometry': 'rz'
+        }
+        diag_dict['plasma_ions'] = {
+            'r': self.pp['r_hist'][:, n_elec:] * s_d,
+            'z': self.pp['xi_hist'][:, n_elec:] * s_d + self.xi_max,
+            'pr': self.pp['pr_hist'][:, n_elec:] * self.ion_mass * ct.c,
+            'pz': self.pp['pz_hist'][:, n_elec:] * self.ion_mass * ct.c,
+            'w': self.pp['w_hist'][:, n_elec:] * (self.n_p /
+                                                  self.free_electrons_per_ion),
+            'q': ct.e * self.free_electrons_per_ion,
+            'm': self.ion_mass,
+            'name': 'plasma_ions',
+            'z_off': global_time * ct.c,
+            'geometry': 'rz'
+        }
+        return diag_dict
