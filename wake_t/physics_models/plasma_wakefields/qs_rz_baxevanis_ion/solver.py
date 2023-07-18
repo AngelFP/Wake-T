@@ -93,6 +93,7 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     """
     rho, rho_e, rho_i, chi, E_r, E_z, B_t, xi_fld, r_fld = fld_arrays
 
+    # Convert to normalized units.
     s_d = ge.plasma_skin_depth(n_p * 1e-6)
     r_max = r_max / s_d
     xi_min = xi_min / s_d
@@ -100,6 +101,8 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     dr = r_max / n_r
     dxi = (xi_max - xi_min) / (n_xi - 1)
     parabolic_coefficient = parabolic_coefficient * s_d**2
+    ppc = ppc.copy()
+    ppc[:, 0] /= s_d
 
     # Maximum radial extent of the plasma.
     if r_max_plasma is None:

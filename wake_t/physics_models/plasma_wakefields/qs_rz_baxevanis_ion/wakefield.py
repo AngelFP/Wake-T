@@ -1,6 +1,7 @@
 from typing import Optional, Callable
 
 import numpy as np
+from numpy.typing import ArrayLike
 from numba.typed import List
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
@@ -58,8 +59,20 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         Number of grid elements along `r` to calculate the wakefields.
     n_xi : int
         Number of grid elements along `xi` to calculate the wakefields.
-    ppc : int, optional
-        Number of plasma particles per radial cell. By default ``ppc=2``.
+    ppc : array_like, optional
+        Number of plasma particles per radial cell. It can be a single number
+        (e.g., ``ppc=2``) if the plasma should have the same number of
+        particles per cell everywhere. Alternatively, a different number
+        of particles per cell at different radial locations can also be
+        specified. This can be useful, for example, when using adaptive grids
+        with very narrow beams that might require more plasma particles close
+        to the axis. To achieve this, an array-like structure should be given
+        where each item contains two values: the number of particles per cell
+        and the radius up to which this number should be used. For example
+        to have 8 ppc up to a radius of 100µm and 2 ppc for higher radii up to
+        500µm ``ppc=[[100e-6, 8], [500e-6, 2]]``. When using this step option
+        for ``ppc`` the ``r_max_plasma`` argument is ignored. By default
+        ``ppc=2``.
     dz_fields : float, optional
         Determines how often the plasma wakefields should be updated.
         For example, if ``dz_fields=10e-6``, the plasma wakefields are
@@ -137,7 +150,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         xi_max: float,
         n_r: int,
         n_xi: int,
-        ppc: Optional[int] = 2,
+        ppc: Optional[ArrayLike] = 2,
         dz_fields: Optional[float] = None,
         r_max_plasma: Optional[float] = None,
         parabolic_coefficient: Optional[float] = 0.,
@@ -156,8 +169,8 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         use_adaptive_grids: Optional[bool] = False,
         adaptive_grid_nr: Optional[int] = 16
     ) -> None:
-        self.ppc = ppc
-        self.r_max_plasma = r_max_plasma
+        self.ppc = np.array(ppc)
+        self.r_max_plasma = r_max_plasma if r_max_plasma is not None else r_max
         self.parabolic_coefficient = self._get_parabolic_coefficient_fn(
             parabolic_coefficient)
         self.p_shape = p_shape
@@ -169,6 +182,8 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self.use_adaptive_grids = use_adaptive_grids
         self.adaptive_grid_nr = adaptive_grid_nr
         self.bunch_grids = {}
+        if len(self.ppc.shape) in [0, 1]:
+            self.ppc = np.array([[self.r_max_plasma, self.ppc.flatten()[0]]])
         super().__init__(
             density_function=density_function,
             r_max=r_max,

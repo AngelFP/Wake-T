@@ -213,7 +213,7 @@ def determine_neighboring_points(r, dr_p, idx, r_neighbor):
         Array containing the (radially) sorted indices of the plasma particles.
     r_max : float
         Maximum radial extent of the plasma column.
-    dr_p : float
+    dr_p : ndarray
         Initial spacing between plasma macroparticles. Corresponds also the
         width of the plasma sheet represented by the macroparticle.
     psi_pp, dr_psi_pp, dxi_psi_pp : ndarray
@@ -233,6 +233,7 @@ def determine_neighboring_points(r, dr_p, idx, r_neighbor):
     for i_sort in range(n_part):
         i = idx[i_sort]
         r_i = r[i]
+        dr_p_i = dr_p[i]
 
         # If this is not the first particle, calculate the left point (r_left)
         # and the field values there (psi_left and dr_psi_left) as usual.
@@ -240,14 +241,14 @@ def determine_neighboring_points(r, dr_p, idx, r_neighbor):
             r_left = (r_im1 + r_i) * 0.5
         # Otherwise, take r=0 as the location of the left point.
         else:
-            r_left = max(r_i - dr_p * 0.5, 0.5 * r_i) 
+            r_left = max(r_i - dr_p_i * 0.5, 0.5 * r_i) 
 
         r_im1 = r_i
         r_neighbor[i_sort] = r_left
 
         # If this is the last particle, calculate the r_right as
         if i_sort == n_part - 1:
-            r_right = r_i + dr_p * 0.5
+            r_right = r_i + dr_p_i * 0.5
             r_neighbor[-1] = r_right
     # r_neighbor is sorted, thus, different order than r
 
@@ -311,7 +312,7 @@ def calculate_psi_and_dr_psi(r_eval, log_r_eval, r, dr_p, idx, sum_1_arr, sum_2_
     # Initialize array for psi at r_eval locations.
     n_points = r_eval.shape[0]
 
-    r_max_plasma = r[idx[-1]] + dr_p * 0.5
+    r_max_plasma = r[idx[-1]] + dr_p[idx[-1]] * 0.5
     log_r_max_plasma = np.log(r_max_plasma)
 
     # Calculate fields at r_eval.

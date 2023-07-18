@@ -30,10 +30,9 @@ spec = [
     ('r_max', float64),
     ('r_max_plasma', float64),
     ('parabolic_coefficient', float64),
-    ('ppc', int64),
+    ('ppc', float64[:, ::1]),
     ('n_elec', int64),
     ('n_part', int64),
-    ('dr_p', float64),
     ('max_gamma', float64),
     ('ion_motion', boolean),
     ('ion_mass', float64),
@@ -42,6 +41,7 @@ spec = [
     ('store_history', boolean),
 
     ('r', float64[::1]),
+    ('dr_p', float64[::1]),
     ('pr', float64[::1]),
     ('pz', float64[::1]),
     ('gamma', float64[::1]),
@@ -65,6 +65,7 @@ spec = [
     ('xi_current', float64),
 
     ('r_elec', float64[::1]),
+    ('dr_p_elec', float64[::1]),
     ('pr_elec', float64[::1]),
     ('q_elec', float64[::1]),
     ('gamma_elec', float64[::1]),
@@ -73,6 +74,7 @@ spec = [
     ('m_elec', float64[::1]),
     ('i_sort_e', int64[::1]),
     ('r_ion', float64[::1]),
+    ('dr_p_ion', float64[::1]),
     ('pr_ion', float64[::1]),
     ('q_ion', float64[::1]),
     ('gamma_ion', float64[::1]),
@@ -160,13 +162,6 @@ class PlasmaParticles():
                  nr, nz, max_gamma=10., ion_motion=True, ion_mass=ct.m_p,
                  free_electrons_per_ion=1, pusher='ab5',
                  shape='linear', store_history=False):
-        # Calculate total number of plasma particles.
-        n_elec = int(np.round(r_max_plasma / dr * ppc))
-        n_part = n_elec * 2
-
-        # Readjust plasma extent to match number of particles.
-        dr_p = dr / ppc
-        r_max_plasma = n_elec * dr_p
 
         # Store parameters.
         self.r_max = r_max
@@ -174,13 +169,9 @@ class PlasmaParticles():
         self.parabolic_coefficient = parabolic_coefficient
         self.dr = dr
         self.ppc = ppc
-        self.dr_p = dr / ppc
         self.pusher = pusher
-        self.n_elec = n_elec
-        self.n_part = n_part
         self.shape = shape
         self.max_gamma = max_gamma
-        # self.r_grid = r_grid
         self.nr = nr
         self.nz = nz
         self.ion_motion = ion_motion
@@ -191,13 +182,36 @@ class PlasmaParticles():
     def initialize(self):
         """Initialize column of plasma particles."""
 
+        # Create radial distribution of plasma particles.
+        rmin = 0.
+        for i in range(self.ppc.shape[0]):
+            rmax = self.ppc[i, 0]
+            ppc = self.ppc[i, 1]
+
+            n_elec = int(np.round((rmax - rmin) / self.dr * ppc))
+            dr_p_i = self.dr / ppc
+            rmax = rmin + n_elec * dr_p_i
+
+            r_i = np.linspace(rmin + dr_p_i / 2, rmax - dr_p_i / 2, n_elec)
+            dr_p_i = np.ones(n_elec) * dr_p_i
+            if i == 0:
+                r = r_i
+                dr_p = dr_p_i
+            else:
+                r = np.concatenate((r, r_i))
+                dr_p = np.concatenate((dr_p, dr_p_i))
+
+            rmin = rmax
+
+        # Determine number of particles.
+        self.n_elec = r.shape[0]
+        self.n_part = self.n_elec * 2
+
         # Initialize particle arrays.
-        r = np.linspace(
-            self.dr_p / 2, self.r_max_plasma - self.dr_p / 2, self.n_elec)
         pr = np.zeros(self.n_elec)
         pz = np.zeros(self.n_elec)
         gamma = np.ones(self.n_elec)
-        q = self.dr_p * r + self.dr_p * self.parabolic_coefficient * r**3
+        q = dr_p * r + dr_p * self.parabolic_coefficient * r**3
         q *= self.free_electrons_per_ion
         m_e = np.ones(self.n_elec)
         m_i = np.ones(self.n_elec) * self.ion_mass / ct.m_e
@@ -205,6 +219,7 @@ class PlasmaParticles():
         q_species_i = - np.ones(self.n_elec) * self.free_electrons_per_ion
 
         self.r = np.concatenate((r, r))
+        self.dr_p = np.concatenate((dr_p, dr_p))
         self.pr = np.concatenate((pr, pr))
         self.pz = np.concatenate((pz, pz))
         self.gamma = np.concatenate((gamma, gamma))
@@ -228,6 +243,7 @@ class PlasmaParticles():
         self.xi_current = 0.
 
         self.r_elec = self.r[:self.n_elec]
+        self.dr_p_elec = self.dr_p[:self.n_elec]
         self.pr_elec = self.pr[:self.n_elec]
         self.pz_elec = self.pz[:self.n_elec]
         self.gamma_elec = self.gamma[:self.n_elec]
@@ -236,6 +252,7 @@ class PlasmaParticles():
         self.m_elec = self.m[:self.n_elec]
 
         self.r_ion = self.r[self.n_elec:]
+        self.dr_p_ion = self.dr_p[self.n_elec:]
         self.pr_ion = self.pr[self.n_elec:]
         self.pz_ion = self.pz[self.n_elec:]
         self.gamma_ion = self.gamma[self.n_elec:]
@@ -260,12 +277,12 @@ class PlasmaParticles():
 
     def determine_neighboring_points(self):
         determine_neighboring_points(
-            self.r_elec, self.dr_p, self.i_sort_e, self._r_neighbor_e
+            self.r_elec, self.dr_p_elec, self.i_sort_e, self._r_neighbor_e
         )
         self._log_r_neighbor_e = np.log(self._r_neighbor_e)
         if self.ion_motion:
             determine_neighboring_points(
-                self.r_ion, self.dr_p, self.i_sort_i, self._r_neighbor_i
+                self.r_ion, self.dr_p_ion, self.i_sort_i, self._r_neighbor_i
             )
             self._log_r_neighbor_i = np.log(self._r_neighbor_i)
 
@@ -447,14 +464,14 @@ class PlasmaParticles():
 
     def _gather_particle_background_psi_dr_psi(self):
         calculate_psi_and_dr_psi(
-            self._r_neighbor_e, self._log_r_neighbor_e, self.r_ion, self.dr_p,
-            self.i_sort_i, self._sum_1_i, self._sum_2_i, self._psi_bg_i,
-            self._dr_psi_bg_i
+            self._r_neighbor_e, self._log_r_neighbor_e, self.r_ion,
+            self.dr_p_elec, self.i_sort_i, self._sum_1_i, self._sum_2_i,
+            self._psi_bg_i, self._dr_psi_bg_i
         )
         if self.ion_motion:
             calculate_psi_and_dr_psi(
                 self._r_neighbor_i, self._log_r_neighbor_i, self.r_elec,
-                self.dr_p, self.i_sort_e, self._sum_1_e, self._sum_2_e,
+                self.dr_p_ion, self.i_sort_e, self._sum_1_e, self._sum_2_e,
                 self._psi_bg_e, self._dr_psi_bg_e)
             
     def _gather_particle_background_dxi_psi(self):
