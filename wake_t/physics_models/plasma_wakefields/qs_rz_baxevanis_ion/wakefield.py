@@ -225,7 +225,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             if self.laser.polarization == 'linear':
                 a_env_2 /= 2
         else:
-            a_env_2 = np.zeros((self.n_xi, self.n_r))
+            a_env_2 = None
 
         # Calculate bunch sources and create adaptive grids if needed.
         store_plasma_history = len(self.particle_diags) > 0

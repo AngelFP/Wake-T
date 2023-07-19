@@ -129,15 +129,17 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     b_t_bar = np.zeros((n_xi+4, n_r+4))
 
     # Laser source.
-    a2[2:-2, 2:-2] = laser_a2
-    nabla_a2[2:-2, 2:-2] = radial_gradient(laser_a2, dr)
+    laser_source = laser_a2 is not None
+    if laser_source:
+        a2[2:-2, 2:-2] = laser_a2
+        nabla_a2[2:-2, 2:-2] = radial_gradient(laser_a2, dr)
 
     # Calculate plasma response (including density, susceptibility, potential
     # and magnetic field)
     hist_float_2d, hist_float_1d, hist_int_2d = calculate_plasma_response(
         r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
         plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
-        free_electrons_per_ion, n_xi, a2, nabla_a2,
+        free_electrons_per_ion, n_xi, a2, nabla_a2, laser_source,
         bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
         r_fld, log_r_fld, psi, b_t_bar, rho, rho_e, rho_i, chi, dxi,
         store_plasma_history=store_plasma_history,
@@ -161,8 +163,8 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
 def calculate_plasma_response(
     r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
     plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
-    free_electrons_per_ion, n_xi, a2, nabla_a2, bunch_source_arrays,
-    bunch_source_xi_indices, bunch_source_metadata,
+    free_electrons_per_ion, n_xi, a2, nabla_a2, laser_source,
+    bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
     r_fld, log_r_fld, psi, b_t_bar, rho,
     rho_e, rho_i, chi, dxi, store_plasma_history, calculate_rho
 ):
@@ -183,9 +185,10 @@ def calculate_plasma_response(
 
         pp.determine_neighboring_points()
 
-        pp.gather_laser_sources(
-            a2[slice_i+2], nabla_a2[slice_i+2], r_fld[0], r_fld[-1], dr
-        )
+        if laser_source:
+            pp.gather_laser_sources(
+                a2[slice_i+2], nabla_a2[slice_i+2], r_fld[0], r_fld[-1], dr
+            )
         pp.gather_bunch_sources(bunch_source_arrays, bunch_source_xi_indices,
                                 bunch_source_metadata, slice_i)
 
@@ -197,7 +200,8 @@ def calculate_plasma_response(
         if calculate_rho:
             pp.deposit_rho(rho[slice_i+2], rho_e[slice_i+2], rho_i[slice_i+2],
                            r_fld, n_r, dr)
-        pp.deposit_chi(chi[slice_i+2], r_fld, n_r, dr)
+        if laser_source:
+            pp.deposit_chi(chi[slice_i+2], r_fld, n_r, dr)
 
         pp.ions_computed = True
 
