@@ -169,7 +169,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         laser_envelope_use_phase: Optional[bool] = True,
         field_diags: Optional[List[str]] = ['rho', 'E', 'B', 'a_mod',
                                             'a_phase'],
-        particle_diags: Optional[List[str]] = ['r', 'z', 'pr', 'pz', 'w'],
+        particle_diags: Optional[List[str]] = [],
         use_adaptive_grids: Optional[bool] = False,
         adaptive_grid_nr: Optional[int] = 16,
         adaptive_grid_diags: Optional[List[str]] = ['E', 'B'],
