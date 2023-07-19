@@ -267,16 +267,17 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                     np.array([grid.r_grid[0], grid.r_grid[-1], grid.dr]) / s_d)
         else:
             # If not using adaptive grids, add all sources to the same array.
-            self.b_t_bunch[:] = 0.
-            for bunch in bunches:
-                calculate_bunch_source(bunch, self.n_p, self.n_r, self.n_xi,
-                                       self.r_fld[0], self.xi_fld[0], self.dr,
-                                       self.dxi, self.p_shape, self.b_t_bunch)
-
-            bunch_source_arrays.append(self.b_t_bunch)
-            bunch_source_xi_indices.append(np.arange(self.n_xi))
-            bunch_source_metadata.append(
-                np.array([self.r_fld[0], self.r_fld[-1], self.dr]) / s_d)
+            if bunches:
+                self.b_t_bunch[:] = 0.
+                for bunch in bunches:
+                    calculate_bunch_source(
+                        bunch, self.n_p, self.n_r, self.n_xi, self.r_fld[0],
+                        self.xi_fld[0], self.dr, self.dxi, self.p_shape,
+                        self.b_t_bunch)
+                bunch_source_arrays.append(self.b_t_bunch)
+                bunch_source_xi_indices.append(np.arange(self.n_xi))
+                bunch_source_metadata.append(
+                    np.array([self.r_fld[0], self.r_fld[-1], self.dr]) / s_d)
 
         # Calculate rho only if requested in the diagnostics.
         calculate_rho = any('rho' in diag for diag in self.field_diags)
