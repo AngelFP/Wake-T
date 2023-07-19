@@ -4,7 +4,6 @@ openPMD output.
 """
 import os
 from typing import Optional, List
-from copy import deepcopy
 
 import numpy as np
 import scipy.constants as ct
@@ -295,9 +294,7 @@ class OpenPMDDiagnostics():
                 fld.set_attribute(attr, val)
             fld.axis_labels = wf_data[field]['grid']['labels']
             fld.grid_spacing = wf_data[field]['grid']['spacing']
-            global_offset = deepcopy(wf_data[field]['grid']['global_offset'])
-            global_offset[-1] += self._current_z_pos
-            fld.grid_global_offset = global_offset
+            fld.grid_global_offset = wf_data[field]['grid']['global_offset']
 
     def check_species_names(
         self,

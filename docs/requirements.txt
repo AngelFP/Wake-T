@@ -2,10 +2,10 @@ numpy
 numba
 scipy
 matplotlib
-aptools>=0.1.23
-openpmd-api~=0.14.0
+aptools~=0.2.0
+openpmd-api
 openpmd-viewer>=1.2.0
 pydata-sphinx-theme
-sphinx-panels
+sphinx-design
 sphinx-gallery
 numpydoc
