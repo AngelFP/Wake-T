@@ -3,6 +3,7 @@ from typing import Optional, Callable, List
 import numpy as np
 from numpy.typing import ArrayLike
 from numba.typed import List as TypedList
+from numba import float64, int32
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
@@ -227,12 +228,16 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         else:
             a_env_2 = None
 
-        # Calculate bunch sources and create adaptive grids if needed.
+        # Store plasma history if required by the diagnostics.
         store_plasma_history = len(self.particle_diags) > 0
-        bunch_source_arrays = TypedList()
-        bunch_source_xi_indices = TypedList()
-        bunch_source_metadata = TypedList()
 
+        # Initialize empty lists with correct type so that numba can use
+        # them even if there are no bunch sources.
+        bunch_source_arrays = TypedList().empty_list(float64[:, ::1])
+        bunch_source_xi_indices = TypedList().empty_list(int32[::1])
+        bunch_source_metadata = TypedList().empty_list(float64[::1])
+
+        # Calculate bunch sources and create adaptive grids if needed.
         s_d = ge.plasma_skin_depth(self.n_p * 1e-6)
         if self.use_adaptive_grids:
             store_plasma_history = True
