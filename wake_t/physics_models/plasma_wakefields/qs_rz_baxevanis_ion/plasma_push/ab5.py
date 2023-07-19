@@ -60,7 +60,7 @@ def evolve_plasma_ab5(
         dpr[:, idx_neg] *= -1.
 
 
-@njit_serial()
+@njit_serial(fastmath=True, error_model="numpy")
 def calculate_derivatives(
         pr, gamma, m, q, b_theta_0, nabla_a2, b_theta_bar, psi, dr_psi, dr, dpr):
     """
@@ -91,12 +91,12 @@ def calculate_derivatives(
     # Calculate derivatives of r and pr.
     for i in range(pr.shape[0]):
         q_over_m = q[i] / m[i]
-        psi_i = psi[i] * q_over_m
-        dpr[i] = (gamma[i] * dr_psi[i] / (1. + psi_i)
+        inv_psi_i = 1. / (1. + psi[i] * q_over_m)
+        dpr[i] = (gamma[i] * dr_psi[i] * inv_psi_i
                   - b_theta_bar[i]
                   - b_theta_0[i]
-                  - nabla_a2[i] / (2. * (1. + psi_i))) * q_over_m
-        dr[i] = pr[i] / (1. + psi_i)
+                  - nabla_a2[i] * 0.5 * inv_psi_i) * q_over_m
+        dr[i] = pr[i] * inv_psi_i
 
 
 @njit_serial()
@@ -126,9 +126,8 @@ def apply_ab5(x, dt, dx):
     # for i in range(x.shape[0]):
     #     x[i] += dt * (
     #         23. * dx_1[i] - 16. * dx_2[i] + 5. * dx_3[i]) * inv_24
-    inv_24 = 1. / 2.
+    # inv_24 = 1. / 2.
     for i in range(x.shape[0]):
-        x[i] += dt * (
-            3. * dx[0, i] - 1. * dx[1, i]) * inv_24
+        x[i] += dt * (1.5 * dx[0, i] - 0.5 * dx[1, i])
     # for i in range(x.shape[0]):
     #     x[i] += dt * dx_1[i]
