@@ -130,34 +130,53 @@ class AdaptiveGrid():
             self.r_grid[0], self.r_grid[-1], self.dxi, self.dr, x, y, z,
             ex, ey, ez, bx, by, bz)
 
-    def get_openpmd_data(self, global_time):
+    def get_openpmd_data(self, global_time, diags):
         """Get the field data at the grid to store in the openpmd diagnostics.
 
         Parameters
         ----------
         global_time : float
             The global time of the simulation.
+        diags : list
+            A list of strings with the names of the fields to include in the
+            diagnostics.
 
         Returns
         -------
         dict
         """
 
+        # Grid parameters.
         grid_spacing = [self.dr, self.dxi]
         grid_labels = ['r', 'z']
         grid_global_offset = [0., global_time*ct.c + self.xi_min]
 
-        names = ['E', 'B']
-        comps = [['r', 'z'], ['t']]
-        attrs = [{}, {}]
-        arrays = [
-            [np.ascontiguousarray(self.e_r.T[2:-2, 2:-2]),
-             np.ascontiguousarray(self.e_z.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.b_t.T[2:-2, 2:-2])]
-        ]
+        # Initialize field diags lists.
+        names = []
+        comps = []
+        attrs = []
+        arrays = []
+
+        # Add requested fields to lists.
+        if 'E' in diags:
+            names += ['E']
+            comps += [['r', 'z']]
+            attrs += [{}]
+            arrays += [
+                [np.ascontiguousarray(self.e_r.T[2:-2, 2:-2]),
+                 np.ascontiguousarray(self.e_z.T[2:-2, 2:-2])]
+            ]
+        if 'B' in diags:
+            names += ['B']
+            comps += [['t']]
+            attrs += [{}]
+            arrays += [
+                [np.ascontiguousarray(self.b_t.T[2:-2, 2:-2])]
+            ]
+
+        # Create dictionary with all diagnostics data.
         comp_pos = [[0.5, 0.]] * len(names)
         fld_zip = zip(names, comps, attrs, arrays, comp_pos)
-
         diag_data = {}
         diag_data['fields'] = []
         for fld, comps, attrs, arrays, pos in fld_zip:

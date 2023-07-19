@@ -1,5 +1,5 @@
 """This module contains the base class for plasma wakefields in r-z geometry"""
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 
 import numpy as np
 import scipy.constants as ct
@@ -83,6 +83,9 @@ class RZWakefield(NumericalField):
         laser_envelope_nxi: Optional[int] = None,
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
+        field_diags: Optional[List[str]] = ['rho', 'E', 'B', 'a_mod',
+                                            'a_phase'],
+        particle_diags: Optional[List[str]] = [],
         model_name: Optional[str] = ''
     ) -> None:
         dz_fields = xi_max - xi_min if dz_fields is None else dz_fields
@@ -101,6 +104,8 @@ class RZWakefield(NumericalField):
         self.n_xi = n_xi
         self.dr = r_max / n_r
         self.dxi = (xi_max - xi_min) / (n_xi - 1)
+        self.field_diags = field_diags
+        self.particle_diags = particle_diags
         self.model_name = model_name
         # If a laser is included, make sure it is evolved for the whole
         # duration of the plasma stage. See `force_even_updates` parameter.
@@ -181,35 +186,67 @@ class RZWakefield(NumericalField):
         grid_global_offset = [0., global_time*ct.c+self.xi_min]
         # Cell-centered in 'r' and node centered in 'z'.
         fld_position = [0.5, 0.]
-        fld_names = ['E', 'B', 'rho']
-        fld_comps = [['r', 't', 'z'], ['r', 't', 'z'], None]
-        fld_attrs = [{}, {}, {}]
+        fld_names = []
+        fld_comps = []
+        fld_attrs = []
+        fld_arrays = []
         rho_norm =  self.n_p * (-ct.e)
-        fld_arrays = [
-            [np.ascontiguousarray(self.e_r.T[2:-2, 2:-2]),
-             np.ascontiguousarray(self.e_t.T[2:-2, 2:-2]),
-             np.ascontiguousarray(self.e_z.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.b_r.T[2:-2, 2:-2]),
-             np.ascontiguousarray(self.b_t.T[2:-2, 2:-2]),
-             np.ascontiguousarray(self.b_z.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * rho_norm]
-        ]
+
+        # Add requested fields to diagnostics.
+        if 'E' in self.field_diags:
+            fld_names += ['E']
+            fld_comps += [['r', 't', 'z']]
+            fld_attrs += [{}]
+            fld_arrays += [
+                [np.ascontiguousarray(self.e_r.T[2:-2, 2:-2]),
+                 np.ascontiguousarray(self.e_t.T[2:-2, 2:-2]),
+                 np.ascontiguousarray(self.e_z.T[2:-2, 2:-2])]
+            ]
+        if 'B' in self.field_diags:
+            fld_names += ['B']
+            fld_comps += [['r', 't', 'z']]
+            fld_attrs += [{}]
+            fld_arrays += [
+                [np.ascontiguousarray(self.b_r.T[2:-2, 2:-2]),
+                 np.ascontiguousarray(self.b_t.T[2:-2, 2:-2]),
+                 np.ascontiguousarray(self.b_z.T[2:-2, 2:-2])]
+            ]
+        if 'rho' in self.field_diags:
+            fld_names += ['rho']
+            fld_comps += [None]
+            fld_attrs += [{}]
+            fld_arrays += [
+                [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * rho_norm]
+            ]
         if self.species_rho_diags:
-            fld_names += ['rho_e', 'rho_i']
-            fld_comps += [None, None]
-            fld_attrs += [{}, {}]
-            fld_arrays += [
-                [np.ascontiguousarray(self.rho_e.T[2:-2, 2:-2]) * rho_norm],
-                [np.ascontiguousarray(self.rho_i.T[2:-2, 2:-2]) * rho_norm]
-            ]
+            if 'rho_e' in self.field_diags:
+                fld_names += ['rho_e']
+                fld_comps += [None]
+                fld_attrs += [{}]
+                fld_arrays += [
+                    [np.ascontiguousarray(self.rho_e.T[2:-2, 2:-2]) * rho_norm]
+                ]
+            if 'rho_i' in self.field_diags:
+                fld_names += ['rho_i']
+                fld_comps += [None]
+                fld_attrs += [{}]
+                fld_arrays += [
+                    [np.ascontiguousarray(self.rho_i.T[2:-2, 2:-2]) * rho_norm]
+                ]
         if self.laser is not None:
-            fld_names += ['a_mod', 'a_phase']
-            fld_comps += [None, None]
-            fld_attrs += [{'polarization': self.laser.polarization}, {}]
-            fld_arrays += [
-                [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))],
-                [np.ascontiguousarray(np.angle(self.laser.get_envelope().T))]
-            ]
+            if 'a_mod' in self.field_diags:
+                a_mod = np.abs(self.laser.get_envelope().T)
+                fld_names += ['a_mod']
+                fld_comps += [None]
+                fld_attrs += [{'polarization': self.laser.polarization}]
+                fld_arrays += [[np.ascontiguousarray(a_mod)]]
+            if 'a_phase' in self.field_diags:
+                a_phase = np.angle(self.laser.get_envelope().T)
+                fld_names += ['a_phase']
+                fld_comps += [None]
+                fld_attrs += [{}]
+                fld_arrays += [[np.ascontiguousarray(a_phase)]]
+
         fld_comp_pos = [fld_position] * len(fld_names)
 
         # Generate dictionary for openPMD diagnostics.

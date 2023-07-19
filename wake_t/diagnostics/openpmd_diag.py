@@ -147,65 +147,72 @@ class OpenPMDDiagnostics():
         if species_data['geometry'] == 'rz':
             components = ['r', 'z']
 
-        # Generate datasets for each component and prepare to write.
+        # Create records of position components.
+        position_record = False
         for component in components:
-            array = np.ascontiguousarray(species_data[component])
-            pos_offset = species_data['z_off'] if component == 'z' else 0.
-            dataset = Dataset(array.dtype, extent=array.shape)
-            offset = Dataset(np.dtype('float64'), extent=[1])
-            particles['position'][component].reset_dataset(dataset)
-            particles['positionOffset'][component].reset_dataset(offset)
-            particles['position'][component].store_chunk(array)
-            particles['positionOffset'][component].make_constant(pos_offset)
+            if component in species_data:
+                array = np.ascontiguousarray(species_data[component])
+                pos_off = species_data['z_off'] if component == 'z' else 0.
+                dataset = Dataset(array.dtype, extent=array.shape)
+                offset = Dataset(np.dtype('float64'), extent=[1])
+                particles['position'][component].reset_dataset(dataset)
+                particles['positionOffset'][component].reset_dataset(offset)
+                particles['position'][component].store_chunk(array)
+                particles['positionOffset'][component].make_constant(pos_off)
+                position_record = True
+        if position_record:
+            particles['position'].unit_dimension = {Unit_Dimension.L: 1}
+            particles['positionOffset'].unit_dimension = {Unit_Dimension.L: 1}
+            particles['position'].set_attribute('macroWeighted', np.uint32(0))
+            particles['positionOffset'].set_attribute(
+                'macroWeighted', np.uint32(0))
+            particles['position'].set_attribute('weightingPower', 0.)
+            particles['positionOffset'].set_attribute('weightingPower', 0.)
+
+        # Create records of momentum components.
+        momentum_record = False
         for component in components:
             pc = 'p' + component
-            array = np.ascontiguousarray(species_data[pc])
-            dataset = Dataset(array.dtype, extent=array.shape)
-            particles['momentum'][component].reset_dataset(dataset)
-            particles['momentum'][component].store_chunk(array)
+            if pc in species_data:
+                array = np.ascontiguousarray(species_data[pc])
+                dataset = Dataset(array.dtype, extent=array.shape)
+                particles['momentum'][component].reset_dataset(dataset)
+                particles['momentum'][component].store_chunk(array)
+                momentum_record = True
+        if momentum_record:
+            particles['momentum'].unit_dimension = {
+                Unit_Dimension.L: 1,
+                Unit_Dimension.M: 1,
+                Unit_Dimension.T: -1,
+                }
+            particles['momentum'].set_attribute('macroWeighted', np.uint32(0))
+            particles['momentum'].set_attribute('weightingPower', 1.)
 
         # Do the same with geometry-independent data.
-        w = np.ascontiguousarray(species_data['w'])
+        if 'w' in species_data:
+            w = np.ascontiguousarray(species_data['w'])
+            d_w = Dataset(w.dtype, extent=w.shape)
+            particles['weighting'][SCALAR].reset_dataset(d_w)
+            particles['weighting'][SCALAR].store_chunk(w)
+            particles['weighting'][SCALAR].set_attribute(
+                'macroWeighted', np.uint32(1))
+            particles['weighting'][SCALAR].set_attribute('weightingPower', 1.)
         q = species_data['q']
         m = species_data['m']
-        d_w = Dataset(w.dtype, extent=w.shape)
         d_q = Dataset(np.dtype('float64'), extent=[1])
         d_m = Dataset(np.dtype('float64'), extent=[1])
-        particles['weighting'][SCALAR].reset_dataset(d_w)
         particles['charge'][SCALAR].reset_dataset(d_q)
         particles['mass'][SCALAR].reset_dataset(d_m)
-        particles['weighting'][SCALAR].store_chunk(w)
         particles['charge'][SCALAR].make_constant(q)
         particles['mass'][SCALAR].make_constant(m)
-
-        # Set units.
-        particles['position'].unit_dimension = {Unit_Dimension.L: 1}
-        particles['positionOffset'].unit_dimension = {Unit_Dimension.L: 1}
-        particles['momentum'].unit_dimension = {
-            Unit_Dimension.L: 1,
-            Unit_Dimension.M: 1,
-            Unit_Dimension.T: -1,
-            }
         particles['charge'].unit_dimension = {
             Unit_Dimension.T: 1,
             Unit_Dimension.I: 1,
-            }
+        }
         particles['mass'].unit_dimension = {Unit_Dimension.M: 1}
-
-        # Set weighting attributes.
-        particles['position'].set_attribute('macroWeighted', np.uint32(0))
-        particles['positionOffset'].set_attribute(
-            'macroWeighted', np.uint32(0))
-        particles['momentum'].set_attribute('macroWeighted', np.uint32(0))
-        particles['weighting'][SCALAR].set_attribute(
-            'macroWeighted', np.uint32(1))
         particles['charge'][SCALAR].set_attribute(
             'macroWeighted', np.uint32(0))
         particles['mass'][SCALAR].set_attribute('macroWeighted', np.uint32(0))
-        particles['position'].set_attribute('weightingPower', 0.)
-        particles['positionOffset'].set_attribute('weightingPower', 0.)
-        particles['momentum'].set_attribute('weightingPower', 1.)
-        particles['weighting'][SCALAR].set_attribute('weightingPower', 1.)
         particles['charge'][SCALAR].set_attribute('weightingPower', 1.)
         particles['mass'][SCALAR].set_attribute('weightingPower', 1.)
 
