@@ -136,7 +136,7 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
 
     # Calculate plasma response (including density, susceptibility, potential
     # and magnetic field)
-    hist_float_2d, hist_float_1d, hist_int_2d = calculate_plasma_response(
+    pp_hist = calculate_plasma_response(
         r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
         plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
         free_electrons_per_ion, n_xi, a2, nabla_a2, laser_source,
@@ -145,8 +145,6 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
         store_plasma_history=store_plasma_history,
         calculate_rho=calculate_rho
     )
-    # Combine all numba TypedDicts into a single python dict.
-    pp_hist = {**hist_float_2d, **hist_float_1d, **hist_int_2d}
 
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
@@ -159,7 +157,6 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     return pp_hist
 
 
-@njit_serial()
 def calculate_plasma_response(
     r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
     plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
