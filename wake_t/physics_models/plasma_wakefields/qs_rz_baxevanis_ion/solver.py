@@ -17,7 +17,7 @@ from wake_t.utilities.numba import njit_serial
 def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
                          n_r, n_xi, ppc, n_p, r_max_plasma=None,
                          parabolic_coefficient=0., p_shape='cubic',
-                         max_gamma=10., plasma_pusher='rk4',
+                         max_gamma=10., plasma_pusher='ab2',
                          ion_motion=False, ion_mass=ct.m_p,
                          free_electrons_per_ion=1,
                          bunch_source_arrays=[], bunch_source_xi_indices=[],
@@ -67,8 +67,7 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
         violate the quasistatic condition and are put at rest (i.e.,
         `gamma=1.`, `pr=pz=0.`).
     plasma_pusher : str
-        Numerical pusher for the plasma particles. Possible values are `'rk4'`
-        and `'ab5'`.
+        Numerical pusher for the plasma particles. Possible values are `'ab2'`.
     ion_motion : bool, optional
         Whether to allow the plasma ions to move. By default, False.
     ion_mass : float, optional

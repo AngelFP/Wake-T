@@ -7,57 +7,47 @@ from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial()
-def evolve_plasma_ab5(
+def evolve_plasma_ab2(
         dxi, r, pr, gamma, m, q,
-        nabla_a2_pp, b_theta_0_pp, b_theta_pp, psi_pp, dr_psi_pp,
+        nabla_a2, b_theta_0, b_theta, psi, dr_psi,
         dr, dpr
         ):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
-    using an Adams-Bashforth method of 5th order.
+    using an Adams-Bashforth method of 2nd order.
 
     Parameters
     ----------
     dxi : float
         Longitudinal step.
-    r, pr, gamma : ndarray
-        Radial position, radial momentum, and Lorentz factor of the plasma
-        particles.
-    a2_pp, ..., dxi_psi_pp : ndarray
-        Arrays where the value of the fields at the particle positions will
-        be stored.
-    dr_1, ..., dr_5 : ndarray
-        Arrays containing the derivative of the radial position of the
-        particles at the 5 slices previous to the next one.
-    dpr_1, ..., dpr_5 : ndarray
-        Arrays containing the derivative of the radial momentum of the
-        particles at the 5 slices previous to the next one.
+    r, pr, gamma, m, q : ndarray
+        Radial position, radial momentum, Lorentz factor, mass and charge of
+        the plasma particles.
+    nabla_a2, b_theta_0, b_theta, psi, dr_psi : ndarray
+        Arrays with the value of the fields at the particle positions.
+    dr, dpr : ndarray
+        Arrays containing the derivative of the radial position and momentum
+        of the particles at the 2 slices previous to the next step.
     """
 
     calculate_derivatives(
-        pr, gamma, m, q, b_theta_0_pp, nabla_a2_pp, b_theta_pp,
-        psi_pp, dr_psi_pp, dr[0], dpr[0]
+        pr, gamma, m, q, b_theta_0, nabla_a2, b_theta,
+        psi, dr_psi, dr[0], dpr[0]
     )
 
     # Push radial position.
-    apply_ab5(r, dxi, dr)
+    apply_ab2(r, dxi, dr)
 
     # Push radial momentum.
-    apply_ab5(pr, dxi, dpr)
+    apply_ab2(pr, dxi, dpr)
 
     # Shift derivatives for next step (i.e., the derivative at step i will be
     # the derivative at step i+i in the next iteration.)
-    for i in range(4):
-        dr[i+1] = dr[i]
-        dpr[i+1] = dpr[i]
+    dr[1] = dr[0]
+    dpr[1] = dpr[0]
 
     # If a particle has crossed the axis, mirror it.
-    idx_neg = np.where(r < 0.)[0]
-    if idx_neg.size > 0:
-        r[idx_neg] *= -1.
-        pr[idx_neg] *= -1.
-        dr[:, idx_neg] *= -1.
-        dpr[:, idx_neg] *= -1.
+    check_axis_crossing(r, pr, dr[1], dpr[1])
 
 
 @njit_serial(fastmath=True, error_model="numpy")
@@ -100,34 +90,28 @@ def calculate_derivatives(
 
 
 @njit_serial()
-def apply_ab5(x, dt, dx):
-    """Apply the Adams-Bashforth method of 5th order to evolve `x`.
+def apply_ab2(x, dt, dx):
+    """Apply the Adams-Bashforth method of 2nd order to evolve `x`.
 
     Parameters
     ----------
     x : ndarray
         Array containing the variable to be advanced.
-    dt : _type_
+    dt : float
         Discretization step size.
     dx : ndarray
-        Array containing the derivatives of `x` at the five previous steps.
+        Array containing the derivatives of `x` at the two previous steps.
     """
-    # inv_720 = 1. / 720.
-    # for i in range(x.shape[0]):
-    #     x[i] += dt * (
-    #         1901. * dx_1[i] - 2774. * dx_2[i] + 2616. * dx_3[i]
-    #         - 1274. * dx_4[i] + 251. * dx_5[i]) * inv_720
-    # inv_24 = 1. / 24.
-    # for i in range(x.shape[0]):
-    #     x[i] += dt * (
-    #         55. * dx_1[i] - 59. * dx_2[i] + 37. * dx_3[i]
-    #         - 9. * dx_4[i]) * inv_24
-    # inv_24 = 1. / 12.
-    # for i in range(x.shape[0]):
-    #     x[i] += dt * (
-    #         23. * dx_1[i] - 16. * dx_2[i] + 5. * dx_3[i]) * inv_24
-    # inv_24 = 1. / 2.
     for i in range(x.shape[0]):
         x[i] += dt * (1.5 * dx[0, i] - 0.5 * dx[1, i])
-    # for i in range(x.shape[0]):
-    #     x[i] += dt * dx_1[i]
+
+
+@njit_serial()
+def check_axis_crossing(r, pr, dr, dpr):
+    """Check for particles with r < 0 and invert them."""
+    for i in range(r.shape[0]):
+        if r[i] < 0.:
+            r[i] *= -1.
+            pr[i] *= -1.
+            dr[i] *= -1.
+            dpr[i] *= -1.

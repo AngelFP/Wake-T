@@ -9,7 +9,7 @@ from .psi_and_derivatives import (calculate_psi,
 from .deposition import deposit_plasma_particles
 from .gather import gather_bunch_sources, gather_laser_sources
 from .b_theta import calculate_b_theta_at_particles, calculate_b_theta
-from .plasma_push.ab5 import evolve_plasma_ab5
+from .plasma_push.ab5 import evolve_plasma_ab2
 from .utils import (log, calculate_chi, calculate_rho,
                     determine_neighboring_points)
 
@@ -33,13 +33,13 @@ class PlasmaParticles():
         Number of particles per cell.
     pusher : str
         Particle pusher used to evolve the plasma particles. Possible
-        values are `'rk4'` and `'ab5'`.
+        values are `'ab2'`.
 
     """
 
     def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc,
                  nr, nz, max_gamma=10., ion_motion=True, ion_mass=ct.m_p,
-                 free_electrons_per_ion=1, pusher='ab5',
+                 free_electrons_per_ion=1, pusher='ab2',
                  shape='linear', store_history=False):
 
         # Store parameters.
@@ -147,8 +147,8 @@ class PlasmaParticles():
         self._allocate_field_arrays()
 
         # Allocate arrays needed for the particle pusher.
-        if self.pusher == 'ab5':
-            self._allocate_ab5_arrays()
+        if self.pusher == 'ab2':
+            self._allocate_ab2_arrays()
 
     def sort(self):
         self.i_sort_e = np.argsort(self.r_elec, kind='stable')
@@ -259,13 +259,13 @@ class PlasmaParticles():
 
     def evolve(self, dxi):
         if self.ion_motion:
-            evolve_plasma_ab5(
+            evolve_plasma_ab2(
                 dxi, self.r, self.pr, self.gamma, self.m, self.q_species,
                 self._nabla_a2, self._b_t_0, self._b_t, self._psi,
                 self._dr_psi, self._dr, self._dpr
             )
         else:
-            evolve_plasma_ab5(
+            evolve_plasma_ab2(
                 dxi, self.r_elec, self.pr_elec, self.gamma_elec, self.m_elec,
                 self.q_species_elec, self._nabla_a2_e, self._b_t_0_e,
                 self._b_t_e, self._psi_e, self._dr_psi_e, self._dr, self._dpr
@@ -395,19 +395,19 @@ class PlasmaParticles():
 
         self._psi_max = np.zeros(1)
 
-    def _allocate_ab5_arrays(self):
+    def _allocate_ab2_arrays(self):
         """Allocate the arrays needed for the 5th order Adams-Bashforth pusher.
 
-        The AB5 pusher needs the derivatives of r and pr for each particle
-        at the last 5 plasma slices. This method allocates the arrays that will
+        The AB2 pusher needs the derivatives of r and pr for each particle
+        at the last 2 plasma slices. This method allocates the arrays that will
         store these derivatives.
         """
         if self.ion_motion:
             size = self.n_part
         else:
             size = self.n_elec
-        self._dr = np.zeros((5, size))
-        self._dpr = np.zeros((5, size))
+        self._dr = np.zeros((2, size))
+        self._dpr = np.zeros((2, size))
 
 
 @njit_serial(error_model='numpy')

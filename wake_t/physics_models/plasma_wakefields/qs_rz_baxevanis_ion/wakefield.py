@@ -100,8 +100,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         ``max_gamma=10``.
     plasma_pusher : str, optional
         The pusher used to evolve the plasma particles. Possible values
-        are ``'rk4'`` (Runge-Kutta 4th order) or ``'ab5'`` (Adams-Bashforth
-        5th order).
+        are ``'ab2'`` (Adams-Bashforth 2nd order).
     ion_motion : bool, optional
         Whether to allow the plasma ions to move. By default, False.
     ion_mass : float, optional
@@ -156,7 +155,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         parabolic_coefficient: Optional[float] = 0.,
         p_shape: Optional[str] = 'cubic',
         max_gamma: Optional[float] = 10,
-        plasma_pusher: Optional[str] = 'rk4',
+        plasma_pusher: Optional[str] = 'ab2',
         ion_motion: Optional[bool] = False,
         ion_mass: Optional[float] = ct.m_p,
         free_electrons_per_ion: Optional[int] = 1,
