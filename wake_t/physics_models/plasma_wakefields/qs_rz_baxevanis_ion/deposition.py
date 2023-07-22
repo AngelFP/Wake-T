@@ -45,7 +45,7 @@ def deposit_plasma_particles(r, w, r_min, nr, dr, deposition_array,
             r, w, r_min, nr, dr, deposition_array)
 
 
-@njit_serial(fastmath=True)
+@njit_serial(fastmath=True, error_model="numpy")
 def deposit_plasma_particles_linear(r, q, r_min, nr, dr, deposition_array):
     """ Calculate charge distribution assuming linear particle shape. """
 
@@ -81,8 +81,11 @@ def deposit_plasma_particles_linear(r, q, r_min, nr, dr, deposition_array):
         deposition_array[2] -= deposition_array[1]
         deposition_array[1] = 0.
 
+    for i in range(nr):
+        deposition_array[i+2] /= (r_min + i * dr) * dr
 
-@njit_serial(fastmath=True)
+
+@njit_serial(fastmath=True, error_model="numpy")
 def deposit_plasma_particles_cubic(r, q, r_min, nr, dr, deposition_array):
     """ Calculate charge distribution assuming cubic particle shape. """
 
@@ -127,3 +130,6 @@ def deposit_plasma_particles_cubic(r, q, r_min, nr, dr, deposition_array):
         deposition_array[3] -= deposition_array[0]
         deposition_array[0] = 0.
         deposition_array[1] = 0.
+
+    for i in range(nr):
+        deposition_array[i+2] /= (r_min + i * dr) * dr
