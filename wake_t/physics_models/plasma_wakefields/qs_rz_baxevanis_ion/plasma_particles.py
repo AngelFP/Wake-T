@@ -9,7 +9,7 @@ from .psi_and_derivatives import (calculate_psi,
 from .deposition import deposit_plasma_particles
 from .gather import gather_bunch_sources, gather_laser_sources
 from .b_theta import calculate_b_theta_at_particles, calculate_b_theta
-from .plasma_push.ab5 import evolve_plasma_ab2
+from .plasma_push.ab2 import evolve_plasma_ab2
 from .utils import (log, calculate_chi, calculate_rho,
                     determine_neighboring_points)
 
