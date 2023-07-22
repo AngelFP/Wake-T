@@ -3,7 +3,7 @@ import math
 from wake_t.utilities.numba import njit_serial
 
 
-@njit_serial(fastmath=True)
+@njit_serial(error_model="numpy")
 def gather_laser_sources(a2, nabla_a, r_min, r_max, dr, r, a2_pp, nabla_a_pp):
     """
     Gather the laser source terms (a2 and nabla_a) needed
@@ -68,7 +68,7 @@ def gather_laser_sources(a2, nabla_a, r_min, r_max, dr, r, a2_pp, nabla_a_pp):
             nabla_a_pp[i] = 0.
 
 
-@njit_serial(fastmath=True)
+@njit_serial(error_model="numpy")
 def gather_bunch_sources(b_t, r_min, r_max, dr, r, b_t_pp):
     """
     Gathering the beam source terms (B_theta) needed by the Baxevanis
