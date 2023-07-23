@@ -341,10 +341,10 @@ class Quasistatic2DWakefieldIon(RZWakefield):
 
     def _get_plasma_particle_diagnostics(self, global_time):
         """Return dict with plasma particle diagnostics."""
-        n_elec = int(self.pp['r_hist'].shape[-1] / 2)
-        s_d = ge.plasma_skin_depth(self.n_p * 1e-6)
         diag_dict = {}
-        if len(self.particle_diags) > 0:            
+        if len(self.particle_diags) > 0:
+            n_elec = int(self.pp['r_hist'].shape[-1] / 2)
+            s_d = ge.plasma_skin_depth(self.n_p * 1e-6)        
             diag_dict['plasma_e'] = {
                 'q': - ct.e,
                 'm': ct.m_e,
