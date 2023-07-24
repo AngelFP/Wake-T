@@ -121,26 +121,22 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     log_r_fld = np.log(r_fld)
 
     # Initialize field arrays, including guard cells.
-    a2 = np.zeros((n_xi+4, n_r+4))
     nabla_a2 = np.zeros((n_xi+4, n_r+4))
     psi = np.zeros((n_xi+4, n_r+4))
-    W_r = np.zeros((n_xi+4, n_r+4))
-    b_t_bar = np.zeros((n_xi+4, n_r+4))
 
     # Laser source.
     laser_source = laser_a2 is not None
     if laser_source:
-        a2[2:-2, 2:-2] = laser_a2
-        radial_gradient(laser_a2, dr, nabla_a2[2:-2, 2:-2])
+        radial_gradient(laser_a2[2:-2, 2:-2], dr, nabla_a2[2:-2, 2:-2])
 
     # Calculate plasma response (including density, susceptibility, potential
     # and magnetic field)
     pp_hist = calculate_plasma_response(
         r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
         plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
-        free_electrons_per_ion, n_xi, a2, nabla_a2, laser_source,
+        free_electrons_per_ion, n_xi, laser_a2, nabla_a2, laser_source,
         bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
-        r_fld, log_r_fld, psi, b_t_bar, rho, rho_e, rho_i, chi, dxi,
+        r_fld, log_r_fld, psi, B_t, rho, rho_e, rho_i, chi, dxi,
         store_plasma_history=store_plasma_history,
         calculate_rho=calculate_rho
     )
@@ -148,12 +144,12 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
     longitudinal_gradient(psi[2:-2, 2:-2], dxi, E_z[2:-2, 2:-2])
-    radial_gradient(psi[2:-2, 2:-2], dr, W_r[2:-2, 2:-2])
+    radial_gradient(psi[2:-2, 2:-2], dr, E_r[2:-2, 2:-2])
+    E_r -= B_t
     E_z *= - E_0
-    W_r *= - E_0
+    E_r *= - E_0
     # B_t[:] = (b_t_bar + b_t_beam) * E_0 / ct.c
-    B_t[:] = (b_t_bar) * E_0 / ct.c
-    E_r[:] = W_r + B_t * ct.c
+    B_t *= E_0 / ct.c
     return pp_hist
 
 

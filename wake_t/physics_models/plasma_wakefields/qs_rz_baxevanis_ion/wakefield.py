@@ -9,6 +9,7 @@ import aptools.plasma_accel.general_equations as ge
 from .solver import calculate_wakefields
 from .b_theta_bunch import calculate_bunch_source, deposit_bunch_charge
 from .adaptive_grid import AdaptiveGrid
+from .utils import calculate_laser_a2
 from wake_t.fields.rz_wakefield import RZWakefield
 from wake_t.physics_models.laser.laser_pulse import LaserPulse
 
@@ -213,19 +214,23 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         # Add bunch source array (needed if not using adaptive grids).
         self.b_t_bunch = np.zeros((self.n_xi+4, self.n_r+4))
         self.q_bunch = np.zeros((self.n_xi+4, self.n_r+4))
+        self.laser_a2 = np.zeros((self.n_xi+4, self.n_r+4))
+        self.fld_arrays = [self.rho, self.rho_e, self.rho_i, self.chi, self.e_r,
+                           self.e_z, self.b_t, self.xi_fld, self.r_fld]
 
     def _calculate_wakefield(self, bunches):
         parabolic_coefficient = self.parabolic_coefficient(self.t*ct.c)
 
         # Get square of laser envelope
         if self.laser is not None:
-            a_env_2 = np.abs(self.laser.get_envelope()) ** 2
+            calculate_laser_a2(self.laser.get_envelope(), self.laser_a2)
             # If linearly polarized, divide by 2 so that the ponderomotive
             # force on the plasma particles is correct.
             if self.laser.polarization == 'linear':
-                a_env_2 /= 2
+                self.laser_a2 /= 2.
+            laser_a2 = self.laser_a2
         else:
-            a_env_2 = None
+            laser_a2 = None
 
         # Store plasma history if required by the diagnostics.
         store_plasma_history = len(self.particle_diags) > 0
@@ -289,7 +294,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
 
         # Calculate plasma wakefields
         self.pp = calculate_wakefields(
-            a_env_2, self.r_max, self.xi_min, self.xi_max,
+            laser_a2, self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, self.n_p,
             r_max_plasma=self.r_max_plasma,
             parabolic_coefficient=parabolic_coefficient,
@@ -297,8 +302,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             plasma_pusher=self.plasma_pusher, ion_motion=self.ion_motion,
             ion_mass=self.ion_mass,
             free_electrons_per_ion=self.free_electrons_per_ion,
-            fld_arrays=[self.rho, self.rho_e, self.rho_i, self.chi, self.e_r,
-                        self.e_z, self.b_t, self.xi_fld, self.r_fld],
+            fld_arrays=self.fld_arrays,
             bunch_source_arrays=bunch_source_arrays,
             bunch_source_xi_indices=bunch_source_xi_indices,
             bunch_source_metadata=bunch_source_metadata,

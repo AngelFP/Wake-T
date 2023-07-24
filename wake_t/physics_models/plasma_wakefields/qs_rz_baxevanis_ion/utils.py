@@ -133,3 +133,24 @@ def radial_gradient(f, dr, dr_f):
             dr_f[i, j] = (f_right - f_left) * inv_h
         dr_f[i, 0] = a * f[i, 0] + b * f[i, 1] + c * f[i, 2]
         dr_f[i, -1] = - a * f[i, -1] - b * f[i, -2] - c * f[i, -3]
+
+
+@njit_serial()
+def calculate_laser_a2(a_complex, a2):
+    """Calculate the square of the laser complex envelope amplitude.
+
+    Parameters
+    ----------
+    a_complex : ndarray
+        Array of size (nz, nr) containing the complex envelope of the laser.
+    a2 : ndarray
+        Array of size (nz+4, nr+4) where the result will be stored.
+    """
+    nz, nr = a_complex.shape
+    a_real = a_complex.real
+    a_imag = a_complex.imag
+    for i in range(nz):
+        for j in range(nr):
+            ar = a_real[i, j]
+            ai = a_imag[i, j]
+            a2[2 + i, 2 + j] = ar * ar + ai * ai
