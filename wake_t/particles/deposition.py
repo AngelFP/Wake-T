@@ -13,6 +13,7 @@ import numpy as np
 from wake_t.utilities.numba import njit_serial
 
 
+@njit_serial()
 def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
                             deposition_array, p_shape='cubic',
                             use_ruyten=False):
@@ -54,7 +55,7 @@ def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
             z, x, y, w, z_min, r_min, nz, nr, dz, dr, deposition_array,
             use_ruyten)
     else:
-        err_string = ("Particle shape '{}' not recognized. ".format(p_shape) +
+        err_string = ("Particle shape '" + p_shape + "' not recognized. "
                       "Possible values are 'linear' or 'cubic'.")
         raise ValueError(err_string)
 
