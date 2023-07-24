@@ -68,3 +68,68 @@ def determine_neighboring_points(r, dr_p, idx, r_neighbor):
         if i_sort == n_part - 1:
             r_right = r_i + dr_p_i * 0.5
             r_neighbor[-1] = r_right
+
+
+@njit_serial()
+def longitudinal_gradient(f, dz, dz_f):
+    """Calculate the longitudinal gradient of a 2D array.
+
+    This method is equivalent to using `np.gradient` with
+    `edge_order=2`, but is several times faster as it is compiled with numba
+    and is more specialized.
+
+    Parameters
+    ----------
+    f : ndarray
+        The array from which to calculate the gradient.
+    dz : float
+        Longitudinal step size.
+    dz_f : ndarray
+        Array where the longitudinal gradient will be stored.
+    """
+    nz, nr = f.shape
+    inv_dz = 1. / dz
+    inv_h = 0.5 * inv_dz
+    a = - 1.5 * inv_dz
+    b = 2. * inv_dz
+    c = - 0.5 * inv_dz
+    for j in range(nr):
+        f_right = f[nz-1, j]
+        for i in range(1, nz - 1):
+            f_left = f[i - 1, j]
+            f_right = f[i + 1, j]            
+            dz_f[i, j] = (f_right - f_left) * inv_h
+        dz_f[0, j] = a * f[0, j] + b * f[1, j] + c * f[2, j]
+        dz_f[-1, j] = - a * f[-1, j] - b * f[-2, j] - c * f[-3, j]
+
+
+@njit_serial()
+def radial_gradient(f, dr, dr_f):
+    """Calculate the radial gradient of a 2D array.
+
+    This method is equivalent to using `np.gradient` with
+    `edge_order=2`, but is several times faster as it is compiled with numba
+    and is more specialized.
+
+    Parameters
+    ----------
+    f : ndarray
+        The array from which to calculate the gradient.
+    dr : float
+        Radial step size.
+    dr_f : ndarray
+        Array where the radial gradient will be stored.
+    """
+    nz, nr = f.shape
+    inv_dr = 1. / dr
+    inv_h = 0.5 * inv_dr
+    a = - 1.5 * inv_dr
+    b = 2. * inv_dr
+    c = - 0.5 * inv_dr
+    for i in range(nz):
+        for j in range(1, nr - 1):
+            f_left = f[i, j - 1]
+            f_right = f[i, j + 1]
+            dr_f[i, j] = (f_right - f_left) * inv_h
+        dr_f[i, 0] = a * f[i, 0] + b * f[i, 1] + c * f[i, 2]
+        dr_f[i, -1] = - a * f[i, -1] - b * f[i, -2] - c * f[i, -3]

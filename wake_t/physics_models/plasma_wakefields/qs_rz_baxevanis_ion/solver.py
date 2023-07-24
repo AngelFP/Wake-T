@@ -9,9 +9,9 @@ import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-from wake_t.utilities.other import radial_gradient
 from .plasma_particles import PlasmaParticles
 from wake_t.utilities.numba import njit_serial
+from .utils import longitudinal_gradient, radial_gradient
 
 
 def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
@@ -131,7 +131,7 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     laser_source = laser_a2 is not None
     if laser_source:
         a2[2:-2, 2:-2] = laser_a2
-        nabla_a2[2:-2, 2:-2] = radial_gradient(laser_a2, dr)
+        radial_gradient(laser_a2, dr, nabla_a2[2:-2, 2:-2])
 
     # Calculate plasma response (including density, susceptibility, potential
     # and magnetic field)
@@ -147,9 +147,10 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
 
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p*1e-6)
-    dxi_psi, dr_psi = np.gradient(psi[2:-2, 2:-2], dxi, dr, edge_order=2)
-    E_z[2:-2, 2:-2] = -dxi_psi * E_0
-    W_r[2:-2, 2:-2] = -dr_psi * E_0
+    longitudinal_gradient(psi[2:-2, 2:-2], dxi, E_z[2:-2, 2:-2])
+    radial_gradient(psi[2:-2, 2:-2], dr, W_r[2:-2, 2:-2])
+    E_z *= - E_0
+    W_r *= - E_0
     # B_t[:] = (b_t_bar + b_t_beam) * E_0 / ct.c
     B_t[:] = (b_t_bar) * E_0 / ct.c
     E_r[:] = W_r + B_t * ct.c
