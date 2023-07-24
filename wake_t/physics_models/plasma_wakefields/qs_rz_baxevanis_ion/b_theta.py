@@ -141,30 +141,34 @@ def calculate_b_theta_at_electrons(r, a_0, a, b, r_neighbor, idx, b_theta):
     # Calculate field at particles as average between neighboring values.
     n_part = r.shape[0]
 
+    a_i_left = a_0
+    b_i_left = 0.
+    r_left = r_neighbor[0]
+    inv_r_left = 1. / r_left
     for i_sort in range(n_part):
         i = idx[i_sort]
-        im1 = idx[i_sort - 1]
         r_i = r[i]
         
-        r_left = r_neighbor[i_sort]
-        r_right = r_neighbor[i_sort+1]
-        
-        if i_sort > 0:
-            a_i_left = a[im1]
-            b_i_left = b[im1]
-            b_theta_left = a_i_left * r_left + b_i_left / r_left
-        else:
-            a_i_left = a_0
-            b_theta_left = a_i_left * r_left
-            
+        # Calculate b_theta at left neighboring point.
+        b_theta_left = a_i_left * r_left + b_i_left * inv_r_left
+
+        # Calculate b_theta at right neighboring point.
+        r_right = r_neighbor[i_sort + 1]
+        inv_r_right = 1. / r_right
         a_i_right = a[i]
         b_i_right = b[i]
-        b_theta_right = a_i_right * r_right + b_i_right / r_right
+        b_theta_right = a_i_right * r_right + b_i_right * inv_r_right
 
         # Do interpolation.
         c2 = (b_theta_right - b_theta_left) / (r_right - r_left)
         c1 = b_theta_left - c2*r_left
         b_theta[i] = c1 + c2*r_i
+
+        # Use right value as left values for next iteration.
+        a_i_left = a_i_right
+        b_i_left = b_i_right
+        r_left = r_right
+        inv_r_left = inv_r_right
 
 
 @njit_serial(error_model='numpy')
@@ -179,24 +183,24 @@ def calculate_b_theta_at_ions(r_i, r_e, a_0, a, b, idx_i, idx_e, b_theta):
     n_i = r_i.shape[0]
     n_e = r_e.shape[0]
     i_last = 0
+    a_i = a_0
+    b_i = 0.
     for i_sort in range(n_i):
-        i = idx_i[i_sort]
-        r_i_i = r_i[i]        
+        i_i = idx_i[i_sort]
+        r_i_i = r_i[i_i]        
         # Get index of last plasma electron with r_i_e < r_i_i, continuing from
         # last electron found in previous iteration.
-        for i_sort_e in range(i_last, n_e):
-            i_e = idx_e[i_sort_e]
+        while i_last < n_e:
+            i_e = idx_e[i_last]
             r_i_e = r_e[i_e]
             if r_i_e >= r_i_i:
-                i_last = i_sort_e - 1
                 break
-        # Calculate fields.
-        if i_last == -1:
-            b_theta[i] = a_0 * r_i_i
-            i_last = 0
-        else:
-            i_e = idx_e[i_last]
-            b_theta[i] = a[i_e] * r_i_i + b[i_e] / r_i_i
+            i_last += 1
+        if i_last > 0:
+            i_e = idx_e[i_last - 1]
+            a_i = a[i_e]
+            b_i = b[i_e]
+        b_theta[i_i] = a_i * r_i_i + b_i / r_i_i
 
 
 @njit_serial(error_model='numpy')
@@ -210,23 +214,23 @@ def calculate_b_theta(r_fld, a_0, a, b, r, idx, b_theta):
     n_part = r.shape[0]
     n_points = r_fld.shape[0]
     i_last = 0
+    a_i = a_0
+    b_i = 0.
     for j in range(n_points):
         r_j = r_fld[j]
         # Get index of last plasma particle with r_i < r_j, continuing from
         # last particle found in previous iteration.
-        for i_sort in range(i_last, n_part):
-            i_p = idx[i_sort]
-            r_i = r[i_p]
+        while i_last < n_part:
+            i = idx[i_last]
+            r_i = r[i]
             if r_i >= r_j:
-                i_last = i_sort - 1
                 break
-        # Calculate fields.
-        if i_last == -1:
-            b_theta[j] = a_0 * r_j
-            i_last = 0
-        else:
-            i_p = idx[i_last]
-            b_theta[j] = a[i_p] * r_j + b[i_p] / r_j
+            i_last += 1
+        if i_last > 0:
+            i = idx[i_last - 1]
+            a_i = a[i]
+            b_i = b[i]
+        b_theta[j] = a_i * r_j + b_i / r_j
 
 
 @njit_serial(error_model='numpy')
@@ -335,20 +339,22 @@ def calculate_ABC(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
         nabla_a2_i = nabla_a2[i]
 
         a = 1. + psi_i
-        a2 = a * a
-        a3 = a2 * a
-        b = 1. / (r_i * a)
-        c = 1. / (r_i * a2)
+        inv_a = 1. / a
+        inv_a2 = inv_a * inv_a
+        inv_a3 = inv_a2 * inv_a
+        inv_r_i = 1. / r_i
+        b = inv_a * inv_r_i
+        c = inv_a2 * inv_r_i
         pr_i2 = pr_i * pr_i
 
         A[i] = q_i * b
         B[i] = q_i * (- (gamma_i * dr_psi_i) * c
-                      + (pr_i2 * dr_psi_i) / (r_i * a3)
+                      + (pr_i2 * dr_psi_i) * inv_r_i * inv_a3
                       + (pr_i * dxi_psi_i) * c
-                      + pr_i2 / (r_i * r_i * a2)
+                      + pr_i2 * inv_r_i * inv_r_i * inv_a2
                       + b_theta_0_i * b
                       + nabla_a2_i * c * 0.5)
-        C[i] = q_i * (pr_i2 * c - (gamma_i / a - 1.) / r_i)
+        C[i] = q_i * (pr_i2 * c - (gamma_i * inv_a - 1.) * inv_r_i)
 
 
 @njit_serial(error_model='numpy')
