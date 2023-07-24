@@ -7,7 +7,7 @@ import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
 from .solver import calculate_wakefields
-from .b_theta_bunch import calculate_bunch_source
+from .b_theta_bunch import calculate_bunch_source, deposit_bunch_charge
 from .adaptive_grid import AdaptiveGrid
 from wake_t.fields.rz_wakefield import RZWakefield
 from wake_t.physics_models.laser.laser_pulse import LaserPulse
@@ -212,6 +212,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         super()._initialize_properties(bunches)
         # Add bunch source array (needed if not using adaptive grids).
         self.b_t_bunch = np.zeros((self.n_xi+4, self.n_r+4))
+        self.q_bunch = np.zeros((self.n_xi+4, self.n_r+4))
 
     def _calculate_wakefield(self, bunches):
         parabolic_coefficient = self.parabolic_coefficient(self.t*ct.c)
@@ -267,11 +268,17 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             # If not using adaptive grids, add all sources to the same array.
             if bunches:
                 self.b_t_bunch[:] = 0.
+                self.q_bunch[:] = 0.
                 for bunch in bunches:
-                    calculate_bunch_source(
-                        bunch, self.n_p, self.n_r, self.n_xi, self.r_fld[0],
-                        self.xi_fld[0], self.dr, self.dxi, self.p_shape,
-                        self.b_t_bunch)
+                    deposit_bunch_charge(
+                        bunch.x, bunch.y, bunch.xi, bunch.q,
+                        self.n_p, self.n_r, self.n_xi, self.r_fld, self.xi_fld,
+                        self.dr, self.dxi, self.p_shape, self.q_bunch
+                    )
+                calculate_bunch_source(
+                    self.q_bunch, self.n_r, self.n_xi, self.r_fld,
+                    self.dr, self.b_t_bunch
+                )
                 bunch_source_arrays.append(self.b_t_bunch)
                 bunch_source_xi_indices.append(np.arange(self.n_xi))
                 bunch_source_metadata.append(

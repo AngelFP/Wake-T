@@ -8,7 +8,7 @@ from wake_t.utilities.numba import njit_serial
 from wake_t.particles.interpolation import gather_main_fields_cyl_linear
 from .psi_and_derivatives import calculate_psi
 from .b_theta import calculate_b_theta
-from .b_theta_bunch import calculate_bunch_source
+from .b_theta_bunch import calculate_bunch_source, deposit_bunch_charge
 
 
 class AdaptiveGrid():
@@ -111,9 +111,12 @@ class AdaptiveGrid():
             The particle shape.
         """
         self.b_t_bunch[:] = 0.
-        calculate_bunch_source(bunch, n_p, self.nr, self.nxi, self.r_grid[0],
-                               self.xi_grid[0], self.dr, self.dxi, p_shape,
-                               self.b_t_bunch)
+        self.q_bunch[:] = 0.
+        deposit_bunch_charge(bunch.x, bunch.y, bunch.xi, bunch.q, n_p,
+                             self.nr, self.nxi, self.r_grid, self.xi_grid,
+                             self.dr, self.dxi, p_shape, self.q_bunch)
+        calculate_bunch_source(self.q_bunch, self.nr, self.nxi, self.r_grid,
+                               self.dr, self.b_t_bunch)
 
     def gather_fields(self, x, y, z, ex, ey, ez, bx, by, bz):
         """Gather the plasma fields at the location of the bunch particles.
@@ -227,6 +230,7 @@ class AdaptiveGrid():
         self.e_r = np.zeros((self.nxi + 4, self.nr + 4))
         self.e_z = np.zeros((self.nxi + 4, self.nr + 4))
         self.b_t_bunch = np.zeros((self.nxi + 4, self.nr + 4))
+        self.q_bunch = np.zeros((self.nxi + 4, self.nr + 4))
 
     def _reset_fields(self):
         """Reset value of the fields at the grid."""
@@ -274,8 +278,8 @@ def calculate_fields_on_grid(
         calculate_b_theta(
             r_fld=r_grid / s_d,
             a_0=a_0_hist[j],
-            a_i=a_i_hist[j],
-            b_i=b_i_hist[j],
+            a=a_i_hist[j],
+            b=b_i_hist[j],
             r=r_hist[j, :n_elec],
             idx=i_sort_hist[j, :n_elec],
             b_theta=b_theta
