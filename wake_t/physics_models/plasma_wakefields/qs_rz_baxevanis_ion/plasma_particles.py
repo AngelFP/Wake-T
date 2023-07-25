@@ -1,4 +1,5 @@
 """Contains the definition of the `PlasmaParticles` class."""
+from typing import Optional, List
 
 import numpy as np
 import scipy.constants as ct
@@ -35,12 +36,64 @@ class PlasmaParticles():
         Particle pusher used to evolve the plasma particles. Possible
         values are `'ab2'`.
 
+
+    Parameters
+    ----------
+    r_max : float
+        Maximum radial extension of the simulation box in normalized units.
+    r_max_plasma : float
+        Maximum radial extension of the plasma column in normalized units.
+    parabolic_coefficient : float
+        The coefficient for the transverse parabolic density profile.
+    dr : float
+        Radial step size of the discretized simulation box.
+    ppc : float
+        Number of particles per cell.
+    nr, nz : int
+        Number of grid elements along `r` and `z`.
+    max_gamma : float, optional
+        Plasma particles whose ``gamma`` exceeds ``max_gamma`` are
+        considered to violate the quasistatic condition and are put at
+        rest (i.e., ``gamma=1.``, ``pr=pz=0.``). By default 10.
+    ion_motion : bool, optional
+        Whether to allow the plasma ions to move. By default, False.
+    ion_mass : float, optional
+        Mass of the plasma ions. By default, the mass of a proton.
+    free_electrons_per_ion : int, optional
+        Number of free electrons per ion. The ion charge is adjusted
+        accordingly to maintain a quasi-neutral plasma (i.e.,
+        ion charge = e * free_electrons_per_ion). By default, 1.
+    pusher : str, optional
+        The pusher used to evolve the plasma particles. Possible values
+        are ``'ab2'`` (Adams-Bashforth 2nd order).
+    shape : str
+        Particle shape to be used for the beam charge deposition. Possible
+        values are 'linear' or 'cubic'. By default 'linear'.
+    store_history : bool, optional
+        Whether to store the plasma particle evolution. This might be needed
+        for diagnostics or the use of adaptive grids. By default, False.
+    diags : list, optional
+        List of particle quantities to save to diagnostics.
     """
 
-    def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc,
-                 nr, nz, max_gamma=10., ion_motion=True, ion_mass=ct.m_p,
-                 free_electrons_per_ion=1, pusher='ab2',
-                 shape='linear', store_history=False, diags=[]):
+    def __init__(
+        self,
+        r_max: float,
+        r_max_plasma: float,
+        parabolic_coefficient: float,
+        dr: float,
+        ppc: float,
+        nr: int,
+        nz: int,
+        max_gamma: Optional[float] = 10.,
+        ion_motion: Optional[bool] = True,
+        ion_mass: Optional[float] = ct.m_p,
+        free_electrons_per_ion: Optional[int] = 1,
+        pusher: Optional[str] = 'ab2',
+        shape: Optional[str] = 'linear',
+        store_history: Optional[bool] = False,
+        diags: Optional[List[str]] = []
+    ):
 
         # Store parameters.
         self.r_max = r_max
@@ -136,11 +189,13 @@ class PlasmaParticles():
             self._allocate_ab2_arrays()
 
     def sort(self):
+        """Sort plasma particles radially (only by index)."""
         self.i_sort_e = np.argsort(self.r_elec, kind='stable')
         if self.ion_motion or not self.ions_computed:
             self.i_sort_i = np.argsort(self.r_ion, kind='stable')
 
-    def determine_neighboring_points(self):
+    def determine_neighboring_points(self):        
+        """Determine the neighboring points of each plasma particle."""
         determine_neighboring_points(
             self.r_elec, self.dr_p_elec, self.i_sort_e, self._r_neighbor_e
         )
@@ -152,6 +207,7 @@ class PlasmaParticles():
             log(self._r_neighbor_i, self._log_r_neighbor_i)
 
     def gather_laser_sources(self, a2, nabla_a2, r_min, r_max, dr):
+        """Gather the source terms (a^2 and nabla(a)^2) from the laser."""
         if self.ion_motion:
             gather_laser_sources(
                 a2, nabla_a2, r_min, r_max, dr,
@@ -165,6 +221,7 @@ class PlasmaParticles():
 
     def gather_bunch_sources(self, source_arrays, source_xi_indices,
                              source_metadata, slice_i):
+        """Gather the source terms (b_theta) from the particle bunches."""
         self._b_t_0[:] = 0.
         for i in range(len(source_arrays)):
             array = source_arrays[i]
@@ -183,6 +240,7 @@ class PlasmaParticles():
                                          self.r_elec, self._b_t_0_e)
 
     def calculate_fields(self):
+        """Calculate the fields at the plasma particles."""
         calculate_psi_and_derivatives_at_particles(
             self.r_elec, self.pr_elec, self.q_elec, self.dr_p_elec,
             self.r_ion, self.pr_ion, self.q_ion, self.dr_p_ion,
@@ -226,6 +284,7 @@ class PlasmaParticles():
         )
 
     def calculate_psi_at_grid(self, r_eval, log_r_eval, psi):
+        """Calculate psi on the current grid slice."""
         calculate_psi(
             r_eval, log_r_eval, self.r_elec, self._sum_1_e, self._sum_2_e,
             self.i_sort_e, psi
@@ -237,12 +296,14 @@ class PlasmaParticles():
         psi -= self._psi_max
 
     def calculate_b_theta_at_grid(self, r_eval, b_theta):
+        """Calculate b_theta on the current grid slice."""
         calculate_b_theta(
             r_eval, self._a_0[0], self._a_i, self._b_i, self.r_elec,
             self.i_sort_e, b_theta
         )
 
     def evolve(self, dxi):
+        """Evolve plasma particles to next longitudinal slice."""
         if self.ion_motion:
             evolve_plasma_ab2(
                 dxi, self.r, self.pr, self.gamma, self.m, self.q_species,
@@ -262,10 +323,12 @@ class PlasmaParticles():
             self._move_auxiliary_arrays_to_next_slice()
 
     def calculate_weights(self):
+        """Calculate the plasma density weights of each particle."""
         calculate_rho(self.q, self.pz, self.gamma, self._rho)
 
 
     def deposit_rho(self, rho, rho_e, rho_i, r_fld, nr, dr):
+        """Deposit plasma density on a grid slice."""
         self.calculate_weights()
         # Deposit electrons
         deposit_plasma_particles(
@@ -280,6 +343,7 @@ class PlasmaParticles():
         rho += rho_i
 
     def deposit_chi(self, chi, r_fld, nr, dr):
+        """Deposit plasma susceptibility on a grid slice."""
         calculate_chi(self.q_elec, self.pz_elec, self.gamma_elec, self._chi_e)
         deposit_plasma_particles(
             self.r_elec, self._chi_e, r_fld[0], nr, dr, chi, self.shape

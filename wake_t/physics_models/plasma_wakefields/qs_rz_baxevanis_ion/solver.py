@@ -75,7 +75,7 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     free_electrons_per_ion : int, optional
         Number of free electrons per ion. The ion charge is adjusted
         accordingly to maintain a quasi-neutral plasma (i.e.,
-        ion charge = e * free_electrons_per_ion).
+        ion charge = e * free_electrons_per_ion). By default, 1.
     bunch_source_arrays : list, optional
         List containing the array from which the bunch source terms (the
         azimuthal magnetic field) will be gathered. It can be a single

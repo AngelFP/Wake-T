@@ -1,4 +1,4 @@
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -106,11 +106,10 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         Whether to allow the plasma ions to move. By default, False.
     ion_mass : float, optional
         Mass of the plasma ions. By default, the mass of a proton.
-    ion_charge : float, optional
-        Charge of the plasma ions. By default, the charge of a proton.
-    electron_charge : float, optional
-        Charge of the plasma electrons released by each ionized plasma atom or
-        molecule. By default, the charge of an electron.
+    free_electrons_per_ion : int, optional
+        Number of free electrons per ion. The ion charge is adjusted
+        accordingly to maintain a quasi-neutral plasma (i.e.,
+        ion charge = e * free_electrons_per_ion). By default, 1.
     laser : LaserPulse, optional
         Laser driver of the plasma stage.
     laser_evolution : bool, optional
@@ -132,7 +131,23 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         Determines whether to take into account the terms related to the
         longitudinal derivative of the complex phase in the envelope
         solver.
-
+    field_diags : list, optional
+        List of fields to save to openpmd diagnostics. By default ['rho', 'E',
+        'B', 'a_mod', 'a_phase'].
+    field_diags : list, optional
+        List of particle quantities to save to openpmd diagnostics. By default
+        [].
+    use_adaptive_grids : bool, optional
+        Whether to use adaptive grids for each particle bunch, instead of the
+        general (n_xi x n_r) grid.
+    adaptive_grid_nr : int or list of int, optional
+        Radial resolution of the adaptive grids. In only one value is given,
+        the same resolution will be used for the adaptive grids of all bunches.
+        Otherwise, a list of values can be given (one per bunch and in the same
+        order as the list of bunches given to the `track` method.)
+    adaptive_grid_diags : list, optional
+        List of fields from the adaptive grids to save to openpmd diagnostics.
+        By default ['E', 'B'].
     References
     ----------
     .. [1] P. Baxevanis and G. Stupakov, "Novel fast simulation technique
@@ -170,7 +185,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                                             'a_phase'],
         particle_diags: Optional[List[str]] = [],
         use_adaptive_grids: Optional[bool] = False,
-        adaptive_grid_nr: Optional[int] = 16,
+        adaptive_grid_nr: Optional[Union[int, List[int]]] = 16,
         adaptive_grid_diags: Optional[List[str]] = ['E', 'B'],
     ) -> None:
         self.ppc = np.array(ppc)
