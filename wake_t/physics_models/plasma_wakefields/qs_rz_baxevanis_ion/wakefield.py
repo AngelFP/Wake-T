@@ -307,7 +307,8 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             bunch_source_xi_indices=bunch_source_xi_indices,
             bunch_source_metadata=bunch_source_metadata,
             store_plasma_history=store_plasma_history,
-            calculate_rho=calculate_rho
+            calculate_rho=calculate_rho,
+            particle_diags=self.particle_diags
         )
 
     def _get_parabolic_coefficient_fn(self, parabolic_coefficient):

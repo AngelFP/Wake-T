@@ -40,7 +40,7 @@ class PlasmaParticles():
     def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc,
                  nr, nz, max_gamma=10., ion_motion=True, ion_mass=ct.m_p,
                  free_electrons_per_ion=1, pusher='ab2',
-                 shape='linear', store_history=False):
+                 shape='linear', store_history=False, diags=[]):
 
         # Store parameters.
         self.r_max = r_max
@@ -57,6 +57,7 @@ class PlasmaParticles():
         self.ion_mass = ion_mass
         self.free_electrons_per_ion = free_electrons_per_ion
         self.store_history = store_history
+        self.diags = diags
 
     def initialize(self):
         """Initialize column of plasma particles."""
@@ -106,6 +107,7 @@ class PlasmaParticles():
         self.q_species = np.concatenate((q_species_e, q_species_i))
         self.m = np.concatenate((m_e, m_i))
 
+        # Create history arrays.
         if self.store_history:
             self.r_hist = np.zeros((self.nz, self.n_part))
             self.xi_hist = np.zeros((self.nz, self.n_part))
@@ -119,32 +121,15 @@ class PlasmaParticles():
             self.a_i_hist = np.zeros((self.nz, self.n_elec))
             self.b_i_hist = np.zeros((self.nz, self.n_elec))
             self.a_0_hist = np.zeros(self.nz)
-        self.i_push = 0
-        self.xi_current = 0.
-
-        self.r_elec = self.r[:self.n_elec]
-        self.dr_p_elec = self.dr_p[:self.n_elec]
-        self.pr_elec = self.pr[:self.n_elec]
-        self.pz_elec = self.pz[:self.n_elec]
-        self.gamma_elec = self.gamma[:self.n_elec]
-        self.q_elec = self.q[:self.n_elec]
-        self.q_species_elec = self.q_species[:self.n_elec]
-        self.m_elec = self.m[:self.n_elec]
-
-        self.r_ion = self.r[self.n_elec:]
-        self.dr_p_ion = self.dr_p[self.n_elec:]
-        self.pr_ion = self.pr[self.n_elec:]
-        self.pz_ion = self.pz[self.n_elec:]
-        self.gamma_ion = self.gamma[self.n_elec:]
-        self.q_ion = self.q[self.n_elec:]
-        self.q_species_ion = self.q_species[self.n_elec:]
-        self.m_ion = self.m[self.n_elec:]
+            self.i_push = 0
+            self.xi_current = 0.
 
         self.ions_computed = False
 
         # Allocate arrays that will contain the fields experienced by the
         # particles.
         self._allocate_field_arrays()
+        self._make_species_views()
 
         # Allocate arrays needed for the particle pusher.
         if self.pusher == 'ab2':
@@ -270,18 +255,24 @@ class PlasmaParticles():
                 self.q_species_elec, self._nabla_a2_e, self._b_t_0_e,
                 self._b_t_e, self._psi_e, self._dr_psi_e, self._dr, self._dpr
             )
-        self.i_push += 1
-        self.xi_current -= dxi
+
+        if self.store_history:
+            self.i_push += 1
+            self.xi_current -= dxi
+            self._move_auxiliary_arrays_to_next_slice()
+
+    def calculate_weights(self):
+        calculate_rho(self.q, self.pz, self.gamma, self._rho)
+
 
     def deposit_rho(self, rho, rho_e, rho_i, r_fld, nr, dr):
+        self.calculate_weights()
         # Deposit electrons
-        calculate_rho(self.q_elec, self.pz_elec, self.gamma_elec, self._rho_e)
         deposit_plasma_particles(
             self.r_elec, self._rho_e, r_fld[0], nr, dr, rho_e, self.shape
         )
 
         # Deposit ions
-        calculate_rho(self.q_ion, self.pz_ion, self.gamma_ion, self._rho_i)
         deposit_plasma_particles(
             self.r_ion, self._rho_i, r_fld[0], nr, dr, rho_i, self.shape
         )
@@ -320,19 +311,22 @@ class PlasmaParticles():
             return history
 
     def store_current_step(self):
-        self.r_hist[-1 - self.i_push] = self.r
-        self.xi_hist[-1 - self.i_push] = self.xi_current
-        self.pr_hist[-1 - self.i_push] = self.pr
-        self.pz_hist[-1 - self.i_push] = self.pz
-        self.w_hist[-1 - self.i_push] = self.q / (1 - self.pz/self.gamma)
-        self.sum_1_hist[-1 - self.i_push] = self._sum_1
-        self.sum_2_hist[-1 - self.i_push] = self._sum_2
-        self.i_sort_hist[-1 - self.i_push, :self.n_elec] = self.i_sort_e
-        self.i_sort_hist[-1 - self.i_push, self.n_elec:] = self.i_sort_i
-        self.psi_max_hist[-1 - self.i_push] = self._psi_max
-        self.a_i_hist[-1 - self.i_push] = self._a_i
-        self.b_i_hist[-1 - self.i_push] = self._b_i
-        self.a_0_hist[-1 - self.i_push] = self._a_0[0]
+        """Store current particle properties in the history arrays."""
+        if 'r' in self.diags or self.store_history:
+            self.r_hist[-1 - self.i_push] = self.r
+        if 'z' in self.diags:
+            self.xi_hist[-1 - self.i_push] = self.xi_current
+        if 'pr' in self.diags:
+            self.pr_hist[-1 - self.i_push] = self.pr
+        if 'pz' in self.diags:
+            self.pz_hist[-1 - self.i_push] = self.pz
+        if 'w' in self.diags:
+            self.w_hist[-1 - self.i_push] = self._rho
+        if self.store_history:
+            self.i_sort_hist[-1 - self.i_push, :self.n_elec] = self.i_sort_e
+            self.i_sort_hist[-1 - self.i_push, self.n_elec:] = self.i_sort_i
+            self.psi_max_hist[-1 - self.i_push] = self._psi_max[0]
+            self.a_0_hist[-1 - self.i_push] = self._a_0[0]
 
     def _allocate_field_arrays(self):
         """Allocate arrays for the fields experienced by the particles.
@@ -342,6 +336,21 @@ class PlasmaParticles():
         arrays are used for storing the value of these fields at the location
         of each particle.
         """
+        # When storing the particle history, define the following auxiliary
+        # arrays as views of a 1D slice of the history arrays.
+        if self.store_history:
+            self._a_i = self.a_i_hist[-1]
+            self._b_i = self.b_i_hist[-1]
+            self._sum_1 = self.sum_1_hist[-1]
+            self._sum_2 = self.sum_2_hist[-1]
+            self._rho = self.w_hist[-1]
+        else:
+            self._a_i = np.zeros(self.n_elec)
+            self._b_i = np.zeros(self.n_elec)
+            self._sum_1 = np.zeros(self.n_part)
+            self._sum_2 = np.zeros(self.n_part)
+            self._rho = np.zeros(self.n_part)
+
         self._a2 = np.zeros(self.n_part)
         self._nabla_a2 = np.zeros(self.n_part)
         self._b_t_0 = np.zeros(self.n_part)
@@ -349,10 +358,48 @@ class PlasmaParticles():
         self._psi = np.zeros(self.n_part)
         self._dr_psi = np.zeros(self.n_part)
         self._dxi_psi = np.zeros(self.n_part)
-        self._sum_1 = np.zeros(self.n_part)
-        self._sum_2 = np.zeros(self.n_part)
-        self._rho = np.zeros(self.n_part)
         self._chi = np.zeros(self.n_part)
+        self._sum_3_e = np.zeros(self.n_elec)
+        self._sum_3_i = np.zeros(self.n_elec)
+        self._psi_bg_e = np.zeros(self.n_elec+1)
+        self._dr_psi_bg_e = np.zeros(self.n_elec+1)
+        self._dxi_psi_bg_e = np.zeros(self.n_elec+1)
+        self._psi_bg_i = np.zeros(self.n_elec+1)
+        self._dr_psi_bg_i = np.zeros(self.n_elec+1)
+        self._dxi_psi_bg_i = np.zeros(self.n_elec+1)
+        self._a_0 = np.zeros(1)
+        self._A = np.zeros(self.n_elec)
+        self._B = np.zeros(self.n_elec)
+        self._C = np.zeros(self.n_elec)
+        self._K = np.zeros(self.n_elec)
+        self._U = np.zeros(self.n_elec)
+        self._r_neighbor_e = np.zeros(self.n_elec+1)
+        self._r_neighbor_i = np.zeros(self.n_elec+1)
+        self._log_r_neighbor_e = np.zeros(self.n_elec+1)
+        self._log_r_neighbor_i = np.zeros(self.n_elec+1)
+
+        self._psi_max = np.zeros(1)
+
+    def _make_species_views(self):
+        """Make species arrays as partial views of the particle arrays."""
+        self.r_elec = self.r[:self.n_elec]
+        self.dr_p_elec = self.dr_p[:self.n_elec]
+        self.pr_elec = self.pr[:self.n_elec]
+        self.pz_elec = self.pz[:self.n_elec]
+        self.gamma_elec = self.gamma[:self.n_elec]
+        self.q_elec = self.q[:self.n_elec]
+        self.q_species_elec = self.q_species[:self.n_elec]
+        self.m_elec = self.m[:self.n_elec]
+
+        self.r_ion = self.r[self.n_elec:]
+        self.dr_p_ion = self.dr_p[self.n_elec:]
+        self.pr_ion = self.pr[self.n_elec:]
+        self.pz_ion = self.pz[self.n_elec:]
+        self.gamma_ion = self.gamma[self.n_elec:]
+        self.q_ion = self.q[self.n_elec:]
+        self.q_species_ion = self.q_species[self.n_elec:]
+        self.m_ion = self.m[self.n_elec:]
+
         self._psi_e = self._psi[:self.n_elec]
         self._dr_psi_e = self._dr_psi[:self.n_elec]
         self._dxi_psi_e = self._dxi_psi[:self.n_elec]
@@ -366,34 +413,12 @@ class PlasmaParticles():
         self._a2_e = self._a2[:self.n_elec]
         self._sum_1_e = self._sum_1[:self.n_elec]
         self._sum_2_e = self._sum_2[:self.n_elec]
-        self._sum_3_e = np.zeros(self.n_elec)
         self._sum_1_i = self._sum_1[self.n_elec:]
         self._sum_2_i = self._sum_2[self.n_elec:]
-        self._sum_3_i = np.zeros(self.n_elec)
-        self._psi_bg_e = np.zeros(self.n_elec+1)
-        self._dr_psi_bg_e = np.zeros(self.n_elec+1)
-        self._dxi_psi_bg_e = np.zeros(self.n_elec+1)
-        self._psi_bg_i = np.zeros(self.n_elec+1)
-        self._dr_psi_bg_i = np.zeros(self.n_elec+1)
-        self._dxi_psi_bg_i = np.zeros(self.n_elec+1)
-        self._a_0 = np.zeros(1)
-        self._a_i = np.zeros(self.n_elec)
-        self._b_i = np.zeros(self.n_elec)
-        self._A = np.zeros(self.n_elec)
-        self._B = np.zeros(self.n_elec)
-        self._C = np.zeros(self.n_elec)
-        self._K = np.zeros(self.n_elec)
-        self._U = np.zeros(self.n_elec)
-        self._r_neighbor_e = np.zeros(self.n_elec+1)
-        self._r_neighbor_i = np.zeros(self.n_elec+1)
-        self._log_r_neighbor_e = np.zeros(self.n_elec+1)
-        self._log_r_neighbor_i = np.zeros(self.n_elec+1)
         self._rho_e = self._rho[:self.n_elec]
         self._rho_i = self._rho[self.n_elec:]
         self._chi_e = self._chi[:self.n_elec]
         self._chi_i = self._chi[self.n_elec:]
-
-        self._psi_max = np.zeros(1)
 
     def _allocate_ab2_arrays(self):
         """Allocate the arrays needed for the 5th order Adams-Bashforth pusher.
@@ -408,6 +433,38 @@ class PlasmaParticles():
             size = self.n_elec
         self._dr = np.zeros((2, size))
         self._dpr = np.zeros((2, size))
+
+    def _move_auxiliary_arrays_to_next_slice(self):
+        """Point auxiliary 1D arrays to next slice of the 2D history arrays.
+
+        When storing the particle history, some auxiliary arrays (e.g., those
+        storing the cumulative sums, the a_i, b_i coefficients, ...) have to be
+    	stored at every longitudinal step. In principle, this used to be done
+        by writing the 1D auxiliary arrays into the corresponding slice of the
+        2D history arrays. However, this is time consuming as it leads to
+        copying data at every step. In order to avoid this, the auxiliary
+        arrays are defined simply as views of a 1D slice of the history arrays
+        so that the data is written directly to the history without it being a
+        copy. In order to make this work, the slice to which the auxiliary
+        arrays point to needs to be moved at each step. This is what this
+        method does.
+        """
+        self._a_i = self.a_i_hist[-1 - self.i_push]
+        self._b_i = self.b_i_hist[-1 - self.i_push]
+        self._sum_1 = self.sum_1_hist[-1 - self.i_push]
+        self._sum_2 = self.sum_2_hist[-1 - self.i_push]
+        self._rho = self.w_hist[-1 - self.i_push]
+
+        self._sum_1_e = self._sum_1[:self.n_elec]
+        self._sum_2_e = self._sum_2[:self.n_elec]
+        self._sum_1_i = self._sum_1[self.n_elec:]
+        self._sum_2_i = self._sum_2[self.n_elec:]
+        self._rho_e = self._rho[:self.n_elec]
+        self._rho_i = self._rho[self.n_elec:]
+
+        if not self.ion_motion:
+            self._sum_1_i[:] = self.sum_1_hist[-self.i_push, self.n_elec:]
+            self._sum_2_i[:] = self.sum_2_hist[-self.i_push, self.n_elec:]
 
 
 @njit_serial(error_model='numpy')
