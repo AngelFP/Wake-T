@@ -57,7 +57,7 @@ class CustomBlowoutWakefield(AnalyticalField):
         super().__init__(e_x=e_x, e_y=e_y, e_z=e_z)
 
     def _pre_gather(self, x, y, xi, t):
-        n_p = self.density(t*ct.c)
+        n_p = self.density(t*ct.c, 0.)
         b_w = self.laser.get_group_velocity(n_p)
         self.constants = np.array(
             [self.k, self.e_z_0, self.e_z_p, self.xi_fields, b_w])

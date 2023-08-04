@@ -17,7 +17,7 @@ class RZWakefield(NumericalField):
     ----------
     density_function : callable
         Function of that returns the relative value of the plasma density
-        at each `z` position.
+        at each `z` and `r` position.
     r_max : float
         Maximum radial position up to which plasma wakefield will be
         calculated.
@@ -61,6 +61,12 @@ class RZWakefield(NumericalField):
         Determines whether to take into account the terms related to the
         longitudinal derivative of the complex phase in the envelope
         solver.
+    field_diags : list, optional
+        List of fields to save to openpmd diagnostics. By default ['rho', 'E',
+        'B', 'a_mod', 'a_phase'].
+    field_diags : list, optional
+        List of particle quantities to save to openpmd diagnostics. By default
+        [].
     model_name : str, optional
         Name of the wakefield model. This will be stored in the openPMD
         diagnostics.
@@ -69,7 +75,7 @@ class RZWakefield(NumericalField):
 
     def __init__(
         self,
-        density_function: Callable[[float], float],
+        density_function: Callable[[float, float], float],
         r_max: float,
         xi_min: float,
         xi_max: float,
@@ -146,7 +152,7 @@ class RZWakefield(NumericalField):
                 self.laser.evolve(self.chi[2:-2, 2:-2], self.n_p)
 
     def _calculate_field(self, bunches):
-        self.n_p = self.density_function(self.t*ct.c)
+        self.n_p = self.density_function(self.t*ct.c, 0.)
         self.rho[:] = 0.
         self.chi[:] = 0.
         self.e_z[:] = 0.
@@ -190,7 +196,7 @@ class RZWakefield(NumericalField):
         fld_comps = []
         fld_attrs = []
         fld_arrays = []
-        rho_norm =  self.n_p * (-ct.e)
+        rho_norm = self.n_p * (-ct.e)
 
         # Add requested fields to diagnostics.
         if 'E' in self.field_diags:

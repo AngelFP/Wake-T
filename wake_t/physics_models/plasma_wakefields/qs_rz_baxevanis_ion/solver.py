@@ -16,7 +16,7 @@ from .utils import longitudinal_gradient, radial_gradient
 
 def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
                          n_r, n_xi, ppc, n_p, r_max_plasma=None,
-                         parabolic_coefficient=0., p_shape='cubic',
+                         radial_density=None, p_shape='cubic',
                          max_gamma=10., plasma_pusher='ab2',
                          ion_motion=False, ion_mass=ct.m_p,
                          free_electrons_per_ion=1,
@@ -50,15 +50,12 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     ppc : int (optional)
         Number of plasma particles per 1d cell along the radial direction.
     n_p : float
-        Plasma density in units of m^{-3}.
+        On-axis plasma density in units of m^{-3}.
     r_max_plasma : float
         Maximum radial extension of the plasma column. If `None`, the plasma
         extends up to the `r_max` boundary of the simulation box.
-    parabolic_coefficient : float
-        The coefficient for the transverse parabolic density profile. The
-        radial density distribution is calculated as
-        `n_r = n_p * (1 + parabolic_coefficient * r**2)`, where `n_p` is the
-        local on-axis plasma density.
+    radial_density : callable
+        Function defining the radial density profile.
     p_shape : str
         Particle shape to be used for the beam charge deposition. Possible
         values are 'linear' or 'cubic'.
@@ -107,9 +104,11 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     xi_max = xi_max / s_d
     dr = r_max / n_r
     dxi = (xi_max - xi_min) / (n_xi - 1)
-    parabolic_coefficient = parabolic_coefficient * s_d**2
     ppc = ppc.copy()
     ppc[:, 0] /= s_d
+
+    def radial_density_normalized(r):
+        return radial_density(r * s_d) / n_p
 
     # Maximum radial extent of the plasma.
     if r_max_plasma is None:
@@ -134,7 +133,7 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     # Calculate plasma response (including density, susceptibility, potential
     # and magnetic field)
     pp_hist = calculate_plasma_response(
-        r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
+        r_max, r_max_plasma, radial_density_normalized, dr, ppc, n_r,
         plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
         free_electrons_per_ion, n_xi, laser_a2, nabla_a2, laser_source,
         bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
@@ -156,7 +155,7 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
 
 
 def calculate_plasma_response(
-    r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r,
+    r_max, r_max_plasma, radial_density_normalized, dr, ppc, n_r,
     plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
     free_electrons_per_ion, n_xi, a2, nabla_a2, laser_source,
     bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
@@ -166,7 +165,7 @@ def calculate_plasma_response(
 ):
     # Initialize plasma particles.
     pp = PlasmaParticles(
-        r_max, r_max_plasma, parabolic_coefficient, dr, ppc, n_r, n_xi,
+        r_max, r_max_plasma, dr, ppc, n_r, n_xi, radial_density_normalized,
         max_gamma, ion_motion, ion_mass, free_electrons_per_ion,
         plasma_pusher, p_shape, store_plasma_history, particle_diags
     )

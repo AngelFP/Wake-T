@@ -39,7 +39,7 @@ class SimpleBlowoutWakefield(AnalyticalField):
         super().__init__(e_x=e_x, e_y=e_y, e_z=e_z)
 
     def _pre_gather(self, x, y, xi, t):
-        n_p = self.density(t*ct.c)
+        n_p = self.density(t*ct.c, 0)
         w_p = ge.plasma_frequency(n_p*1e-6)
         l_p = 2*np.pi*ct.c / w_p
         g_x = w_p**2/2 * ct.m_e / (ct.e * ct.c)

@@ -1,5 +1,5 @@
 """Contains the definition of the `PlasmaParticles` class."""
-from typing import Optional, List
+from typing import Optional, List, Callable
 
 import numpy as np
 import scipy.constants as ct
@@ -43,14 +43,14 @@ class PlasmaParticles():
         Maximum radial extension of the simulation box in normalized units.
     r_max_plasma : float
         Maximum radial extension of the plasma column in normalized units.
-    parabolic_coefficient : float
-        The coefficient for the transverse parabolic density profile.
     dr : float
         Radial step size of the discretized simulation box.
     ppc : float
         Number of particles per cell.
     nr, nz : int
         Number of grid elements along `r` and `z`.
+    radial_density : callable
+        Function defining the radial density profile.
     max_gamma : float, optional
         Plasma particles whose ``gamma`` exceeds ``max_gamma`` are
         considered to violate the quasistatic condition and are put at
@@ -80,11 +80,11 @@ class PlasmaParticles():
         self,
         r_max: float,
         r_max_plasma: float,
-        parabolic_coefficient: float,
         dr: float,
         ppc: float,
         nr: int,
         nz: int,
+        radial_density: Callable[[float], float],
         max_gamma: Optional[float] = 10.,
         ion_motion: Optional[bool] = True,
         ion_mass: Optional[float] = ct.m_p,
@@ -98,7 +98,7 @@ class PlasmaParticles():
         # Store parameters.
         self.r_max = r_max
         self.r_max_plasma = r_max_plasma
-        self.parabolic_coefficient = parabolic_coefficient
+        self.radial_density = radial_density
         self.dr = dr
         self.ppc = ppc
         self.pusher = pusher
@@ -144,7 +144,7 @@ class PlasmaParticles():
         pr = np.zeros(self.n_elec)
         pz = np.zeros(self.n_elec)
         gamma = np.ones(self.n_elec)
-        q = dr_p * r + dr_p * self.parabolic_coefficient * r**3
+        q = dr_p * r * self.radial_density(r)
         q *= self.free_electrons_per_ion
         m_e = np.ones(self.n_elec)
         m_i = np.ones(self.n_elec) * self.ion_mass / ct.m_e

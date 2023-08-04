@@ -44,7 +44,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
     Parameters
     ----------
     density_function : callable
-        Function that returns the density value at the given position z.
+        Function that returns the density value at the given position (z, r).
         This parameter is given by the ``PlasmaStage`` and does not need
         to be specified by the user.
     r_max : float
@@ -83,14 +83,6 @@ class Quasistatic2DWakefieldIon(RZWakefield):
     r_max_plasma : float, optional
         Maximum radial extension of the plasma column. If ``None``, the
         plasma extends up to the ``r_max`` boundary of the simulation box.
-    parabolic_coefficient : float or callable, optional
-        The coefficient for the transverse parabolic density profile. The
-        radial density distribution is calculated as
-        ``n_r = n_p * (1 + parabolic_coefficient * r**2)``, where n_p is
-        the local on-axis plasma density. If a ``float`` is provided, the
-        same value will be used throwout the stage. Alternatively, a
-        function which returns the value of the coefficient at the given
-        position ``z`` (e.g. ``def func(z)``) might also be provided.
     p_shape : str, optional
         Particle shape to be used for the beam charge deposition. Possible
         values are ``'linear'`` or ``'cubic'`` (default).
@@ -159,7 +151,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
 
     def __init__(
         self,
-        density_function: Callable[[float], float],
+        density_function: Callable[[float, float], float],
         r_max: float,
         xi_min: float,
         xi_max: float,
@@ -168,7 +160,6 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         ppc: Optional[ArrayLike] = 2,
         dz_fields: Optional[float] = None,
         r_max_plasma: Optional[float] = None,
-        parabolic_coefficient: Optional[float] = 0.,
         p_shape: Optional[str] = 'cubic',
         max_gamma: Optional[float] = 10,
         plasma_pusher: Optional[str] = 'ab2',
@@ -190,8 +181,6 @@ class Quasistatic2DWakefieldIon(RZWakefield):
     ) -> None:
         self.ppc = np.array(ppc)
         self.r_max_plasma = r_max_plasma if r_max_plasma is not None else r_max
-        self.parabolic_coefficient = self._get_parabolic_coefficient_fn(
-            parabolic_coefficient)
         self.p_shape = p_shape
         self.max_gamma = max_gamma
         self.plasma_pusher = plasma_pusher
@@ -234,7 +223,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                            self.e_z, self.b_t, self.xi_fld, self.r_fld]
 
     def _calculate_wakefield(self, bunches):
-        parabolic_coefficient = self.parabolic_coefficient(self.t*ct.c)
+        radial_density = self._get_radial_density(self.t*ct.c)
 
         # Get square of laser envelope
         if self.laser is not None:
@@ -312,7 +301,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             laser_a2, self.r_max, self.xi_min, self.xi_max,
             self.n_r, self.n_xi, self.ppc, self.n_p,
             r_max_plasma=self.r_max_plasma,
-            parabolic_coefficient=parabolic_coefficient,
+            radial_density=radial_density,
             p_shape=self.p_shape, max_gamma=self.max_gamma,
             plasma_pusher=self.plasma_pusher, ion_motion=self.ion_motion,
             ion_mass=self.ion_mass,
@@ -326,18 +315,11 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             particle_diags=self.particle_diags
         )
 
-    def _get_parabolic_coefficient_fn(self, parabolic_coefficient):
-        """ Get parabolic_coefficient profile function """
-        if isinstance(parabolic_coefficient, float):
-            def uniform_parabolic_coefficient(z):
-                return np.ones_like(z) * parabolic_coefficient
-            return uniform_parabolic_coefficient
-        elif callable(parabolic_coefficient):
-            return parabolic_coefficient
-        else:
-            raise ValueError(
-                'Type {} not supported for parabolic_coefficient.'.format(
-                    type(parabolic_coefficient)))
+    def _get_radial_density(self, z_current):
+        """ Get radial density profile function """
+        def radial_density(r):
+            return self.density_function(z_current, r)
+        return radial_density
 
     def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name):
         # If using adaptive grids, gather fields from them.
