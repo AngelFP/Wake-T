@@ -13,6 +13,14 @@ from typing import Optional
 import numpy as np
 import scipy.constants as ct
 from scipy.special import genlaguerre, binom
+try:
+    from lasy.profiles.from_openpmd_profile import FromOpenPMDProfile
+    from lasy.laser import Laser
+    from lasy.utils.laser_utils import field_to_a0
+    lasy_installed = True
+except ImportError:
+    lasy_installed = False
+    
 
 from .envelope_solver import evolve_envelope
 from .envelope_solver_non_centered import evolve_envelope_non_centered
@@ -578,3 +586,51 @@ class FlattenedGaussianPulse(LaserPulse):
     def _envelope_function(self, xi, r, z_pos):
         """Complex envelope of the flattened Gaussian beam."""
         return self.summed_pulse.envelope_function(xi, r, z_pos)
+
+
+class OpenPMDPulse(LaserPulse):
+    def __init__(
+        self,
+        path: str,
+        iteration: int,
+        field: str = 'E',
+        coord: str = 'x',
+        envelope: bool = False,
+        prefix: str = None, # only needed if `envelope=True`
+        theta: float = 0.
+    ) -> None:
+        assert lasy_installed, (
+            "Using an `OpenPMDPulse` requires `lasy` to be installed. "
+            "You can do so with `pip install lasy`."
+        )
+        self.lasy_profile = FromOpenPMDProfile(
+            path=path,
+            iteration=iteration,
+            pol=(0,0),  # probably not needed
+            field=field,
+            coord=coord,
+            envelope=envelope,
+            prefix=prefix,
+            theta=theta
+        )
+        super().__init__(self.lasy_profile.lambda0, 'linear')
+
+    def _envelope_function(self, xi, r, z_pos):
+        # Create laser
+        t = -xi / ct.c
+        t_min = np.min(t)
+        t_max = np.max(t)
+        t_max -= t_min
+        t_min = 0
+        r_min = np.min(r)
+        r_max = np.max(r)
+        laser = Laser(
+            dim='rt',
+            lo=(r_min, t_min),
+            hi=(r_max, t_max),
+            npoints=(xi.shape[1], xi.shape[0]),
+            profile=self.lasy_profile,
+            n_azimuthal_modes=1
+        )
+        a_env = field_to_a0(laser.grid, laser.profile.omega0)[0].T[::-1]
+        return a_env
