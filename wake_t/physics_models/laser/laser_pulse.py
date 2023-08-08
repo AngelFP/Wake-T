@@ -606,7 +606,7 @@ class OpenPMDPulse(LaserPulse):
         self.lasy_profile = FromOpenPMDProfile(
             path=path,
             iteration=iteration,
-            pol=(0,0),  # probably not needed
+            pol=(1, 0),  # probably not needed
             field=field,
             coord=coord,
             envelope=envelope,
