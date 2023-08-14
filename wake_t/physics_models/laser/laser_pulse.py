@@ -16,11 +16,11 @@ from scipy.special import genlaguerre, binom
 try:
     from lasy.profiles.from_openpmd_profile import FromOpenPMDProfile
     from lasy.laser import Laser
-    from lasy.utils.laser_utils import field_to_a0
+    from lasy.utils.laser_utils import field_to_vector_potential
     lasy_installed = True
 except ImportError:
     lasy_installed = False
-    
+
 
 from .envelope_solver import evolve_envelope
 from .envelope_solver_non_centered import evolve_envelope_non_centered
@@ -596,7 +596,7 @@ class OpenPMDPulse(LaserPulse):
         field: str = 'E',
         coord: str = 'x',
         envelope: bool = False,
-        prefix: str = None, # only needed if `envelope=True`
+        prefix: str = None,  # only needed if `envelope=True`
         theta: float = 0.
     ) -> None:
         assert lasy_installed, (
@@ -632,5 +632,7 @@ class OpenPMDPulse(LaserPulse):
             profile=self.lasy_profile,
             n_azimuthal_modes=1
         )
-        a_env = field_to_a0(laser.grid, laser.profile.omega0)[0].T[::-1]
+        a_env = field_to_vector_potential(laser.grid, laser.profile.omega0)
+        # Get, transpose and invert 2D slice
+        a_env = a_env[0].T[::-1]
         return a_env
