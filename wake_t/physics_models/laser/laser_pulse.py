@@ -589,6 +589,33 @@ class FlattenedGaussianPulse(LaserPulse):
 
 
 class OpenPMDPulse(LaserPulse):
+    """Read a laser pulse from an openPMD file.
+
+    This class requires `lasy <https://lasydoc.readthedocs.io>`_ to be
+    installed.
+
+    Parameters
+    ----------
+    path : str
+        Path to the openPMD file or folder containing the laser data.
+    iteration : int
+        Iteration at which to read the laser pulse.
+    field : str
+        Name of the field containing the laser pulse.
+    coord : string
+        Coordinate of the field containing the laser pulse.
+    envelope : boolean
+        Whether the file represents a laser envelope.
+        If not, the envelope is obtained from the electric field
+        using a Hilbert transform.
+    prefix : string
+        Prefix of the openPMD file from which the envelope is read.
+        Only used when envelope=True.
+        The provided iteration is read from <path>/<prefix>_%T.h5.
+    theta : float or None, optional
+        Only used if the openPMD input is in thetaMode geometry.
+        The angle of the plane of observation, with respect to the x axis.
+    """
     def __init__(
         self,
         path: str,
