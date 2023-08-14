@@ -10,3 +10,4 @@ Laser pulses
    LaguerreGaussPulse
    FlattenedGaussianPulse
    SummedPulse
+   OpenPMDPulse
