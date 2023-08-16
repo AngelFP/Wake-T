@@ -184,12 +184,17 @@ class RZWakefield(NumericalField):
             [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * self.n_p * (-ct.e)]
         ]
         if self.laser is not None:
-            fld_names += ['a_mod', 'a_phase']
-            fld_comps += [None, None]
-            fld_attrs += [{'polarization': self.laser.polarization}, {}]
+            fld_names += ['a_mod', 'a_phase', 'a']
+            fld_comps += [None, None, None]
+            fld_attrs += [
+                {'polarization': self.laser.polarization},
+                {},
+                {'angularFrequency': 2 * np.pi * ct.c / self.laser.l_0}
+            ]
             fld_arrays += [
                 [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))],
-                [np.ascontiguousarray(np.angle(self.laser.get_envelope().T))]
+                [np.ascontiguousarray(np.angle(self.laser.get_envelope().T))],
+                [np.ascontiguousarray(self.laser.get_envelope().T)]
             ]
         fld_comp_pos = [fld_position] * len(fld_names)
 
