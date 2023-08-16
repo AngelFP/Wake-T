@@ -604,10 +604,6 @@ class OpenPMDPulse(LaserPulse):
         Name of the field containing the laser pulse.
     coord : string
         Coordinate of the field containing the laser pulse.
-    envelope : boolean
-        Whether the file represents a laser envelope.
-        If not, the envelope is obtained from the electric field
-        using a Hilbert transform.
     prefix : string
         Prefix of the openPMD file from which the envelope is read.
         Only used when envelope=True.
@@ -622,7 +618,6 @@ class OpenPMDPulse(LaserPulse):
         iteration: int,
         field: str = 'E',
         coord: str = 'x',
-        envelope: bool = False,
         prefix: str = None,  # only needed if `envelope=True`
         theta: float = 0.
     ) -> None:
@@ -636,7 +631,6 @@ class OpenPMDPulse(LaserPulse):
             pol=(1, 0),  # probably not needed
             field=field,
             coord=coord,
-            envelope=envelope,
             prefix=prefix,
             theta=theta
         )
