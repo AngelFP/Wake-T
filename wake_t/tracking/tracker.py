@@ -10,6 +10,9 @@ from wake_t.fields.base import Field
 from wake_t.fields.analytical_field import AnalyticalField
 from wake_t.fields.numerical_field import NumericalField
 from wake_t.diagnostics.openpmd_diag import OpenPMDDiagnostics
+from wake_t.utilities.numba import (
+    num_threads, set_num_threads, get_num_threads
+)
 from .progress_bar import get_progress_bar
 
 
@@ -125,6 +128,11 @@ class Tracker():
             Each item is another list with `n_diag` copies of the particle
             bunch along the tracking.
         """
+        # Get current number of threads before setting it to the number
+        # requested by Wake-T.
+        num_threads_outside_waket = get_num_threads()
+        set_num_threads(num_threads)
+
         # Initialize progress bar.
         progress_bar = get_progress_bar(self.section_name, self.t_final*ct.c)
 
@@ -214,6 +222,11 @@ class Tracker():
 
         # Close progress bar.
         progress_bar.close()
+
+        # Reset the number of threads to the value outside of Wake-T.
+        # This should help avoiding Wake-T to affect the behavior of other
+        # applications that require a different number of threads.
+        set_num_threads(num_threads_outside_waket)
 
         return self.bunch_list
 
