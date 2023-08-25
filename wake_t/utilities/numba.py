@@ -19,6 +19,14 @@ if 'WAKET_DISABLE_CACHING' in os.environ:
         caching = False
 
 
+# Check if the environment variable WAKET_DISABLE_CACHING is set to 1
+# and in that case, disable caching
+parallel = False
+if 'WAKET_PARALLEL' in os.environ:
+    if int(os.environ['WAKET_PARALLEL']) == 1:
+        parallel = True
+
+
 # Define custom njit decorator for serial methods.
 def njit_serial(*args, **kwargs):
     return njit(*args, cache=caching, **kwargs)
@@ -26,4 +34,4 @@ def njit_serial(*args, **kwargs):
 
 # Define custom njit decorator for parallel methods.
 def njit_parallel(*args, **kwargs):
-    return njit(*args, cache=caching, parallel=True, **kwargs)
+    return njit(*args, cache=caching, parallel=parallel, **kwargs)

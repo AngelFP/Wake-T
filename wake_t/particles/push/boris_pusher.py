@@ -5,8 +5,9 @@ Authors: Jorge Ordóñez Carrasco, Ángel Ferran Pousa.
 """
 import numpy as np
 import scipy.constants as ct
+from numba import prange
 
-from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.numba import njit_parallel
 from wake_t.fields.gather import gather_fields
 
 
@@ -42,9 +43,9 @@ def apply_boris_pusher(bunch, fields, t, dt):
         bunch.x, bunch.y, bunch.xi, bunch.px, bunch.py, bunch.pz, dt)
 
 
-@njit_serial()
+@njit_parallel()
 def apply_half_position_push(x, y, xi, px, py, pz, dt):
-    for i in range(x.shape[0]):
+    for i in prange(x.shape[0]):
         # Get particle momentum
         px_i = px[i]
         py_i = py[i]
@@ -58,11 +59,11 @@ def apply_half_position_push(x, y, xi, px, py, pz, dt):
         xi[i] += 0.5 * (pz_i * c_over_gamma_i - ct.c) * dt
 
 
-@njit_serial()
+@njit_parallel()
 def push_momentum(px, py, pz, ex, ey, ez, bx, by, bz, dt, q_over_mc):
     k = q_over_mc * dt / 2
 
-    for i in range(px.shape[0]):
+    for i in prange(px.shape[0]):
         # Get particle momentum and fields.
         px_i = px[i]
         py_i = py[i]
