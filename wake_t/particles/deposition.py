@@ -10,7 +10,7 @@ implemented in FBPIC (https://github.com/fbpic/fbpic).
 import math
 import numpy as np
 
-from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.numba import njit_parallel, prange
 
 
 def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
@@ -59,7 +59,7 @@ def deposit_3d_distribution(z, x, y, w, z_min, r_min, nz, nr, dz, dr,
         raise ValueError(err_string)
 
 
-@njit_serial
+@njit_parallel
 def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
                                    deposition_array, use_ruyten=False):
     """ Calculate charge distribution assuming linear particle shape. """
@@ -83,7 +83,7 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     r_max = nr * dr
 
     # Loop over particles.
-    for i in range(z.shape[0]):
+    for i in prange(z.shape[0]):
         # Get particle components.
         x_i = x[i]
         y_i = y[i]
@@ -146,7 +146,7 @@ def deposit_3d_distribution_linear(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     return
 
 
-@njit_serial
+@njit_parallel
 def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
                                   deposition_array, use_ruyten=False):
     """ Calculate charge distribution assuming cubic particle shape. """
@@ -171,7 +171,7 @@ def deposit_3d_distribution_cubic(z, x, y, q, z_min, r_min, nz, nr, dz, dr,
     r_max = nr * dr
 
     # Loop over particles.
-    for i in range(z.shape[0]):
+    for i in prange(z.shape[0]):
         # Get particle components.
         x_i = x[i]
         y_i = y[i]
