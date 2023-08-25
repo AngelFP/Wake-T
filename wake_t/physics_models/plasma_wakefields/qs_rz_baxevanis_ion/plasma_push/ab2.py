@@ -85,7 +85,7 @@ def calculate_derivatives(
         dpr[i] = (gamma[i] * dr_psi[i] * inv_psi_i
                   - b_theta_bar[i]
                   - b_theta_0[i]
-                  - nabla_a2[i] * 0.5 * inv_psi_i) * q_over_m
+                  - nabla_a2[i] * 0.5 * inv_psi_i * q_over_m) * q_over_m
         dr[i] = pr[i] * inv_psi_i
 
 
