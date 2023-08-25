@@ -252,6 +252,14 @@ class RZWakefield(NumericalField):
                 fld_comps += [None]
                 fld_attrs += [{}]
                 fld_arrays += [[np.ascontiguousarray(a_phase)]]
+            if 'a' in self.field_diags:
+                a = self.laser.get_envelope().T
+                fld_names += ['a']
+                fld_comps += [None]
+                fld_attrs += [
+                    {'angularFrequency': 2 * np.pi * ct.c / self.laser.l_0}
+                ]
+                fld_arrays += [[np.ascontiguousarray(a)]]
 
         fld_comp_pos = [fld_position] * len(fld_names)
 

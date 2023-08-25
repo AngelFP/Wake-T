@@ -13,6 +13,14 @@ from typing import Optional
 import numpy as np
 import scipy.constants as ct
 from scipy.special import genlaguerre, binom
+try:
+    from lasy.profiles.from_openpmd_profile import FromOpenPMDProfile
+    from lasy.laser import Laser
+    from lasy.utils.laser_utils import field_to_vector_potential
+    lasy_installed = True
+except ImportError:
+    lasy_installed = False
+
 
 from .envelope_solver import evolve_envelope
 from .envelope_solver_non_centered import evolve_envelope_non_centered
@@ -578,3 +586,74 @@ class FlattenedGaussianPulse(LaserPulse):
     def _envelope_function(self, xi, r, z_pos):
         """Complex envelope of the flattened Gaussian beam."""
         return self.summed_pulse.envelope_function(xi, r, z_pos)
+
+
+class OpenPMDPulse(LaserPulse):
+    """Read a laser pulse from an openPMD file.
+
+    This class requires `lasy <https://lasydoc.readthedocs.io>`_ to be
+    installed.
+
+    Parameters
+    ----------
+    path : str
+        Path to the openPMD file or folder containing the laser data.
+    iteration : int
+        Iteration at which to read the laser pulse.
+    field : str
+        Name of the field containing the laser pulse.
+    coord : string
+        Coordinate of the field containing the laser pulse.
+    prefix : string
+        Prefix of the openPMD file from which the envelope is read.
+        Only used when envelope=True.
+        The provided iteration is read from <path>/<prefix>_%T.h5.
+    theta : float or None, optional
+        Only used if the openPMD input is in thetaMode geometry.
+        The angle of the plane of observation, with respect to the x axis.
+    """
+    def __init__(
+        self,
+        path: str,
+        iteration: int,
+        field: str = 'E',
+        coord: str = 'x',
+        prefix: str = None,
+        theta: float = 0.
+    ) -> None:
+        assert lasy_installed, (
+            "Using an `OpenPMDPulse` requires `lasy` to be installed. "
+            "You can do so with `pip install lasy`."
+        )
+        self.lasy_profile = FromOpenPMDProfile(
+            path=path,
+            iteration=iteration,
+            pol=(1, 0),  # dummy value, currently not needed
+            field=field,
+            coord=coord,
+            prefix=prefix,
+            theta=theta
+        )
+        super().__init__(self.lasy_profile.lambda0, 'linear')
+
+    def _envelope_function(self, xi, r, z_pos):
+        # Create laser
+        t = -xi / ct.c
+        t_min = np.min(t)
+        t_max = np.max(t)
+        t_max -= t_min
+        t_min = 0
+        r_min = np.min(r)
+        r_max = np.max(r)
+        laser = Laser(
+            dim='rt',
+            lo=(r_min, t_min),
+            hi=(r_max, t_max),
+            npoints=(xi.shape[1], xi.shape[0]),
+            profile=self.lasy_profile,
+            n_azimuthal_modes=1
+        )
+        a_env = field_to_vector_potential(laser.grid, laser.profile.omega0)
+        # Get, transpose and invert 2D slice
+        a_env = a_env[0].T[::-1]
+        return a_env
