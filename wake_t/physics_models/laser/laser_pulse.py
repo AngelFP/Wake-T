@@ -618,7 +618,7 @@ class OpenPMDPulse(LaserPulse):
         iteration: int,
         field: str = 'E',
         coord: str = 'x',
-        prefix: str = None,  # only needed if `envelope=True`
+        prefix: str = None,
         theta: float = 0.
     ) -> None:
         assert lasy_installed, (
@@ -628,7 +628,7 @@ class OpenPMDPulse(LaserPulse):
         self.lasy_profile = FromOpenPMDProfile(
             path=path,
             iteration=iteration,
-            pol=(1, 0),  # probably not needed
+            pol=(1, 0),  # dummy value, currently not needed
             field=field,
             coord=coord,
             prefix=prefix,
