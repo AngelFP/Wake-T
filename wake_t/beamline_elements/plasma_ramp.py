@@ -121,7 +121,7 @@ class PlasmaRamp(PlasmaStage):
         plasma_dens_top: Optional[float] = None,
         plasma_dens_down: Optional[float] = None,
         position_down: Optional[float] = None,
-        bunch_pusher: Optional[str] = 'rk4',
+        bunch_pusher: Optional[str] = 'boris',
         dt_bunch: Optional[Union[float, int]] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Plasma ramp',

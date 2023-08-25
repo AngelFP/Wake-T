@@ -44,7 +44,7 @@ class FieldElement():
         self,
         length: float,
         dt_bunch: Union[float, str],
-        bunch_pusher: Optional[str] = 'rk4',
+        bunch_pusher: Optional[str] = 'boris',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'field element',
         fields: Optional[List[Field]] = [],

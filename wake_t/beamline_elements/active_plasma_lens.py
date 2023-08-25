@@ -67,7 +67,7 @@ class ActivePlasmaLens(PlasmaStage):
         wakefields: bool = False,
         density: Optional[Union[float, Callable[[float], float]]] = None,
         wakefield_model: Optional[str] = 'quasistatic_2d',
-        bunch_pusher: Optional[str] = 'rk4',
+        bunch_pusher: Optional[str] = 'boris',
         dt_bunch: Optional[Union[float, int]] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Active plasma lens',

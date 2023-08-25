@@ -67,7 +67,7 @@ class PlasmaStage(FieldElement):
         length: float,
         density: Union[float, Callable[[float], float]],
         wakefield_model: Optional[str] = 'simple_blowout',
-        bunch_pusher: Optional[str] = 'rk4',
+        bunch_pusher: Optional[str] = 'boris',
         dt_bunch: Optional[Union[float, int]] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Plasma stage',
