@@ -8,6 +8,7 @@ import scipy.constants as ct
 import wake_t.physics_models.plasma_wakefields as wf
 from wake_t.fields.base import Field
 from .field_element import FieldElement
+from wake_t.particles.particle_bunch import ParticleBunch
 
 
 wakefield_models = {
@@ -39,10 +40,13 @@ class PlasmaStage(FieldElement):
         the specified fields. Possible values are ``'rk4'`` (Runge-Kutta
         method of 4th order) or ``'boris'`` (Boris method).
     dt_bunch : float
-        The time step for evolving the particle bunches. If ``None``, it
-        will be automatically set to ``dt = T/(10*2*pi)``, where T is the
-        smallest expected betatron period of the bunch along the plasma
-        stage.
+        The time step for evolving the particle bunches. An adaptive time
+        step can be used if this parameter is set to ``'auto'`` and a
+        ``auto_dt_bunch`` function is provided.
+        By default the automatic function is set to ``dt = T/(10*2*pi)``,
+        where T is the smallest expected betatron period of the bunch
+        along the plasma stage.
+
     n_out : int
         Number of times along the stage in which the particle distribution
         should be returned (A list with all output bunches is returned
@@ -50,6 +54,10 @@ class PlasmaStage(FieldElement):
     name : str
         Name of the plasma stage. This is only used for displaying the
         progress bar during tracking. By default, ``'Plasma stage'``.
+    auto_dt_bunch : callable, optional
+        Function used to determine the adaptive time step for bunches in
+        which the time step is set to ``'auto'``. The function should take
+        solely a ``ParticleBunch`` as argument.
     **model_params
         Keyword arguments which will be given to the wakefield model. Each
         model requires a different set of parameters. See the documentation
@@ -68,10 +76,11 @@ class PlasmaStage(FieldElement):
         density: Union[float, Callable[[float], float]],
         wakefield_model: Optional[str] = 'simple_blowout',
         bunch_pusher: Optional[str] = 'rk4',
-        dt_bunch: Optional[Union[float, int]] = 'auto',
+        dt_bunch: Optional[Union[float, str]] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Plasma stage',
         external_fields: Optional[List[Field]] = [],
+        auto_dt_bunch: Optional[Callable[[ParticleBunch], float]] = None,
         **model_params
     ) -> None:
         self.density = self._get_density_profile(density)
@@ -81,6 +90,10 @@ class PlasmaStage(FieldElement):
         if self.wakefield is not None:
             fields.append(self.wakefield)
         fields.extend(self.external_fields)
+        if auto_dt_bunch is not None:
+            self.auto_dt_bunch = auto_dt_bunch
+        else:
+            self.auto_dt_bunch = self._get_optimized_dt
         super().__init__(
             length=length,
             dt_bunch=dt_bunch,
@@ -88,7 +101,8 @@ class PlasmaStage(FieldElement):
             n_out=n_out,
             name=name,
             fields=fields,
-            auto_dt_bunch=self._get_optimized_dt
+            # auto_dt_bunch=self._get_optimized_dt
+            auto_dt_bunch=self.auto_dt_bunch
         )
 
     def _get_density_profile(self, density):
