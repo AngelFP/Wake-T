@@ -90,7 +90,7 @@ class RZWakefield(NumericalField):
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
         field_diags: Optional[List[str]] = ['rho', 'E', 'B', 'a_mod',
-                                            'a_phase'],
+                                            'a_phase', 'a'],
         particle_diags: Optional[List[str]] = [],
         model_name: Optional[str] = ''
     ) -> None:
