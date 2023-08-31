@@ -630,6 +630,17 @@ class OpenPMDPulse(LaserPulse):
         sequence, or as a single number, in which case it is equal for
         all axes. By default `(5, 0)`, which only smooths along the radial
         direction.
+
+    Notes
+    -----
+    When the grid of the openPMD laser pulse and the grid of the Wake-T
+    simulation have a different extent or resolution, the original
+    pulse will be linearly interpolated into the Wake-T grid. This is can
+    sometimes lead to numerical issues that manifest as a radial oscillation
+    of the laser pulse (and, as a result, of the plasma wake). To mitigate
+    this, it is important to avoid interpolating along the radial direction.
+    This can be achieved if the ratios between the original and the Wake-T
+    resolution and extent are an integer.
     """
     def __init__(
         self,
