@@ -23,7 +23,10 @@ def test_gradients():
     longitudinal_gradient(f, dz, dz_f)
     radial_gradient(f, dr, dr_f)
 
-    dz_f_np, dr_f_np = np.gradient(f, dz, dr, edge_order=2)
+    dz_f_np = np.gradient(f, dz, edge_order=2, axis=0)
+    dr_f_np = np.gradient(
+        np.concatenate((f[:, ::-1], f), axis=1), dr, edge_order=2, axis=1
+    )[:, nr:]
 
     np.testing.assert_array_almost_equal(dz_f, dz_f_np)
     np.testing.assert_array_almost_equal(dr_f, dr_f_np)

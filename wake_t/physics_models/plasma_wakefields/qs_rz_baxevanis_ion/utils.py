@@ -131,7 +131,7 @@ def radial_gradient(f, dr, dr_f):
             f_left = f[i, j - 1]
             f_right = f[i, j + 1]
             dr_f[i, j] = (f_right - f_left) * inv_h
-        dr_f[i, 0] = a * f[i, 0] + b * f[i, 1] + c * f[i, 2]
+        dr_f[i, 0] = (f[i, 1] - f[i, 0]) * inv_h
         dr_f[i, -1] = - a * f[i, -1] - b * f[i, -2] - c * f[i, -3]
 
 
