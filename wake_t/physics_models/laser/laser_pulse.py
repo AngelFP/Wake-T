@@ -700,7 +700,7 @@ class OpenPMDPulse(LaserPulse):
 
         # Smooth radial edges of profile.
         if self._smooth_edges:
-            r_smooth = np.min(laser.grid.axes[0], np.max(r))
+            r_smooth = min(np.max(self.lasy_profile.axes['r']), np.max(r))
             a_env *= np.exp(- 2 * (r / (r_smooth * 0.85)) ** 8)
 
         return a_env
