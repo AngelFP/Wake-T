@@ -109,7 +109,8 @@ def radial_gradient(f, dr, dr_f):
 
     This method is equivalent to using `np.gradient` with
     `edge_order=2`, but is several times faster as it is compiled with numba
-    and is more specialized.
+    and is more specialized. It takes advantage of the axial symmetry to
+    calculate the derivative on axis.
 
     Parameters
     ----------
