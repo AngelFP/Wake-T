@@ -351,47 +351,49 @@ class Quasistatic2DWakefieldIon(RZWakefield):
     def _get_plasma_particle_diagnostics(self, global_time):
         """Return dict with plasma particle diagnostics."""
         diag_dict = {}
+        elec_name = 'plasma_electrons'
+        ions_name = 'plasma_ions'
         if len(self.particle_diags) > 0:
             n_elec = int(self.pp['r_hist'].shape[-1] / 2)
             s_d = ge.plasma_skin_depth(self.n_p * 1e-6)        
-            diag_dict['plasma_e'] = {
+            diag_dict[elec_name] = {
                 'q': - ct.e,
                 'm': ct.m_e,
-                'name': 'plasma_e',
+                'name': elec_name,
                 'geometry': 'rz'
             }
-            diag_dict['plasma_i'] = {
+            diag_dict[ions_name] = {
                 'q': ct.e * self.free_electrons_per_ion,
                 'm': self.ion_mass,
-                'name': 'plasma_i',
+                'name': ions_name,
                 'geometry': 'rz'
             }
             if 'r' in self.particle_diags:
                 r_e = self.pp['r_hist'][:, :n_elec] * s_d
                 r_i = self.pp['r_hist'][:, n_elec:] * s_d
-                diag_dict['plasma_e']['r'] = r_e
-                diag_dict['plasma_i']['r'] = r_i
+                diag_dict[elec_name]['r'] = r_e
+                diag_dict[ions_name]['r'] = r_i
             if 'z' in self.particle_diags:
                 z_e = self.pp['xi_hist'][:, :n_elec] * s_d + self.xi_max
                 z_i = self.pp['xi_hist'][:, n_elec:] * s_d + self.xi_max
-                diag_dict['plasma_e']['z'] = z_e
-                diag_dict['plasma_i']['z'] = z_i
-                diag_dict['plasma_e']['z_off'] = global_time * ct.c
-                diag_dict['plasma_i']['z_off'] = global_time * ct.c
+                diag_dict[elec_name]['z'] = z_e
+                diag_dict[ions_name]['z'] = z_i
+                diag_dict[elec_name]['z_off'] = global_time * ct.c
+                diag_dict[ions_name]['z_off'] = global_time * ct.c
             if 'pr' in self.particle_diags:
                 pr_e = self.pp['pr_hist'][:, :n_elec] * ct.m_e * ct.c
                 pr_i = self.pp['pr_hist'][:, n_elec:] * self.ion_mass * ct.c
-                diag_dict['plasma_e']['pr'] = pr_e
-                diag_dict['plasma_i']['pr'] = pr_i
+                diag_dict[elec_name]['pr'] = pr_e
+                diag_dict[ions_name]['pr'] = pr_i
             if 'pz' in self.particle_diags:
                 pz_e = self.pp['pz_hist'][:, :n_elec] * ct.m_e * ct.c
                 pz_i = self.pp['pz_hist'][:, n_elec:] * self.ion_mass * ct.c
-                diag_dict['plasma_e']['pz'] = pz_e
-                diag_dict['plasma_i']['pz'] = pz_i
+                diag_dict[elec_name]['pz'] = pz_e
+                diag_dict[ions_name]['pz'] = pz_i
             if 'w' in self.particle_diags:
                 w_e = self.pp['w_hist'][:, :n_elec] * self.n_p
                 w_i = self.pp['w_hist'][:, n_elec:] * (
                     self.n_p / self.free_electrons_per_ion)
-                diag_dict['plasma_e']['w'] = w_e
-                diag_dict['plasma_i']['w'] = w_i
+                diag_dict[elec_name]['w'] = w_e
+                diag_dict[ions_name]['w'] = w_i
         return diag_dict
