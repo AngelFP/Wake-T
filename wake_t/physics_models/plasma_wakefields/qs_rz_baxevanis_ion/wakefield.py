@@ -314,6 +314,11 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             calculate_rho=calculate_rho,
             particle_diags=self.particle_diags
         )
+        
+        # Calculate fields on adaptive grids.
+        if self.use_adaptive_grids:
+            for _, grid in self.bunch_grids.items():
+                grid.calculate_fields(self.n_p, self.pp)
 
     def _get_radial_density(self, z_current):
         """ Get radial density profile function """
