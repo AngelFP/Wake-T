@@ -330,8 +330,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         # If using adaptive grids, gather fields from them.
         if self.use_adaptive_grids:
             grid = self.bunch_grids[bunch_name]
-            grid.update_if_needed(x, y, z)
-            grid.calculate_fields(self.n_p, self.pp)
+            grid.update_if_needed(x, y, z, self.n_p, self.pp)
             grid.gather_fields(x, y, z, ex, ey, ez, bx, by, bz)
         # Otherwise, use base implementation.
         else:

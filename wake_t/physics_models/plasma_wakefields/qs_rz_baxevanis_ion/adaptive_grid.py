@@ -50,14 +50,19 @@ class AdaptiveGrid():
 
         self._update(x, y, xi)
 
-    def update_if_needed(self, x, y, xi):
+    def update_if_needed(self, x, y, xi, n_p, pp_hist):
         """
-        Update the grid size if bunch extent has changed sufficiently.
+        Update grid size and fields if bunch extent has changed sufficiently.
 
         Parameters
         ----------
         x, y, xi : ndarray
             The transverse and longitudinal coordinates of the bunch particles.
+        n_p : float
+            The plasma density.
+        pp_hist : dict
+            Dictionary containing arrays with the history of the plasma
+            particles.
         """
         r_max_beam = np.max(np.sqrt(x**2 + y**2))
         xi_min_beam = np.min(xi)
@@ -69,10 +74,9 @@ class AdaptiveGrid():
             (r_max_beam < self.r_grid[-1] * 0.9)
         ):
             self._update(x, y, xi)
-        else:
-            self._reset_fields()
+            self.calculate_fields(n_p, pp_hist, reset_fields=False)
 
-    def calculate_fields(self, n_p, pp_hist):
+    def calculate_fields(self, n_p, pp_hist, reset_fields=True):
         """Calculate the E and B fields from the plasma at the grid.
 
         Parameters
@@ -82,7 +86,11 @@ class AdaptiveGrid():
         pp_hist : dict
             Dictionary containing arrays with the history of the plasma
             particles.
+        reset_fields : bool
+            Whether the fields should be reset to zero before calculating.
         """
+        if reset_fields:
+            self._reset_fields()
         s_d = ge.plasma_skin_depth(n_p * 1e-6)
         calculate_fields_on_grid(
             self.i_grid, self.r_grid, s_d,
