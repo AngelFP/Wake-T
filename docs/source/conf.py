@@ -75,12 +75,12 @@ html_theme_options = {
         {
             "name": "GitHub",
             "url": "https://github.com/AngelFP/Wake-T",
-            "icon": "fab fa-github-square",
+            "icon": "fa-brands fa-github",
         },
         {
             "name": "Slack",
             "url": "https://wake-t.slack.com/",
-            "icon": "fab fa-slack",
+            "icon": "fa-brands fa-slack",
         },
     ]
 }
