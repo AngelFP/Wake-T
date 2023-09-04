@@ -83,7 +83,9 @@ html_theme_options = {
             "icon": "fa-brands fa-slack",
         },
     ],
-    "use_edit_page_button": True,
+    "use_edit_page_button": True,    
+    "pygment_light_style": "default",
+    "pygment_dark_style": "monokai",
 }
 
 html_context = {
