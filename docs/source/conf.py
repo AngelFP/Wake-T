@@ -82,7 +82,15 @@ html_theme_options = {
             "url": "https://wake-t.slack.com/",
             "icon": "fa-brands fa-slack",
         },
-    ]
+    ],
+    "use_edit_page_button": True,
+}
+
+html_context = {
+    "github_user": "AngelFP",
+    "github_repo": "Wake-T",
+    "github_version": "dev",
+    "doc_path": "docs/source",
 }
 
 # Do not show type hints.
