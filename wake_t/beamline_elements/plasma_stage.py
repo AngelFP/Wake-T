@@ -29,27 +29,30 @@ class PlasmaStage(FieldElement):
         Length of the plasma stage in m.
     density : float
         Plasma density in units of m^{-3}.
-    wakefield_model : str or Field
+    wakefield_model : str or Field, optional
         Wakefield model to be used. Possible values are ``'blowout'``,
         ``'custom_blowout'``, ``'focusing_blowout'``, ``'cold_fluid_1d'``
         and ``'quasistatic_2d'``. If ``None``, no wakefields will be
         computed.
-    bunch_pusher : str
+    bunch_pusher : str, optional
         The pusher used to evolve the particle bunches in time within
         the specified fields. Possible values are ``'rk4'`` (Runge-Kutta
         method of 4th order) or ``'boris'`` (Boris method).
-    dt_bunch : float
+    dt_bunch : float, optional
         The time step for evolving the particle bunches. If ``None``, it
         will be automatically set to ``dt = T/(10*2*pi)``, where T is the
         smallest expected betatron period of the bunch along the plasma
         stage.
-    n_out : int
+    n_out : int, optional
         Number of times along the stage in which the particle distribution
         should be returned (A list with all output bunches is returned
         after tracking).
     name : str
         Name of the plasma stage. This is only used for displaying the
         progress bar during tracking. By default, ``'Plasma stage'``.
+    external_fields : list of Field, optional
+        A list of fields to apply to the particle bunches in
+        addition to the plasma wakefields.
     **model_params
         Keyword arguments which will be given to the wakefield model. Each
         model requires a different set of parameters. See the documentation
