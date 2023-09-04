@@ -38,7 +38,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.coverage',
-    # 'sphinx.ext.intersphinx',
+    'sphinx.ext.viewcode',
     'sphinx_design',
     'sphinx_gallery.gen_gallery',
     'numpydoc'
