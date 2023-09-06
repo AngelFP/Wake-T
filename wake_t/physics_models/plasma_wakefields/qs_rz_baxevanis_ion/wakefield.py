@@ -136,7 +136,9 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         Radial resolution of the adaptive grids. In only one value is given,
         the same resolution will be used for the adaptive grids of all bunches.
         Otherwise, a list of values can be given (one per bunch and in the same
-        order as the list of bunches given to the `track` method.)
+        order as the list of bunches given to the `track` method). If the
+        value is `None`, no adaptive grid will be used for the corresponding
+        bunch, which will instead use the base grid.
     adaptive_grid_diags : list, optional
         List of fields from the adaptive grids to save to openpmd diagnostics.
         By default ['E', 'B'].
@@ -260,13 +262,19 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             else:
                 nr_grids = [self.adaptive_grid_nr] * len(bunches)
             # Create adaptive grids for each bunch.
+            bunches_with_grid = []
+            bunches_without_grid = []
             for bunch, nr in zip(bunches, nr_grids):
-                if bunch.name not in self.bunch_grids:
-                    self.bunch_grids[bunch.name] = AdaptiveGrid(
-                        bunch.x, bunch.y, bunch.xi, bunch.name, nr,
-                        self.xi_fld)
+                if nr is not None:                    
+                    bunches_with_grid.append(bunch)
+                    if bunch.name not in self.bunch_grids:
+                        self.bunch_grids[bunch.name] = AdaptiveGrid(
+                            bunch.x, bunch.y, bunch.xi, bunch.name, nr,
+                            self.xi_fld)
+                else:
+                    bunches_without_grid.append(bunch)
             # Calculate bunch sources at each grid.
-            for bunch in bunches:
+            for bunch in bunches_with_grid:
                 grid = self.bunch_grids[bunch.name]
                 grid.calculate_bunch_source(bunch, self.n_p, self.p_shape)
                 bunch_source_arrays.append(grid.b_t_bunch)
@@ -274,24 +282,25 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                 bunch_source_metadata.append(
                     np.array([grid.r_grid[0], grid.r_grid[-1], grid.dr]) / s_d)
         else:
-            # If not using adaptive grids, add all sources to the same array.
-            if bunches:
-                self.b_t_bunch[:] = 0.
-                self.q_bunch[:] = 0.
-                for bunch in bunches:
-                    deposit_bunch_charge(
-                        bunch.x, bunch.y, bunch.xi, bunch.q,
-                        self.n_p, self.n_r, self.n_xi, self.r_fld, self.xi_fld,
-                        self.dr, self.dxi, self.p_shape, self.q_bunch
-                    )
-                calculate_bunch_source(
-                    self.q_bunch, self.n_r, self.n_xi, self.r_fld,
-                    self.dr, self.b_t_bunch
+            bunches_without_grid = bunches
+        # If not using adaptive grids, add all sources to the same array.
+        if bunches_without_grid:
+            self.b_t_bunch[:] = 0.
+            self.q_bunch[:] = 0.
+            for bunch in bunches_without_grid:
+                deposit_bunch_charge(
+                    bunch.x, bunch.y, bunch.xi, bunch.q,
+                    self.n_p, self.n_r, self.n_xi, self.r_fld, self.xi_fld,
+                    self.dr, self.dxi, self.p_shape, self.q_bunch
                 )
-                bunch_source_arrays.append(self.b_t_bunch)
-                bunch_source_xi_indices.append(np.arange(self.n_xi))
-                bunch_source_metadata.append(
-                    np.array([self.r_fld[0], self.r_fld[-1], self.dr]) / s_d)
+            calculate_bunch_source(
+                self.q_bunch, self.n_r, self.n_xi, self.r_fld,
+                self.dr, self.b_t_bunch
+            )
+            bunch_source_arrays.append(self.b_t_bunch)
+            bunch_source_xi_indices.append(np.arange(self.n_xi))
+            bunch_source_metadata.append(
+                np.array([self.r_fld[0], self.r_fld[-1], self.dr]) / s_d)
 
         # Calculate rho only if requested in the diagnostics.
         calculate_rho = any('rho' in diag for diag in self.field_diags)
@@ -328,7 +337,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
 
     def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name):
         # If using adaptive grids, gather fields from them.
-        if self.use_adaptive_grids:
+        if bunch_name in self.bunch_grids:
             grid = self.bunch_grids[bunch_name]
             grid.update_if_needed(x, y, z, self.n_p, self.pp)
             grid.gather_fields(x, y, z, ex, ey, ez, bx, by, bz)
