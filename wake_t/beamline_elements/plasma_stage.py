@@ -10,7 +10,7 @@ from wake_t.fields.base import Field
 from .field_element import FieldElement
 
 
-DtBunchType = Optional[Union[float, str, List[Union[float, str]]]]
+DtBunchType = Union[float, str, List[Union[float, str]]]
 
 
 wakefield_models = {
