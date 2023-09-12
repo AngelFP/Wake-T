@@ -89,17 +89,17 @@ class FieldElement():
         A list of size 'n_out' containing the bunch distribution at each step.
 
         """
-        # Make sure `bunches` is a list.
+        # Make sure `bunches` and `dt_bunch` are lists.
         if not isinstance(bunches, list):
             bunches = [bunches]
-
         if not isinstance(self.dt_bunch, list):
             dt_bunch = [self.dt_bunch] * len(bunches)
         else:
-            if len(self.dt_bunch) != len(bunches):
+            n_dt, n_bunches = len(self.dt_bunch), len(bunches)
+            if n_dt != n_bunches:
                 raise ValueError(
-                    f'The number of time steps ({len(self.dt_bunch)}) '
-                    f'does not match the number of bunches ({len(bunches)}).'
+                    f'The number of time steps in `dt_bunch` ({n_dt}) '
+                    f'does not match the number of bunches ({n_bunches}).'
                 )
             dt_bunch = self.dt_bunch
 
