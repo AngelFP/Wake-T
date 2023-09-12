@@ -16,10 +16,12 @@ class FieldElement():
     ----------
     length : float or str
         Length of the plasma stage in m.
-    dt_bunch : float
+    dt_bunch : float, str or list of float and str
         The time step for evolving the particle bunches. An adaptive time
         step can be used if this parameter is set to ``'auto'`` and a
-        ``auto_dt_bunch`` function is provided.
+        ``auto_dt_bunch`` function is provided. A list of values can
+        also be provided. In this case, the list should have the same order as
+        the list of bunches given to the ``track`` method.
     bunch_pusher : str
         The pusher used to evolve the particle bunches in time within
         the specified fields. Possible values are ``'rk4'`` (Runge-Kutta
@@ -43,7 +45,7 @@ class FieldElement():
     def __init__(
         self,
         length: float,
-        dt_bunch: Union[float, str],
+        dt_bunch: Union[float, str, List[Union[float, str]]],
         bunch_pusher: Optional[str] = 'rk4',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'field element',
@@ -94,6 +96,11 @@ class FieldElement():
         if not isinstance(self.dt_bunch, list):
             dt_bunch = [self.dt_bunch] * len(bunches)
         else:
+            if len(self.dt_bunch) != len(bunches):
+                raise ValueError(
+                    f'The number of time steps ({len(self.dt_bunch)}) '
+                    f'does not match the number of bunches ({len(bunches)}).'
+                )
             dt_bunch = self.dt_bunch
 
         # Create diagnostics instance.
