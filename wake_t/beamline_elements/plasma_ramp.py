@@ -9,7 +9,7 @@ from functools import partial
 
 import numpy as np
 
-from wake_t.beamline_elements import PlasmaStage
+from .plasma_stage import PlasmaStage, DtBunchType
 
 
 # Define type alias for the ramp profiles.
@@ -93,6 +93,9 @@ class PlasmaRamp(PlasmaStage):
         The time step for evolving the particle bunches. If ``None``, it will
         be automatically set to :math:`dt = T/(10*2*pi)`, where T is the
         smallest expected betatron period of the bunch along the plasma stage.
+        A list of values can also be provided. In this case, the list
+        should have the same order as the list of bunches given to the
+        ``track`` method.
     n_out : int
         Number of times along the stage in which the particle distribution
         should be returned (A list with all output bunches is returned
@@ -122,7 +125,7 @@ class PlasmaRamp(PlasmaStage):
         plasma_dens_down: Optional[float] = None,
         position_down: Optional[float] = None,
         bunch_pusher: Optional[str] = 'rk4',
-        dt_bunch: Optional[Union[float, int]] = 'auto',
+        dt_bunch: Optional[DtBunchType] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Plasma ramp',
         **model_params
