@@ -1,4 +1,5 @@
 import os
+import copy
 
 import numpy as np
 import scipy.constants as ct
@@ -98,9 +99,11 @@ def test_field_element_error():
 
     # Check that an error is raised because the number of `dt_bunch` does
     # not agree with the number of bunches.
-    diag_dir = os.path.join(output_folder, 'diags')
     with raises(ValueError) as e_info:
-        element.track(bunch, opmd_diag=True, diag_dir=diag_dir)
+        element.track(bunch, opmd_diag=False)
+    # This one should instead work.
+    element.track([bunch, copy.deepcopy(bunch)], opmd_diag=False)
+
 
 
 if __name__ == '__main__':
