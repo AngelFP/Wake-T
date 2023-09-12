@@ -94,7 +94,7 @@ class FieldElement():
         if not isinstance(self.dt_bunch, list):
             dt_bunch = [self.dt_bunch] * len(bunches)
         else:
-            dt_bunch = self.dt_bunches
+            dt_bunch = self.dt_bunch
 
         # Create diagnostics instance.
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
