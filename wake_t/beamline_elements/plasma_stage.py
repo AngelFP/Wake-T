@@ -10,6 +10,9 @@ from wake_t.fields.base import Field
 from .field_element import FieldElement
 
 
+DtBunchType = Union[float, str, List[Union[float, str]]]
+
+
 wakefield_models = {
     'simple_blowout': wf.SimpleBlowoutWakefield,
     'custom_blowout': wf.CustomBlowoutWakefield,
@@ -38,11 +41,13 @@ class PlasmaStage(FieldElement):
         The pusher used to evolve the particle bunches in time within
         the specified fields. Possible values are ``'rk4'`` (Runge-Kutta
         method of 4th order) or ``'boris'`` (Boris method).
-    dt_bunch : float, optional
-        The time step for evolving the particle bunches. If ``None``, it
+    dt_bunch : float, str or list of float or str, optional
+        The time step for evolving the particle bunches. If ``'auto'``, it
         will be automatically set to ``dt = T/(10*2*pi)``, where T is the
         smallest expected betatron period of the bunch along the plasma
-        stage.
+        stage. A list of values can also be provided. In this case, the list
+        should have the same order as the list of bunches given to the
+        ``track`` method.
     n_out : int, optional
         Number of times along the stage in which the particle distribution
         should be returned (A list with all output bunches is returned
@@ -71,7 +76,7 @@ class PlasmaStage(FieldElement):
         density: Union[float, Callable[[float], float]],
         wakefield_model: Optional[str] = 'simple_blowout',
         bunch_pusher: Optional[str] = 'rk4',
-        dt_bunch: Optional[Union[float, int]] = 'auto',
+        dt_bunch: Optional[DtBunchType] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Plasma stage',
         external_fields: Optional[List[Field]] = [],
