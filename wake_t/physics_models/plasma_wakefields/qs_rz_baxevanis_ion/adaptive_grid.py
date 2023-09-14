@@ -44,11 +44,11 @@ class AdaptiveGrid():
         xi_plasma: np.ndarray
     ):
         self.bunch_name = bunch_name
-        self.nr = nr
         self.xi_plasma = xi_plasma
         self.dxi = xi_plasma[1] - xi_plasma[0]
         self.nr_guard = 2
         self.nxi_guard = 2
+        self.nr = nr + self.nr_guard
 
         self._update(x, y, xi)
 
