@@ -47,6 +47,8 @@ class AdaptiveGrid():
         self.nr = nr
         self.xi_plasma = xi_plasma
         self.dxi = xi_plasma[1] - xi_plasma[0]
+        self.nr_guard = 2
+        self.nxi_guard = 2
 
         self._update(x, y, xi)
 
@@ -68,10 +70,10 @@ class AdaptiveGrid():
         xi_min_beam = np.min(xi)
         xi_max_beam = np.max(xi)
         if (
-            (r_max_beam > self.r_grid[-1]) or
-            (xi_min_beam < self.xi_grid[0]) or
-            (xi_max_beam > self.xi_grid[-1]) or
-            (r_max_beam < self.r_grid[-1] * 0.9)
+            (r_max_beam > self.r_grid[-1 - self.nr_guard]) or
+            (xi_min_beam < self.xi_grid[0 + self.nxi_guard]) or
+            (xi_max_beam > self.xi_grid[-1 + self.nxi_guard]) or
+            (r_max_beam < self.r_grid[-1 - self.nr_guard] * 0.9)
         ):
             self._update(x, y, xi)
             self.calculate_fields(n_p, pp_hist, reset_fields=False)
@@ -215,8 +217,8 @@ class AdaptiveGrid():
         """Update the grid size."""
         # Create grid in r
         r_max_beam = np.max(np.sqrt(x**2 + y**2))
-        self.r_max = r_max_beam * 1.1
-        self.dr = self.r_max / self.nr
+        self.dr = r_max_beam / (self.nr - self.nr_guard)
+        self.r_max = r_max_beam + 2 * self.dr
         self.r_grid = np.linspace(self.dr/2, self.r_max - self.dr/2, self.nr)
         self.log_r_grid = np.log(self.r_grid)
 
@@ -224,8 +226,8 @@ class AdaptiveGrid():
         xi_min_beam = np.min(xi)
         xi_max_beam = np.max(xi)
         self.i_grid = np.where(
-            (self.xi_plasma > xi_min_beam - self.dxi) &
-            (self.xi_plasma < xi_max_beam + self.dxi)
+            (self.xi_plasma > xi_min_beam - self.dxi * self.nxi_guard) &
+            (self.xi_plasma < xi_max_beam + self.dxi * self.nxi_guard)
         )[0]
         self.xi_grid = self.xi_plasma[self.i_grid]
         self.xi_max = self.xi_grid[-1]
