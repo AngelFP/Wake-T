@@ -72,7 +72,7 @@ class AdaptiveGrid():
         if (
             (r_max_beam > self.r_grid[-1 - self.nr_guard]) or
             (xi_min_beam < self.xi_grid[0 + self.nxi_guard]) or
-            (xi_max_beam > self.xi_grid[-1 + self.nxi_guard]) or
+            (xi_max_beam > self.xi_grid[-1 - self.nxi_guard]) or
             (r_max_beam < self.r_grid[-1 - self.nr_guard] * 0.9)
         ):
             self._update(x, y, xi)
