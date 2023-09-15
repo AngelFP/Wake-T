@@ -1,5 +1,7 @@
 """Contains the definition of the `AdaptiveGrid` class."""
 
+from typing import Optional
+
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
@@ -14,8 +16,9 @@ from .b_theta_bunch import calculate_bunch_source, deposit_bunch_charge
 class AdaptiveGrid():
     """Grid whose size dynamically adapts to the extent of a particle bunch.
 
-    The number of radial cells is fixed, but it its transverse extent is
-    continually adapted to fit the whole particle distribution.
+    The number of radial cells is fixed, but its transverse extent is
+    continually adapted to fit the whole particle distribution (unless
+    a fixed value for `r_max` is given).
 
     The longitudinal grid spacing is always constant, and set to the
     longitudinal step of the plasma particles. The longitudinal
@@ -33,6 +36,10 @@ class AdaptiveGrid():
     xi_plasma : ndarray
         Array containing the possible longitudinal locations of the plasma
         particles.
+    r_max : float, optional
+        Maximum radial extent of the grid. If not given, the radial extent is
+        dynamically updated with the beam size. If given, the radial extent
+        is always fixed to the specified value.
     """
     def __init__(
         self,
@@ -41,7 +48,8 @@ class AdaptiveGrid():
         xi: np.ndarray,
         bunch_name: str,
         nr: int,
-        xi_plasma: np.ndarray
+        xi_plasma: np.ndarray,
+        r_max: Optional[float] = None
     ):
         self.bunch_name = bunch_name
         self.xi_plasma = xi_plasma
@@ -49,6 +57,7 @@ class AdaptiveGrid():
         self.nr_guard = 2
         self.nxi_guard = 2
         self.nr = nr + self.nr_guard
+        self.r_max = r_max
 
         self._update(x, y, xi)
 
@@ -66,15 +75,20 @@ class AdaptiveGrid():
             Dictionary containing arrays with the history of the plasma
             particles.
         """
-        r_max_beam = np.max(np.sqrt(x**2 + y**2))
+        update_r = False
+        if self.r_max is None:
+            r_max_beam = np.max(np.sqrt(x**2 + y**2))
+            update_r = (
+                (r_max_beam > self.r_grid[-1 - self.nr_guard]) or
+                (r_max_beam < self.r_grid[-1 - self.nr_guard] * 0.9)
+            )
         xi_min_beam = np.min(xi)
         xi_max_beam = np.max(xi)
-        if (
-            (r_max_beam > self.r_grid[-1 - self.nr_guard]) or
+        update_xi = (
             (xi_min_beam < self.xi_grid[0 + self.nxi_guard]) or
-            (xi_max_beam > self.xi_grid[-1 - self.nxi_guard]) or
-            (r_max_beam < self.r_grid[-1 - self.nr_guard] * 0.9)
-        ):
+            (xi_max_beam > self.xi_grid[-1 - self.nxi_guard])
+        )
+        if update_r or update_xi:
             self._update(x, y, xi)
             self.calculate_fields(n_p, pp_hist, reset_fields=False)
 
@@ -216,10 +230,13 @@ class AdaptiveGrid():
     def _update(self, x, y, xi):
         """Update the grid size."""
         # Create grid in r
-        r_max_beam = np.max(np.sqrt(x**2 + y**2))
-        self.dr = r_max_beam / (self.nr - self.nr_guard)
-        self.r_max = r_max_beam + 2 * self.dr
-        self.r_grid = np.linspace(self.dr/2, self.r_max - self.dr/2, self.nr)
+        if self.r_max is None:
+            r_max = np.max(np.sqrt(x**2 + y**2))
+        else:
+            r_max = self.r_max
+        self.dr = r_max / (self.nr - self.nr_guard)
+        r_max += self.nr_guard * self.dr
+        self.r_grid = np.linspace(self.dr/2, r_max - self.dr/2, self.nr)
         self.log_r_grid = np.log(self.r_grid)
 
         # Create grid in xi

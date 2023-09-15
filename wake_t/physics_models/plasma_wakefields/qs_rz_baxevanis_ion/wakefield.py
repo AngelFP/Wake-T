@@ -133,12 +133,21 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         Whether to use adaptive grids for each particle bunch, instead of the
         general (n_xi x n_r) grid.
     adaptive_grid_nr : int or list of int, optional
-        Radial resolution of the adaptive grids. In only one value is given,
+        Radial resolution of the adaptive grids. If only one value is given,
         the same resolution will be used for the adaptive grids of all bunches.
         Otherwise, a list of values can be given (one per bunch and in the same
         order as the list of bunches given to the `track` method). If the
         value is `None`, no adaptive grid will be used for the corresponding
         bunch, which will instead use the base grid.
+    adaptive_grid_r_max : float or list of float, optional
+        Specify a fixed radial extent for the adaptive grids. If not given,
+        the radial extent of the grids is continuously adapted with the
+        transverse size of the bunches. If only one value is given,
+        the same extent will be used for all adaptive grids.
+        Otherwise, a list of values can be given (one per bunch and in the same
+        order as the list of bunches given to the `track` method). The
+        individual values can be `float` or `None` (in which case, no fixed
+        radial extent is used for the corresponding grid).
     adaptive_grid_diags : list, optional
         List of fields from the adaptive grids to save to openpmd diagnostics.
         By default ['E', 'B'].
@@ -179,6 +188,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         particle_diags: Optional[List[str]] = [],
         use_adaptive_grids: Optional[bool] = False,
         adaptive_grid_nr: Optional[Union[int, List[int]]] = 16,
+        adaptive_grid_r_max: Optional[Union[float, List[float]]] = None,
         adaptive_grid_diags: Optional[List[str]] = ['E', 'B'],
     ) -> None:
         self.ppc = np.array(ppc)
@@ -191,6 +201,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self.free_electrons_per_ion = free_electrons_per_ion
         self.use_adaptive_grids = use_adaptive_grids
         self.adaptive_grid_nr = adaptive_grid_nr
+        self.adaptive_grid_r_max = adaptive_grid_r_max
         self.adaptive_grid_diags = adaptive_grid_diags
         self.bunch_grids = {}
         if len(self.ppc.shape) in [0, 1]:
@@ -261,16 +272,26 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                 nr_grids = self.adaptive_grid_nr
             else:
                 nr_grids = [self.adaptive_grid_nr] * len(bunches)
+            # Get radial extent.
+            if isinstance(self.adaptive_grid_r_max, list):
+                assert len(self.adaptive_grid_r_max) == len(bunches), (
+                    'Several `r_max` for the adaptive grids have been '
+                    'given, but they do not match the number of tracked '
+                    'bunches'
+                )
+                r_max_grids = self.adaptive_grid_r_max
+            else:
+                r_max_grids = [self.adaptive_grid_r_max] * len(bunches)
             # Create adaptive grids for each bunch.
             bunches_with_grid = []
             bunches_without_grid = []
-            for bunch, nr in zip(bunches, nr_grids):
+            for bunch, nr, r_max in zip(bunches, nr_grids, r_max_grids):
                 if nr is not None:                    
                     bunches_with_grid.append(bunch)
                     if bunch.name not in self.bunch_grids:
                         self.bunch_grids[bunch.name] = AdaptiveGrid(
                             bunch.x, bunch.y, bunch.xi, bunch.name, nr,
-                            self.xi_fld)
+                            self.xi_fld, r_max)
                 else:
                     bunches_without_grid.append(bunch)
             # Calculate bunch sources at each grid.
