@@ -11,6 +11,7 @@ from wake_t.particles.interpolation import gather_main_fields_cyl_linear
 from .psi_and_derivatives import calculate_psi
 from .b_theta import calculate_b_theta
 from .b_theta_bunch import calculate_bunch_source, deposit_bunch_charge
+from .utils import longitudinal_gradient, radial_gradient
 
 
 class AdaptiveGrid():
@@ -116,11 +117,14 @@ class AdaptiveGrid():
             pp_hist['a_0_hist'], pp_hist['a_i_hist'], pp_hist['b_i_hist'])
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
-        dxi_psi, dr_psi = np.gradient(self.psi_grid[2:-2, 2:-2], self.dxi/s_d,
-                                      self.dr/s_d, edge_order=2)
-        self.e_z[2:-2, 2:-2] = -dxi_psi * E_0
+        longitudinal_gradient(
+            self.psi_grid[2:-2, 2:-2], self.dxi/s_d, self.e_z[2:-2, 2:-2])
+        radial_gradient(
+            self.psi_grid[2:-2, 2:-2], self.dr/s_d, self.e_r[2:-2, 2:-2])
+        self.e_r -= self.b_t
+        self.e_z *= - E_0
+        self.e_r *= - E_0
         self.b_t *= E_0 / ct.c
-        self.e_r[2:-2, 2:-2] = -dr_psi * E_0 + self.b_t[2:-2, 2:-2] * ct.c
 
     def calculate_bunch_source(self, bunch, n_p, p_shape):
         """Calculate the source term (B_theta) of the bunch within the grid.
