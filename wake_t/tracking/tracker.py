@@ -1,5 +1,5 @@
 """ This module contains the Tracker class. """
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, Literal
 from copy import deepcopy
 
 import numpy as np
@@ -77,7 +77,7 @@ class Tracker():
         n_diags: Optional[int] = 0,
         opmd_diags: Optional[OpenPMDDiagnostics] = None,
         auto_dt_bunch_f: Optional[Callable[[ParticleBunch], float]] = None,
-        bunch_pusher: Optional[str] = 'rk4',
+        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
         section_name: Optional[str] = 'Simulation'
     ) -> None:
         self.t_final = t_final
