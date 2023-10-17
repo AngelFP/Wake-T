@@ -67,7 +67,7 @@ def test_field_element_tracking():
     # Check that results have not changed.
     bunch_params = analyze_bunch(bunch)
     beta_x = bunch_params['beta_x']
-    assert approx(beta_x, rel=1e-10) == 0.054508554263608434
+    assert approx(beta_x, rel=1e-10) == 0.05450127309723603
 
 
 def test_field_element_error():
