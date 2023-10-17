@@ -1,6 +1,6 @@
 """ This module contains the definition of the PlasmaStage class """
 
-from typing import Optional, Union, Callable, List
+from typing import Optional, Union, Callable, List, Literal
 
 import numpy as np
 import scipy.constants as ct
@@ -75,7 +75,7 @@ class PlasmaStage(FieldElement):
         length: float,
         density: Union[float, Callable[[float], float]],
         wakefield_model: Optional[str] = 'simple_blowout',
-        bunch_pusher: Optional[str] = 'boris',
+        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
         dt_bunch: Optional[DtBunchType] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Plasma stage',

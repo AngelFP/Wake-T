@@ -1,6 +1,6 @@
 """ This module contains the definition of the ActivePlasmaLens class """
 
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Literal
 
 import numpy as np
 import scipy.constants as ct
@@ -76,7 +76,7 @@ class ActivePlasmaLens(PlasmaStage):
         wakefields: bool = False,
         density: Optional[Union[float, Callable[[float], float]]] = None,
         wakefield_model: Optional[str] = 'quasistatic_2d',
-        bunch_pusher: Optional[str] = 'boris',
+        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
         dt_bunch: Optional[DtBunchType] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Active plasma lens',
