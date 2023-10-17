@@ -288,6 +288,11 @@ class ParticleBunch():
             apply_rk4_pusher(self, fields, t, dt)
         elif pusher == 'boris':
             apply_boris_pusher(self, fields, t, dt)
+        else:
+            raise ValueError(
+                f"Bunch pusher '{pusher}' not recognized. "
+                "Possible values are 'boris' and 'rk4'"
+            )
         self.prop_distance += dt * ct.c
 
     def get_field_arrays(self):
