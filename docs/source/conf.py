@@ -38,7 +38,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.coverage',
-    # 'sphinx.ext.intersphinx',
+    'sphinx.ext.viewcode',
     'sphinx_design',
     'sphinx_gallery.gen_gallery',
     'numpydoc'
@@ -75,14 +75,24 @@ html_theme_options = {
         {
             "name": "GitHub",
             "url": "https://github.com/AngelFP/Wake-T",
-            "icon": "fab fa-github-square",
+            "icon": "fa-brands fa-github",
         },
         {
             "name": "Slack",
             "url": "https://wake-t.slack.com/",
-            "icon": "fab fa-slack",
+            "icon": "fa-brands fa-slack",
         },
-    ]
+    ],
+    "use_edit_page_button": True,    
+    "pygment_light_style": "default",
+    "pygment_dark_style": "monokai",
+}
+
+html_context = {
+    "github_user": "AngelFP",
+    "github_repo": "Wake-T",
+    "github_version": "dev",
+    "doc_path": "docs/source",
 }
 
 # Do not show type hints.

@@ -5,7 +5,7 @@ from typing import Optional, Union, Callable
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.beamline_elements import PlasmaStage
+from .plasma_stage import PlasmaStage, DtBunchType
 from wake_t.physics_models.em_fields.linear_b_theta import LinearBThetaField
 
 
@@ -42,6 +42,15 @@ class ActivePlasmaLens(PlasmaStage):
         The pusher used to evolve the particle bunches in time within
         the specified fields. Possible values are ``'rk4'`` (Runge-Kutta
         method of 4th order) or ``'boris'`` (Boris method).
+    dt_bunch : float
+        The time step for evolving the particle bunches. If ``None``, it will
+        be automatically set to :math:`dt = T/(10*2*pi)`, where T is the
+        smallest expected betatron period of the bunch along the plasma lens
+        (T is calculated from `foc_strength` if `wakefields=False`,
+        otherwise the focusing strength of a blowout is used).
+        A list of values can also be provided. In this case, the list
+        should have the same order as the list of bunches given to the
+        ``track`` method.
     n_out : int
         Number of times along the lens in which the particle distribution
         should be returned (A list with all output bunches is returned
@@ -68,7 +77,7 @@ class ActivePlasmaLens(PlasmaStage):
         density: Optional[Union[float, Callable[[float], float]]] = None,
         wakefield_model: Optional[str] = 'quasistatic_2d',
         bunch_pusher: Optional[str] = 'boris',
-        dt_bunch: Optional[Union[float, int]] = 'auto',
+        dt_bunch: Optional[DtBunchType] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Active plasma lens',
         **model_params
