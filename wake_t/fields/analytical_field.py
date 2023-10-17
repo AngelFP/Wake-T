@@ -4,7 +4,7 @@ from typing import Callable, Optional, List
 import numpy as np
 
 from .base import Field
-from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.numba import njit_parallel
 
 
 # Define type alias.
@@ -49,9 +49,10 @@ class AnalyticalField(Field):
 
     Examples
     --------
+    >>> from numba import prange
     >>> def linear_ex(x, y, z, t, ex, constants):
     ...     ex_slope = constants[0]
-    ...     for i in range(x.shape[0]):
+    ...     for i in prange(x.shape[0]):
     ...         ex[i] = ex_slope * x[i]
     ...
     >>> ex = AnalyticField(e_x=linear_ex, constants=[1e6])
@@ -76,12 +77,12 @@ class AnalyticalField(Field):
             """Default field component."""
             pass
 
-        self.__e_x = njit_serial(e_x) if e_x is not None else no_field
-        self.__e_y = njit_serial(e_y) if e_y is not None else no_field
-        self.__e_z = njit_serial(e_z) if e_z is not None else no_field
-        self.__b_x = njit_serial(b_x) if b_x is not None else no_field
-        self.__b_y = njit_serial(b_y) if b_y is not None else no_field
-        self.__b_z = njit_serial(b_z) if b_z is not None else no_field
+        self.__e_x = njit_parallel(e_x) if e_x is not None else no_field
+        self.__e_y = njit_parallel(e_y) if e_y is not None else no_field
+        self.__e_z = njit_parallel(e_z) if e_z is not None else no_field
+        self.__b_x = njit_parallel(b_x) if b_x is not None else no_field
+        self.__b_y = njit_parallel(b_y) if b_y is not None else no_field
+        self.__b_z = njit_parallel(b_z) if b_z is not None else no_field
         self.constants = np.array(constants)
 
     def _pre_gather(self, x, y, z, t):

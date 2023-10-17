@@ -2,6 +2,7 @@ import numpy as np
 import scipy.constants as ct
 
 from wake_t.fields.analytical_field import AnalyticalField
+from wake_t.utilities.numba import prange
 
 
 class CustomBlowoutWakefield(AnalyticalField):
@@ -36,12 +37,12 @@ class CustomBlowoutWakefield(AnalyticalField):
 
         def e_x(x, y, xi, t, ex, constants):
             k = constants[0]
-            for i in range(x.shape[0]):
+            for i in prange(x.shape[0]):
                 ex[i] = ct.c * k * x[i]
 
         def e_y(x, y, xi, t, ey, constants):
             k = constants[0]
-            for i in range(x.shape[0]):
+            for i in prange(x.shape[0]):
                 ey[i] = ct.c * k * y[i]
 
         def e_z(x, y, xi, t, ez, constants):
@@ -51,7 +52,7 @@ class CustomBlowoutWakefield(AnalyticalField):
             b_w = constants[4]
 
             xi_off = - xi_fields + (1 - b_w) * ct.c * t
-            for i in range(x.shape[0]):
+            for i in prange(x.shape[0]):
                 ez[i] = e_z_0 + e_z_p * (xi[i] + xi_off)
 
         super().__init__(e_x=e_x, e_y=e_y, e_z=e_z)

@@ -1,4 +1,4 @@
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Literal
 
 import scipy.constants as ct
 
@@ -46,7 +46,7 @@ class FieldElement():
         self,
         length: float,
         dt_bunch: Union[float, str, List[Union[float, str]]],
-        bunch_pusher: Optional[str] = 'rk4',
+        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'field element',
         fields: Optional[List[Field]] = [],
