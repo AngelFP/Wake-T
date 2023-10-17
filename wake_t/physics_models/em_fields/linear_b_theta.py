@@ -1,19 +1,20 @@
 """ Defines a linearly-varying (in radius) azimuthal magnetic field """
 
 from wake_t.fields.analytical_field import AnalyticalField
+from wake_t.utilities.numba import prange
 
 
 def b_x(x, y, z, t, bx, constants):
     """B_x component."""
     k = constants[0]
-    for i in range(x.shape[0]):
+    for i in prange(x.shape[0]):
         bx[i] -= k * y[i]
 
 
 def b_y(x, y, z, t, by, constants):
     """B_y component."""
     k = constants[0]
-    for i in range(x.shape[0]):
+    for i in prange(x.shape[0]):
         by[i] += k * x[i]
 
 

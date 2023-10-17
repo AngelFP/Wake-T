@@ -2,8 +2,9 @@
 
 import math
 import scipy.constants as ct
+from numba import prange
 
-from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.numba import njit_parallel
 from wake_t.fields.gather import gather_fields
 
 
@@ -117,40 +118,40 @@ def apply_rk4_pusher(bunch, fields, t, dt):
     apply_push(bunch.pz, dt, dpz)
 
 
-@njit_serial()
+@njit_parallel()
 def initialize_coord(x, x_0):
-    for i in range(x.shape[0]):
+    for i in prange(x.shape[0]):
         x[i] = x_0[i]
 
 
-@njit_serial()
+@njit_parallel()
 def update_coord(x, x_0, dt, k_x, fac):
-    for i in range(x.shape[0]):
+    for i in prange(x.shape[0]):
         x[i] = x_0[i] + dt * k_x[i] * fac
 
 
-@njit_serial()
+@njit_parallel()
 def initialize_push(dx, k_x, fac):
-    for i in range(dx.shape[0]):
+    for i in prange(dx.shape[0]):
         dx[i] = k_x[i] * fac
 
 
-@njit_serial()
+@njit_parallel()
 def update_push(dx, k_x, fac):
-    for i in range(dx.shape[0]):
+    for i in prange(dx.shape[0]):
         dx[i] += k_x[i] * fac
 
 
-@njit_serial()
+@njit_parallel()
 def apply_push(x, dt, dx):
-    for i in range(x.shape[0]):
+    for i in prange(x.shape[0]):
         x[i] += dt * dx[i]
 
 
-@njit_serial(fastmath=True, error_model='numpy')
+@njit_parallel(fastmath=True, error_model='numpy')
 def calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,
                 q_over_mc, px, py, pz, ex, ey, ez, bx, by, bz):
-    for i in range(k_x.shape[0]):
+    for i in prange(k_x.shape[0]):
         px_i = px[i]
         py_i = py[i]
         pz_i = pz[i]

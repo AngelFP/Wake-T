@@ -4,6 +4,7 @@ from typing import List
 
 import numpy as np
 
+from wake_t.utilities.numba import njit_parallel, prange
 from .base import Field
 
 
@@ -48,13 +49,20 @@ def gather_fields(
         1D array where the gathered Bz values will be stored
     """
     # Initially, set all field values to zero.
-    ex[:] = 0.
-    ey[:] = 0.
-    ez[:] = 0.
-    bx[:] = 0.
-    by[:] = 0.
-    bz[:] = 0.
+    reset_particle_fields(ex, ey, ez, bx, by, bz)
 
     # Gather contributions from all fields.
     for field in fields:
         field.gather(x, y, z, t, ex, ey, ez, bx, by, bz)
+
+
+@njit_parallel
+def reset_particle_fields(ex, ey, ez, bx, by, bz):
+    """Set bunch field arrays to zero."""
+    for i in prange(ex.size):
+        ex[i] = 0.
+        ey[i] = 0.
+        ez[i] = 0.
+        bx[i] = 0.
+        by[i] = 0.
+        bz[i] = 0.
