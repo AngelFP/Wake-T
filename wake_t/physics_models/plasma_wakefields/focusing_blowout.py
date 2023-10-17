@@ -2,6 +2,7 @@ import numpy as np
 import scipy.constants as ct
 
 from wake_t.fields.analytical_field import AnalyticalField
+from wake_t.utilities.numba import prange
 
 
 class FocusingBlowoutField(AnalyticalField):
@@ -9,11 +10,11 @@ class FocusingBlowoutField(AnalyticalField):
         self.density = density_function
 
         def e_x(x, y, xi, t, ex, k):
-            for i in range(x.shape[0]):
+            for i in prange(x.shape[0]):
                 ex[i] = ct.c * k[i] * x[i]
 
         def e_y(x, y, xi, t, ey, k):
-            for i in range(x.shape[0]):
+            for i in prange(x.shape[0]):
                 ey[i] = ct.c * k[i] * y[i]
 
         super().__init__(e_x=e_x, e_y=e_y)
