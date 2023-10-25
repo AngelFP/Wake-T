@@ -1,8 +1,11 @@
 """This module contains custom definitions of the numba decorators."""
 
 import os
-from numba import njit, __version__ as numba_version
 
+from numba import (
+    njit, __version__ as numba_version, set_num_threads, get_num_threads,
+    prange
+)
 
 if numba_version == '0.57.0':
     raise RuntimeError(
@@ -19,6 +22,13 @@ if 'WAKET_DISABLE_CACHING' in os.environ:
         caching = False
 
 
+# Check if the environment variable WAKET_DISABLE_CACHING is set to 1
+# and in that case, disable caching
+num_threads = 1
+if 'WAKET_NUM_THREADS' in os.environ:
+    num_threads = int(os.environ['WAKET_NUM_THREADS'])
+
+
 # Define custom njit decorator for serial methods.
 def njit_serial(*args, **kwargs):
     return njit(*args, cache=caching, **kwargs)
@@ -27,3 +37,9 @@ def njit_serial(*args, **kwargs):
 # Define custom njit decorator for parallel methods.
 def njit_parallel(*args, **kwargs):
     return njit(*args, cache=caching, parallel=True, **kwargs)
+
+
+__all__ = [
+    'njit_serial', 'njit_parallel', 'num_threads', 'set_num_threads',
+    'get_num_threads', 'prange'
+]

@@ -4,7 +4,7 @@ predefined ramp profiles.
 
 """
 
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Literal
 from functools import partial
 
 import numpy as np
@@ -124,7 +124,7 @@ class PlasmaRamp(PlasmaStage):
         plasma_dens_top: Optional[float] = None,
         plasma_dens_down: Optional[float] = None,
         position_down: Optional[float] = None,
-        bunch_pusher: Optional[str] = 'rk4',
+        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
         dt_bunch: Optional[DtBunchType] = 'auto',
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Plasma ramp',

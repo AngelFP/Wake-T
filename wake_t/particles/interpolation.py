@@ -12,10 +12,10 @@ shapes.
 import math
 import numpy as np
 
-from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.numba import njit_serial, njit_parallel, prange
 
 
-@njit_serial()
+@njit_parallel()
 def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
     """
     Interpolate a 2D field defined on an r-z grid to the particle positions
@@ -45,7 +45,7 @@ def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
     fld_part = np.zeros(n_part)
 
     # Iterate over all particles.
-    for i in range(n_part):
+    for i in prange(n_part):
         # Get particle position.
         x_i = x[i]
         y_i = y[i]
@@ -87,7 +87,7 @@ def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
     return fld_part
 
 
-@njit_serial()
+@njit_parallel()
 def gather_main_fields_cyl_linear(
         er, ez, bt, z_min, z_max, r_min, r_max, dz, dr, x, y, z,
         ex_part, ey_part, ez_part, bx_part, by_part, bz_part):
@@ -117,7 +117,7 @@ def gather_main_fields_cyl_linear(
     n_part = x.shape[0]
 
     # Iterate over all particles.
-    for i in range(n_part):
+    for i in prange(n_part):
 
         # Get particle position.
         x_i = x[i]
