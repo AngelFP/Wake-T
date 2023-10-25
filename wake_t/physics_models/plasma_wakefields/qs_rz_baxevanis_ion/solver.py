@@ -106,15 +106,10 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     dxi = (xi_max - xi_min) / (n_xi - 1)
     ppc = ppc.copy()
     ppc[:, 0] /= s_d
+    r_max_plasma = r_max_plasma / s_d
 
     def radial_density_normalized(r):
         return radial_density(r * s_d) / n_p
-
-    # Maximum radial extent of the plasma.
-    if r_max_plasma is None:
-        r_max_plasma = r_max
-    else:
-        r_max_plasma = r_max_plasma / s_d
 
     # Field node coordinates.
     r_fld = r_fld / s_d

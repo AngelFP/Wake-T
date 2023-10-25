@@ -192,7 +192,9 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         adaptive_grid_diags: Optional[List[str]] = ['E', 'B'],
     ) -> None:
         self.ppc = np.array(ppc)
-        self.r_max_plasma = r_max_plasma if r_max_plasma is not None else r_max
+        if r_max_plasma is None:
+            r_max_plasma = r_max - r_max / n_r / 2
+        self.r_max_plasma = r_max_plasma
         self.p_shape = p_shape
         self.max_gamma = max_gamma
         self.plasma_pusher = plasma_pusher
@@ -291,7 +293,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                     if bunch.name not in self.bunch_grids:
                         self.bunch_grids[bunch.name] = AdaptiveGrid(
                             bunch.x, bunch.y, bunch.xi, bunch.name, nr,
-                            self.xi_fld, r_max)
+                            self.n_xi, self.xi_fld, r_max)
                 else:
                     bunches_without_grid.append(bunch)
             # Calculate bunch sources at each grid.

@@ -32,8 +32,8 @@ class AdaptiveGrid():
         The transverse and longitudinal coordinates of the bunch particles.
     bunch_name : str
         The name of the bunch that is being covered by the grid.
-    nr : int
-        Radial resolution of the grid.
+    nr, nxi : int
+        Radial and longitudinal resolution of the grid.
     xi_plasma : ndarray
         Array containing the possible longitudinal locations of the plasma
         particles.
@@ -49,12 +49,13 @@ class AdaptiveGrid():
         xi: np.ndarray,
         bunch_name: str,
         nr: int,
+        nxi: int,
         xi_plasma: np.ndarray,
         r_max: Optional[float] = None
     ):
         self.bunch_name = bunch_name
         self.xi_plasma = xi_plasma
-        self.dxi = xi_plasma[1] - xi_plasma[0]
+        self.dxi = (xi_plasma[-1] - xi_plasma[0]) / (nxi - 1)
         self.nr_guard = 2
         self.nxi_guard = 2
         self.nr = nr + self.nr_guard
