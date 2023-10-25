@@ -247,8 +247,8 @@ class AdaptiveGrid():
         xi_min_beam = np.min(xi)
         xi_max_beam = np.max(xi)
         self.i_grid = np.where(
-            (self.xi_plasma > xi_min_beam - self.dxi * self.nxi_guard) &
-            (self.xi_plasma < xi_max_beam + self.dxi * self.nxi_guard)
+            (self.xi_plasma > xi_min_beam - self.dxi * (1 + self.nxi_guard)) &
+            (self.xi_plasma < xi_max_beam + self.dxi * (1 + self.nxi_guard))
         )[0]
         self.xi_grid = self.xi_plasma[self.i_grid]
         self.xi_max = self.xi_grid[-1]
