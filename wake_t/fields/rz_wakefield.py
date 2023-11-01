@@ -168,11 +168,9 @@ class RZWakefield(NumericalField):
         raise NotImplementedError
 
     def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name):
-        dr = self.r_fld[1] - self.r_fld[0]
-        dxi = self.xi_fld[1] - self.xi_fld[0]
         gather_main_fields_cyl_linear(
             self.e_r, self.e_z, self.b_t, self.xi_fld[0], self.xi_fld[-1],
-            self.r_fld[0], self.r_fld[-1], dxi, dr, x, y, z,
+            self.r_fld[0], self.r_fld[-1], self.dxi, self.dr, x, y, z,
             ex, ey, ez, bx, by, bz)
 
     def _get_openpmd_diagnostics_data(self, global_time):
