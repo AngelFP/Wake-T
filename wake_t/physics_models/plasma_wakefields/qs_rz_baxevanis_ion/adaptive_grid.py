@@ -70,7 +70,6 @@ class AdaptiveGrid():
         self._r_max = r_max
         self._r_lim = r_lim
         self._r_max_hist = []
-        self._t_update_hist = []
 
         self._update(x, y, xi)
     
