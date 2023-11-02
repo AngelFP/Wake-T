@@ -38,9 +38,16 @@ class AdaptiveGrid():
         Array containing the possible longitudinal locations of the plasma
         particles.
     r_max : float, optional
-        Maximum radial extent of the grid. If not given, the radial extent is
+        Radial extent of the grid. If not given, the radial extent is
         dynamically updated with the beam size. If given, the radial extent
         is always fixed to the specified value.
+    r_lim : float, optional
+        Limit to the radial extent of the grid. If not given, the radial extent
+        is dynamically updated with the beam size to fit the whole beam.
+        If given, the radial extent will never be larger than the specified
+        value. Bunch particles that escape the grid transversely with
+        deposit to and gather from the base grid (if they haven't escaped
+        from it too).
     """
     def __init__(
         self,
@@ -51,17 +58,41 @@ class AdaptiveGrid():
         nr: int,
         nxi: int,
         xi_plasma: np.ndarray,
-        r_max: Optional[float] = None
+        r_max: Optional[float] = None,
+        r_lim: Optional[float] = None
     ):
         self.bunch_name = bunch_name
         self.xi_plasma = xi_plasma
         self.dxi = (xi_plasma[-1] - xi_plasma[0]) / (nxi - 1)
-        self.nr_guard = 2
-        self.nxi_guard = 2
-        self.nr = nr + self.nr_guard
-        self.r_max = r_max
+        self.nr_border = 2
+        self.nxi_border = 2
+        self.nr = nr + self.nr_border
+        self._r_max = r_max
+        self._r_lim = r_lim
+        self._r_max_hist = []
+        self._t_update_hist = []
 
         self._update(x, y, xi)
+    
+    @property
+    def r_min_cell(self):
+        """Get radial position of first grid cell (ignoring guard cells)."""
+        return self.r_grid[0]
+
+    @property
+    def r_max_cell(self):
+        """Get radial position of last grid cell (ignoring guard and border cells)."""
+        return self.r_grid[-1 - self.nr_border]
+
+    @property
+    def r_max(self):
+        """Get radial extent of the grid, ignoring guard and border cells."""
+        return self.r_max_cell + 0.5 * self.dr
+
+    @property
+    def r_max_cell_guard(self):
+        """Get radial position of last guard grid cell."""
+        return self.r_grid[-1] + 2 * self.dr
 
     def update_if_needed(self, x, y, xi, n_p, pp_hist):
         """
@@ -78,17 +109,28 @@ class AdaptiveGrid():
             particles.
         """
         update_r = False
-        if self.r_max is None:
+        # Only trigger radial update if the radial size is not fixed.
+        if self._r_max is None:
             r_max_beam = np.max(np.sqrt(x**2 + y**2))
             update_r = (
-                (r_max_beam > self.r_grid[-1 - self.nr_guard]) or
-                (r_max_beam < self.r_grid[-1 - self.nr_guard] * 0.9)
+                (r_max_beam > self.r_max_cell) or
+                (r_max_beam < self.r_max_cell * 0.9)
             )
+            # It a radial limit is set, update only if limit has not been
+            # reached.
+            if update_r and self._r_lim is not None:
+                if r_max_beam < self._r_lim:
+                    update_r = True
+                elif self.r_max_cell != self._r_lim:
+                    update_r = True
+                else:
+                    update_r = False
+
         xi_min_beam = np.min(xi)
         xi_max_beam = np.max(xi)
         update_xi = (
-            (xi_min_beam < self.xi_grid[0 + self.nxi_guard]) or
-            (xi_max_beam > self.xi_grid[-1 - self.nxi_guard])
+            (xi_min_beam < self.xi_grid[0 + self.nxi_border]) or
+            (xi_max_beam > self.xi_grid[-1 - self.nxi_border])
         )
         if update_r or update_xi:
             self._update(x, y, xi)
@@ -141,11 +183,12 @@ class AdaptiveGrid():
         """
         self.b_t_bunch[:] = 0.
         self.q_bunch[:] = 0.
-        deposit_bunch_charge(bunch.x, bunch.y, bunch.xi, bunch.q, n_p,
-                             self.nr, self.nxi, self.r_grid, self.xi_grid,
-                             self.dr, self.dxi, p_shape, self.q_bunch)
-        calculate_bunch_source(self.q_bunch, self.nr, self.nxi, self.r_grid,
-                               self.dr, self.b_t_bunch)
+        all_deposited = deposit_bunch_charge(
+            bunch.x, bunch.y, bunch.xi, bunch.q, n_p,
+            self.nr-self.nr_border, self.nxi, self.r_grid, self.xi_grid,
+            self.dr, self.dxi, p_shape, self.q_bunch)
+        calculate_bunch_source(self.q_bunch, self.nr, self.nxi, self.b_t_bunch)
+        return all_deposited
 
     def gather_fields(self, x, y, z, ex, ey, ez, bx, by, bz):
         """Gather the plasma fields at the location of the bunch particles.
@@ -157,9 +200,9 @@ class AdaptiveGrid():
         ex, ey, ez, bx, by, bz : ndarray
             The arrays where the gathered field components will be stored.
         """
-        gather_main_fields_cyl_linear(
+        return gather_main_fields_cyl_linear(
             self.e_r, self.e_z, self.b_t, self.xi_min, self.xi_max,
-            self.r_grid[0], self.r_grid[-1], self.dxi, self.dr, x, y, z,
+            self.r_min_cell, self.r_max_cell, self.dxi, self.dr, x, y, z,
             ex, ey, ez, bx, by, bz)
 
     def get_openpmd_data(self, global_time, diags):
@@ -235,12 +278,15 @@ class AdaptiveGrid():
     def _update(self, x, y, xi):
         """Update the grid size."""
         # Create grid in r
-        if self.r_max is None:
+        if self._r_max is None:
             r_max = np.max(np.sqrt(x**2 + y**2))
         else:
-            r_max = self.r_max
-        self.dr = r_max / (self.nr - self.nr_guard)
-        r_max += self.nr_guard * self.dr
+            r_max = self._r_max
+        if self._r_lim is not None:
+            r_max = r_max if r_max <= self._r_lim else self._r_lim
+        self._r_max_hist.append(r_max)
+        self.dr = r_max / (self.nr - self.nr_border)
+        r_max += self.nr_border * self.dr
         self.r_grid = np.linspace(self.dr/2, r_max - self.dr/2, self.nr)
         self.log_r_grid = np.log(self.r_grid)
 
@@ -248,8 +294,8 @@ class AdaptiveGrid():
         xi_min_beam = np.min(xi)
         xi_max_beam = np.max(xi)
         self.i_grid = np.where(
-            (self.xi_plasma > xi_min_beam - self.dxi * (1 + self.nxi_guard)) &
-            (self.xi_plasma < xi_max_beam + self.dxi * (1 + self.nxi_guard))
+            (self.xi_plasma > xi_min_beam - self.dxi * (1 + self.nxi_border)) &
+            (self.xi_plasma < xi_max_beam + self.dxi * (1 + self.nxi_border))
         )[0]
         self.xi_grid = self.xi_plasma[self.i_grid]
         self.xi_max = self.xi_grid[-1]

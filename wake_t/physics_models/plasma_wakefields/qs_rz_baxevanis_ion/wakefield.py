@@ -1,8 +1,7 @@
-from typing import Optional, Callable, List, Union
+from typing import Optional, Callable, List, Union, Dict
 
 import numpy as np
 from numpy.typing import ArrayLike
-from numba import float64, int32
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
@@ -12,6 +11,8 @@ from .adaptive_grid import AdaptiveGrid
 from .utils import calculate_laser_a2
 from wake_t.fields.rz_wakefield import RZWakefield
 from wake_t.physics_models.laser.laser_pulse import LaserPulse
+from wake_t.particles.particle_bunch import ParticleBunch
+from wake_t.particles.interpolation import gather_main_fields_cyl_linear
 
 
 class Quasistatic2DWakefieldIon(RZWakefield):
@@ -148,9 +149,21 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         order as the list of bunches given to the `track` method). The
         individual values can be `float` or `None` (in which case, no fixed
         radial extent is used for the corresponding grid).
+    adaptive_grid_r_lim : float or list of float, optional
+        Specify a limit to the radial extent of the adaptive grids. If not
+        given, the radial extent of the grids is continuously adapted to fit
+        the whole transverse size of the bunches. If only one value is given,
+        the same limit will be used for all adaptive grids.
+        Otherwise, a list of values can be given (one per bunch and in the same
+        order as the list of bunches given to the `track` method). The
+        individual values can be `float` or `None` (in which case, no radial
+        limit is used for the corresponding grid). Bunch particles that escape
+        the grid transversely with deposit to and gather from the base grid
+        (if they haven't escaped from it too).
     adaptive_grid_diags : list, optional
         List of fields from the adaptive grids to save to openpmd diagnostics.
         By default ['E', 'B'].
+
     References
     ----------
     .. [1] P. Baxevanis and G. Stupakov, "Novel fast simulation technique
@@ -189,6 +202,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         use_adaptive_grids: Optional[bool] = False,
         adaptive_grid_nr: Optional[Union[int, List[int]]] = 16,
         adaptive_grid_r_max: Optional[Union[float, List[float]]] = None,
+        adaptive_grid_r_lim: Optional[Union[float, List[float]]] = None,
         adaptive_grid_diags: Optional[List[str]] = ['E', 'B'],
     ) -> None:
         self.ppc = np.array(ppc)
@@ -204,8 +218,10 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self.use_adaptive_grids = use_adaptive_grids
         self.adaptive_grid_nr = adaptive_grid_nr
         self.adaptive_grid_r_max = adaptive_grid_r_max
+        self.adaptive_grid_r_lim = adaptive_grid_r_lim
         self.adaptive_grid_diags = adaptive_grid_diags
-        self.bunch_grids = {}
+        self.bunch_grids: Dict[str, AdaptiveGrid] = {}
+        self._t_reset_bunch_arrays = -1.
         if len(self.ppc.shape) in [0, 1]:
             self.ppc = np.array([[self.r_max_plasma, self.ppc.flatten()[0]]])
         super().__init__(
@@ -237,7 +253,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self.fld_arrays = [self.rho, self.rho_e, self.rho_i, self.chi, self.e_r,
                            self.e_z, self.b_t, self.xi_fld, self.r_fld]
 
-    def _calculate_wakefield(self, bunches):
+    def _calculate_wakefield(self, bunches: List[ParticleBunch]):
         radial_density = self._get_radial_density(self.t*ct.c)
 
         # Get square of laser envelope
@@ -262,6 +278,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
 
         # Calculate bunch sources and create adaptive grids if needed.
         s_d = ge.plasma_skin_depth(self.n_p * 1e-6)
+        deposit_outliers_on_base_grid = False
         if self.use_adaptive_grids:
             store_plasma_history = True
             # Get radial grid resolution.
@@ -284,32 +301,81 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                 r_max_grids = self.adaptive_grid_r_max
             else:
                 r_max_grids = [self.adaptive_grid_r_max] * len(bunches)
+            # Get radial extent limit.
+            if isinstance(self.adaptive_grid_r_lim, list):
+                assert len(self.adaptive_grid_r_lim) == len(bunches), (
+                    'Several `r_lim` for the adaptive grids have been '
+                    'given, but they do not match the number of tracked '
+                    'bunches'
+                )
+                r_lim_grids = self.adaptive_grid_r_lim
+            else:
+                r_lim_grids = [self.adaptive_grid_r_lim] * len(bunches)
+            # Check that the given extents are not larger than the limits.
+            for r_lim, r_max in zip(r_lim_grids, r_max_grids):
+                if r_lim is not None and r_max is not None:
+                    if r_max > r_lim:
+                        raise ValueError(
+                            "`r_max` cannot be larger than `r_lim`"
+                        )
             # Create adaptive grids for each bunch.
-            bunches_with_grid = []
-            bunches_without_grid = []
-            for bunch, nr, r_max in zip(bunches, nr_grids, r_max_grids):
-                if nr is not None:                    
+            bunches_with_grid: List[ParticleBunch] = []
+            bunches_without_grid: List[ParticleBunch] = []
+            for i, bunch in enumerate(bunches):
+                if nr_grids[i] is not None:                    
                     bunches_with_grid.append(bunch)
                     if bunch.name not in self.bunch_grids:
                         self.bunch_grids[bunch.name] = AdaptiveGrid(
-                            bunch.x, bunch.y, bunch.xi, bunch.name, nr,
-                            self.n_xi, self.xi_fld, r_max)
+                            bunch.x,
+                            bunch.y,
+                            bunch.xi,
+                            bunch.name,
+                            nr_grids[i],
+                            self.n_xi,
+                            self.xi_fld,
+                            r_max_grids[i],
+                            r_lim_grids[i]
+                        )
                 else:
                     bunches_without_grid.append(bunch)
             # Calculate bunch sources at each grid.
             for bunch in bunches_with_grid:
                 grid = self.bunch_grids[bunch.name]
-                grid.calculate_bunch_source(bunch, self.n_p, self.p_shape)
+                all_deposited = grid.calculate_bunch_source(
+                    bunch, self.n_p, self.p_shape
+                )
                 bunch_source_arrays.append(grid.b_t_bunch)
                 bunch_source_xi_indices.append(grid.i_grid)
                 bunch_source_metadata.append(
-                    np.array([grid.r_grid[0], grid.r_grid[-1], grid.dr]) / s_d)
+                    np.array(
+                        [grid.r_min_cell, grid.r_max_cell_guard, grid.dr]
+                    ) / s_d
+                )
+                if not all_deposited:
+                    self._reset_bunch_arrays()
+                    deposit_bunch_charge(
+                        bunch.x,
+                        bunch.y,
+                        bunch.xi,
+                        bunch.q,
+                        self.n_p,
+                        self.n_r,
+                        self.n_xi,
+                        self.r_fld,
+                        self.xi_fld,
+                        self.dr,
+                        self.dxi,
+                        self.p_shape,
+                        self.q_bunch,
+                        r_min_deposit=grid.r_max
+                    )
+                    deposit_outliers_on_base_grid = True
+
         else:
             bunches_without_grid = bunches
         # If not using adaptive grids, add all sources to the same array.
-        if bunches_without_grid:
-            self.b_t_bunch[:] = 0.
-            self.q_bunch[:] = 0.
+        if bunches_without_grid or deposit_outliers_on_base_grid:
+            self._reset_bunch_arrays()
             for bunch in bunches_without_grid:
                 deposit_bunch_charge(
                     bunch.x, bunch.y, bunch.xi, bunch.q,
@@ -317,13 +383,19 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                     self.dr, self.dxi, self.p_shape, self.q_bunch
                 )
             calculate_bunch_source(
-                self.q_bunch, self.n_r, self.n_xi, self.r_fld,
-                self.dr, self.b_t_bunch
+                self.q_bunch, self.n_r, self.n_xi, self.b_t_bunch
             )
             bunch_source_arrays.append(self.b_t_bunch)
             bunch_source_xi_indices.append(np.arange(self.n_xi))
             bunch_source_metadata.append(
-                np.array([self.r_fld[0], self.r_fld[-1], self.dr]) / s_d)
+                np.array(
+                    [
+                        self.r_fld[0],
+                        self.r_fld[-1] + 2 * self.dr,  # r of last guard cell.
+                        self.dr
+                    ]
+                ) / s_d
+            )
 
         # Calculate rho only if requested in the diagnostics.
         calculate_rho = any('rho' in diag for diag in self.field_diags)
@@ -352,6 +424,13 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             for _, grid in self.bunch_grids.items():
                 grid.calculate_fields(self.n_p, self.pp)
 
+    def _reset_bunch_arrays(self):
+        """Reset to zero the bunch arrays of the base grid."""
+        if self.t > self._t_reset_bunch_arrays:
+            self.b_t_bunch[:] = 0.
+            self.q_bunch[:] = 0.
+            self._t_reset_bunch_arrays = self.t
+
     def _get_radial_density(self, z_current):
         """ Get radial density profile function """
         def radial_density(r):
@@ -363,7 +442,18 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         if bunch_name in self.bunch_grids:
             grid = self.bunch_grids[bunch_name]
             grid.update_if_needed(x, y, z, self.n_p, self.pp)
-            grid.gather_fields(x, y, z, ex, ey, ez, bx, by, bz)
+            all_gathered = grid.gather_fields(x, y, z, ex, ey, ez, bx, by, bz)
+            # If not all particles managed to gather from adaptive grid (for
+            # example, because they escaped from it), try to gather from the
+            # base grid.
+            if not all_gathered:
+                gather_main_fields_cyl_linear(
+                    self.e_r, self.e_z, self.b_t, self.xi_fld[0],
+                    self.xi_fld[-1], self.r_fld[0], self.r_fld[-1],
+                    self.dxi, self.dr, x, y, z,
+                    ex, ey, ez, bx, by, bz, r_min_gather=grid.r_max_cell
+                )
+
         # Otherwise, use base implementation.
         else:
             super()._gather(x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name)
