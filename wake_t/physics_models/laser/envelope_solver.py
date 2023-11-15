@@ -11,6 +11,7 @@ import scipy.constants as ct
 
 from wake_t.utilities.numba import njit_serial
 from .tdma import TDMA
+from .utils import unwrap
 
 
 @njit_serial(fastmath=True)
@@ -91,7 +92,7 @@ def evolve_envelope(
 
         # Getting the phase of the envelope on axis.
         if use_phase:
-            phases = np.angle(a[:, 0])
+            phases = unwrap(np.angle(a[:, 0]))
 
         # Loop over z.
         for j in range(nz - 1, -1, -1):
@@ -100,16 +101,6 @@ def evolve_envelope(
             if use_phase:
                 d_theta1 = phases[j + 1] - phases[j]
                 d_theta2 = phases[j + 2] - phases[j + 1]
-
-                # Prevent phase jumps bigger than 1.5*pi.
-                if d_theta1 < -1.5 * np.pi:
-                    d_theta1 += 2 * np.pi
-                if d_theta2 < -1.5 * np.pi:
-                    d_theta2 += 2 * np.pi
-                if d_theta1 > 1.5 * np.pi:
-                    d_theta1 -= 2 * np.pi
-                if d_theta2 > 1.5 * np.pi:
-                    d_theta2 -= 2 * np.pi
 
             # Calculate D factor [Eq. (6)].
             D_jkn = (1.5 * d_theta1 - 0.5 * d_theta2) * inv_dz
