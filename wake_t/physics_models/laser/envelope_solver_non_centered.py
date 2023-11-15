@@ -11,6 +11,7 @@ import scipy.constants as ct
 
 from wake_t.utilities.numba import njit_serial
 from .tdma import TDMA
+from .utils import unwrap
 
 
 @njit_serial(fastmath=True)
@@ -91,7 +92,7 @@ def evolve_envelope_non_centered(
 
         # Getting the phase of the envelope on axis.
         if use_phase:
-            phases = np.angle(a[:, 0])
+            phases = unwrap(np.angle(a[:, 0]))
 
         # Loop over z.
         for j in range(nz - 1, -1, -1):
