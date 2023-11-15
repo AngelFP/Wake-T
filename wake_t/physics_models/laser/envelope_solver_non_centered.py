@@ -102,16 +102,6 @@ def evolve_envelope_non_centered(
                 d_theta1 = phases[j + 1] - phases[j]
                 d_theta2 = phases[j + 2] - phases[j + 1]
 
-                # Prevent phase jumps bigger than 1.5*pi.
-                if d_theta1 < -1.5 * np.pi:
-                    d_theta1 += 2 * np.pi
-                if d_theta2 < -1.5 * np.pi:
-                    d_theta2 += 2 * np.pi
-                if d_theta1 > 1.5 * np.pi:
-                    d_theta1 -= 2 * np.pi
-                if d_theta2 > 1.5 * np.pi:
-                    d_theta2 -= 2 * np.pi
-
             # Calculate D factor [Eq. (6)].
             D_jkn = (1.5 * d_theta1 - 0.5 * d_theta2) * inv_dz
 
