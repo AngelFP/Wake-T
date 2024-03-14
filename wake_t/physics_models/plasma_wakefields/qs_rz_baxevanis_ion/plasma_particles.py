@@ -159,6 +159,7 @@ class PlasmaParticles():
         self.q = np.concatenate((q, -q))
         self.q_species = np.concatenate((q_species_e, q_species_i))
         self.m = np.concatenate((m_e, m_i))
+        self.r_to_x = np.ones(self.n_part, dtype=np.int32)
 
         # Create history arrays.
         if self.store_history:
@@ -167,6 +168,7 @@ class PlasmaParticles():
             self.pr_hist = np.zeros((self.nz, self.n_part))
             self.pz_hist = np.zeros((self.nz, self.n_part))
             self.w_hist = np.zeros((self.nz, self.n_part))
+            self.r_to_x_hist = np.zeros((self.nz, self.n_part))
             self.sum_1_hist = np.zeros((self.nz, self.n_part))
             self.sum_2_hist = np.zeros((self.nz, self.n_part))
             self.i_sort_hist = np.zeros((self.nz, self.n_part), dtype=np.int64)
@@ -307,13 +309,14 @@ class PlasmaParticles():
         if self.ion_motion:
             evolve_plasma_ab2(
                 dxi, self.r, self.pr, self.gamma, self.m, self.q_species,
-                self._nabla_a2, self._b_t_0, self._b_t, self._psi,
-                self._dr_psi, self._dr, self._dpr
+                self.r_to_x, self._nabla_a2, self._b_t_0, self._b_t,
+                self._psi, self._dr_psi, self._dr, self._dpr
             )
         else:
             evolve_plasma_ab2(
                 dxi, self.r_elec, self.pr_elec, self.gamma_elec, self.m_elec,
-                self.q_species_elec, self._nabla_a2_e, self._b_t_0_e,
+                self.r_to_x_elec, self.q_species_elec,
+                self._nabla_a2_e, self._b_t_0_e,
                 self._b_t_e, self._psi_e, self._dr_psi_e, self._dr, self._dpr
             )
 
@@ -364,6 +367,7 @@ class PlasmaParticles():
                 'pr_hist': self.pr_hist,
                 'pz_hist': self.pz_hist,
                 'w_hist': self.w_hist,
+                'r_to_x_hist': self.r_to_x_hist,
                 'sum_1_hist': self.sum_1_hist,
                 'sum_2_hist': self.sum_2_hist,
                 'a_i_hist': self.a_i_hist,
@@ -386,6 +390,8 @@ class PlasmaParticles():
             self.pz_hist[-1 - self.i_push] = self.pz
         if 'w' in self.diags:
             self.w_hist[-1 - self.i_push] = self._rho
+        if 'r_to_x' in self.diags:
+            self.r_to_x_hist[-1 - self.i_push] = self.r_to_x
         if self.store_history:
             self.i_sort_hist[-1 - self.i_push, :self.n_elec] = self.i_sort_e
             self.i_sort_hist[-1 - self.i_push, self.n_elec:] = self.i_sort_i
@@ -454,6 +460,7 @@ class PlasmaParticles():
         self.q_elec = self.q[:self.n_elec]
         self.q_species_elec = self.q_species[:self.n_elec]
         self.m_elec = self.m[:self.n_elec]
+        self.r_to_x_elec = self.r_to_x[:self.n_elec]
 
         self.r_ion = self.r[self.n_elec:]
         self.dr_p_ion = self.dr_p[self.n_elec:]
@@ -463,6 +470,7 @@ class PlasmaParticles():
         self.q_ion = self.q[self.n_elec:]
         self.q_species_ion = self.q_species[self.n_elec:]
         self.m_ion = self.m[self.n_elec:]
+        self.r_to_x_ion = self.r_to_x[self.n_elec:]
 
         self._psi_e = self._psi[:self.n_elec]
         self._dr_psi_e = self._dr_psi[:self.n_elec]

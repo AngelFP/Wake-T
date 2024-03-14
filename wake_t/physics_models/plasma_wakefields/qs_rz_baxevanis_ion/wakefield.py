@@ -522,4 +522,9 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                     self.n_p / self.free_electrons_per_ion)
                 diag_dict[elec_name]['w'] = w_e
                 diag_dict[ions_name]['w'] = w_i
+            if 'r_to_x' in self.particle_diags:
+                nc_e = self.pp['r_to_x_hist'][:, :n_elec]
+                nc_i = self.pp['r_to_x_hist'][:, n_elec:]
+                diag_dict[elec_name]['r_to_x'] = nc_e
+                diag_dict[ions_name]['r_to_x'] = nc_i
         return diag_dict

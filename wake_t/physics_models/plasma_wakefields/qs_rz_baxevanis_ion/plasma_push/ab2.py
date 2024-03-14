@@ -8,7 +8,7 @@ from wake_t.utilities.numba import njit_serial
 
 @njit_serial()
 def evolve_plasma_ab2(
-        dxi, r, pr, gamma, m, q,
+        dxi, r, pr, gamma, m, q, r_to_x,
         nabla_a2, b_theta_0, b_theta, psi, dr_psi,
         dr, dpr
         ):
@@ -20,9 +20,10 @@ def evolve_plasma_ab2(
     ----------
     dxi : float
         Longitudinal step.
-    r, pr, gamma, m, q : ndarray
+    r, pr, gamma, m, q, r_to_x : ndarray
         Radial position, radial momentum, Lorentz factor, mass and charge of
-        the plasma particles.
+        the plasma particles as well an array that keeps track of axis crosses
+        to convert from r to x.
     nabla_a2, b_theta_0, b_theta, psi, dr_psi : ndarray
         Arrays with the value of the fields at the particle positions.
     dr, dpr : ndarray
@@ -47,7 +48,7 @@ def evolve_plasma_ab2(
     dpr[1] = dpr[0]
 
     # If a particle has crossed the axis, mirror it.
-    check_axis_crossing(r, pr, dr[1], dpr[1])
+    check_axis_crossing(r, pr, dr[1], dpr[1], r_to_x)
 
 
 @njit_serial(fastmath=True, error_model="numpy")
@@ -107,7 +108,7 @@ def apply_ab2(x, dt, dx):
 
 
 @njit_serial()
-def check_axis_crossing(r, pr, dr, dpr):
+def check_axis_crossing(r, pr, dr, dpr, r_to_x):
     """Check for particles with r < 0 and invert them."""
     for i in range(r.shape[0]):
         if r[i] < 0.:
@@ -115,3 +116,4 @@ def check_axis_crossing(r, pr, dr, dpr):
             pr[i] *= -1.
             dr[i] *= -1.
             dpr[i] *= -1.
+            r_to_x[i] *= -1

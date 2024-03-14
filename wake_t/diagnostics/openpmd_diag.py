@@ -197,6 +197,14 @@ class OpenPMDDiagnostics():
             particles['weighting'][SCALAR].set_attribute(
                 'macroWeighted', np.uint32(1))
             particles['weighting'][SCALAR].set_attribute('weightingPower', 1.)
+        if 'r_to_x' in species_data:
+            r_to_x = np.ascontiguousarray(species_data['r_to_x'])
+            d_r_to_x = Dataset(r_to_x.dtype, extent=r_to_x.shape)
+            particles['r_to_x'][SCALAR].reset_dataset(d_r_to_x)
+            particles['r_to_x'][SCALAR].store_chunk(r_to_x)
+            particles['r_to_x'][SCALAR].set_attribute(
+                'macroWeighted', np.uint32(0))
+            particles['r_to_x'][SCALAR].set_attribute('weightingPower', 1.)
         q = species_data['q']
         m = species_data['m']
         d_q = Dataset(np.dtype('float64'), extent=[1])
