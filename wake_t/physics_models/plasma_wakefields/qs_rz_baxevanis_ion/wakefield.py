@@ -418,6 +418,11 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             calculate_rho=calculate_rho,
             particle_diags=self.particle_diags
         )
+
+        # Add bunch density to total density.
+        if calculate_rho:
+            rho_bunch = -self.q_bunch[2:-2, 2:-2] / (self.r_fld / s_d)
+            self.rho[2:-2, 2:-2] += rho_bunch
         
         # Calculate fields on adaptive grids.
         if self.use_adaptive_grids:
