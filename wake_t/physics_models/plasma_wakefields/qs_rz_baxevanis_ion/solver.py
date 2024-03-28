@@ -114,7 +114,6 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
     # Field node coordinates.
     r_fld = r_fld / s_d
     xi_fld = xi_fld / s_d
-    log_r_fld = np.log(r_fld)
 
     # Initialize field arrays, including guard cells.
     nabla_a2 = np.zeros((n_xi+4, n_r+4))
@@ -132,7 +131,7 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
         plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
         free_electrons_per_ion, n_xi, laser_a2, nabla_a2, laser_source,
         bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
-        r_fld, log_r_fld, psi, B_t, rho, rho_e, rho_i, chi, dxi,
+        r_fld, psi, B_t, rho, rho_e, rho_i, chi, dxi,
         store_plasma_history=store_plasma_history,
         calculate_rho=calculate_rho, particle_diags=particle_diags
     )
@@ -154,7 +153,7 @@ def calculate_plasma_response(
     plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
     free_electrons_per_ion, n_xi, a2, nabla_a2, laser_source,
     bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
-    r_fld, log_r_fld, psi, b_t_bar, rho,
+    r_fld, psi, b_t_bar, rho,
     rho_e, rho_i, chi, dxi, store_plasma_history, calculate_rho,
     particle_diags
 ):
@@ -173,8 +172,6 @@ def calculate_plasma_response(
 
         pp.sort()
 
-        pp.determine_neighboring_points()
-
         if laser_source:
             pp.gather_laser_sources(
                 a2[slice_i+2], nabla_a2[slice_i+2], r_fld[0], r_fld[-1], dr
@@ -184,7 +181,7 @@ def calculate_plasma_response(
 
         pp.calculate_fields()
 
-        pp.calculate_psi_at_grid(r_fld, log_r_fld, psi[slice_i+2, 2:-2])
+        pp.calculate_psi_at_grid(r_fld, psi[slice_i+2, 2:-2])
         pp.calculate_b_theta_at_grid(r_fld, b_t_bar[slice_i+2, 2:-2])
 
         if calculate_rho:

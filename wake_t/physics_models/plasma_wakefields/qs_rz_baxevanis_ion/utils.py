@@ -1,4 +1,9 @@
+"""Contains various utility functions for the gridless solver."""
+
 import math
+
+import numpy as np
+
 from wake_t.utilities.numba import njit_serial
 
 
@@ -155,3 +160,76 @@ def calculate_laser_a2(a_complex, a2):
             ar = a_real[i, j]
             ai = a_imag[i, j]
             a2[2 + i, 2 + j] = ar * ar + ai * ai
+
+
+@njit_serial(error_model='numpy')
+def update_gamma_and_pz(gamma, pz, pr, a2, psi, q, m):
+    """
+    Update the gamma factor and longitudinal momentum of the plasma particles.
+
+    Parameters
+    ----------
+    gamma, pz : ndarray
+        Arrays containing the current gamma factor and longitudinal momentum
+        of the plasma particles (will be modified here).
+    pr, a2, psi : ndarray
+        Arrays containing the radial momentum of the particles and the
+        value of a2 and psi at the position of the particles.
+
+    """
+    for i in range(pr.shape[0]):
+        q_over_m = q[i] / m[i]
+        psi_i = psi[i] * q_over_m
+        pz_i = (
+            (1 + pr[i] ** 2 + q_over_m ** 2 * a2[i] - (1 + psi_i) ** 2) /
+            (2 * (1 + psi_i))
+        )
+        pz[i] = pz_i
+        gamma[i] = 1. + pz_i + psi_i
+
+
+@njit_serial()
+def check_gamma(gamma, pz, pr, max_gamma):
+    """Check that the gamma of particles does not exceed `max_gamma`"""
+    for i in range(gamma.shape[0]):
+        if gamma[i] > max_gamma:
+            gamma[i] = 1.
+            pz[i] = 0.
+            pr[i] = 0.
+
+
+@njit_serial()
+def sort_particle_arrays(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
+    """Sort all the particle arrays with a given sorting order.
+    
+    Implementing it like this looks very ugly, but it is much faster than
+    repeating `array = array[indices]` for each array. It is also much faster
+    than implementing a `sort_array` function that is called on each array.
+    This is probably because of the overhead from calling numba functions.
+    """
+    a1_orig = np.copy(a1)
+    a2_orig = np.copy(a2)
+    a3_orig = np.copy(a3)
+    a4_orig = np.copy(a4)
+    a5_orig = np.copy(a5)
+    a6_orig = np.copy(a6)
+    a7_orig = np.copy(a7)
+    a8_orig = np.copy(a8)
+    a9_orig = np.copy(a9)
+    a10_orig = np.copy(a10)
+    a11_orig = np.copy(a11)
+    n_part = indices.shape[0]
+    for i in range(n_part):
+        i_sort = indices[i]
+        if i != i_sort:
+            a1[i] = a1_orig[i_sort]
+            a2[i] = a2_orig[i_sort]
+            a3[i] = a3_orig[i_sort]
+            a4[i] = a4_orig[i_sort]
+            a5[i] = a5_orig[i_sort]
+            a6[i] = a6_orig[i_sort]
+            a7[i] = a7_orig[i_sort]
+            a8[i] = a8_orig[i_sort]
+            a9[i] = a9_orig[i_sort]
+            a10[:, i] = a10_orig[:, i_sort]
+            a11[:, i] = a11_orig[:, i_sort]

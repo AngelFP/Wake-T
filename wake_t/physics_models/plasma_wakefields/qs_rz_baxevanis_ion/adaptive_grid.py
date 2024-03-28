@@ -8,8 +8,8 @@ import aptools.plasma_accel.general_equations as ge
 
 from wake_t.utilities.numba import njit_serial
 from wake_t.particles.interpolation import gather_main_fields_cyl_linear
-from .psi_and_derivatives import calculate_psi
-from .b_theta import calculate_b_theta
+from .psi_and_derivatives import calculate_psi_with_interpolation
+from .b_theta import calculate_b_theta_with_interpolation
 from .b_theta_bunch import calculate_bunch_source, deposit_bunch_charge
 from .utils import longitudinal_gradient, radial_gradient
 
@@ -153,9 +153,8 @@ class AdaptiveGrid():
         s_d = ge.plasma_skin_depth(n_p * 1e-6)
         calculate_fields_on_grid(
             self.i_grid, self.r_grid, s_d,
-            self.psi_grid, self.b_t, self.log_r_grid, pp_hist['r_hist'],
+            self.psi_grid, self.b_t, pp_hist['r_hist'], pp_hist['log_r_hist'],
             pp_hist['sum_1_hist'], pp_hist['sum_2_hist'],
-            pp_hist['i_sort_hist'], pp_hist['psi_max_hist'],
             pp_hist['a_0_hist'], pp_hist['a_i_hist'], pp_hist['b_i_hist'])
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
@@ -287,7 +286,6 @@ class AdaptiveGrid():
         self.dr = r_max / (self.nr - self.nr_border)
         r_max += self.nr_border * self.dr
         self.r_grid = np.linspace(self.dr/2, r_max - self.dr/2, self.nr)
-        self.log_r_grid = np.log(self.r_grid)
 
         # Create grid in xi
         xi_min_beam = np.min(xi)
@@ -320,8 +318,8 @@ class AdaptiveGrid():
 @njit_serial()
 def calculate_fields_on_grid(
         i_grid, r_grid, s_d,
-        psi_grid, bt_grid, log_r_grid, r_hist, sum_1_hist, sum_2_hist,
-        i_sort_hist, psi_max_hist, a_0_hist, a_i_hist, b_i_hist):
+        psi_grid, bt_grid, r_hist, log_r_hist, sum_1_hist, sum_2_hist,
+        a_0_hist, a_i_hist, b_i_hist):
     """Compute the plasma fields on the grid.
 
     Compiling this method in numba avoids significant overhead.
@@ -332,32 +330,28 @@ def calculate_fields_on_grid(
         j = i_grid[i]
         psi = psi_grid[i + 2, 2:-2]
         b_theta = bt_grid[i + 2, 2:-2]
-        calculate_psi(
+        calculate_psi_with_interpolation(
             r_eval=r_grid / s_d,
-            log_r_eval=log_r_grid - np.log(s_d),
             r=r_hist[j, :n_elec],
-            sum_1=sum_1_hist[j, :n_elec],
-            sum_2=sum_2_hist[j, :n_elec],
-            idx=i_sort_hist[j, :n_elec],
+            log_r=log_r_hist[j, :n_elec],
+            sum_1_arr=sum_1_hist[j, :n_elec],
+            sum_2_arr=sum_2_hist[j, :n_elec],
             psi=psi
         )
-        calculate_psi(
+        calculate_psi_with_interpolation(
             r_eval=r_grid / s_d,
-            log_r_eval=log_r_grid - np.log(s_d),
             r=r_hist[j, n_elec:],
-            sum_1=sum_1_hist[j, n_elec:],
-            sum_2=sum_2_hist[j, n_elec:],
-            idx=i_sort_hist[j, n_elec:],
-            psi=psi
+            log_r=log_r_hist[j, n_elec:],
+            sum_1_arr=sum_1_hist[j, n_elec:],
+            sum_2_arr=sum_2_hist[j, n_elec:],
+            psi=psi,
+            add=True,
         )
-        psi -= psi_max_hist[j]
-
-        calculate_b_theta(
+        calculate_b_theta_with_interpolation(
             r_fld=r_grid / s_d,
             a_0=a_0_hist[j],
             a=a_i_hist[j],
             b=b_i_hist[j],
             r=r_hist[j, :n_elec],
-            idx=i_sort_hist[j, :n_elec],
             b_theta=b_theta
         )

@@ -9,11 +9,9 @@ from wake_t.utilities.numba import njit_serial
 
 @njit_serial()
 def calculate_b_theta_at_particles(
-    r_e, pr_e, q_e, gamma_e,
-    r_i,
-    i_sort_e, i_sort_i,        
+    r_e, pr_e, q_e, q_center_e, gamma_e,
+    r_i,      
     ion_motion,
-    r_neighbor_e,
     psi_e, dr_psi_e, dxi_psi_e,
     b_t_0_e, nabla_a2_e,
     A, B, C,
@@ -104,107 +102,27 @@ def calculate_b_theta_at_particles(
     """
     # Calculate the A_i, B_i, C_i coefficients in Eq. (26).
     calculate_ABC(
-        r_e, pr_e, q_e, gamma_e,
+        r_e, pr_e, gamma_e,
         psi_e, dr_psi_e, dxi_psi_e, b_t_0_e,
-        nabla_a2_e, i_sort_e, A, B, C
+        nabla_a2_e, A, B, C
     )
 
     # Calculate the a_i, b_i coefficients in Eq. (27).
-    calculate_KU(r_e, A, i_sort_e, K, U)
-    calculate_ai_bi_from_axis(r_e, A, B, C, K, U, i_sort_e, a_0, a, b)
+    calculate_KU(r_e, q_e, q_center_e, A, K, U)
+    calculate_ai_bi_from_axis(r_e, q_e, q_center_e, A, B, C, K, U, a_0, a, b)
 
     # Calculate b_theta at plasma particles.
-    calculate_b_theta_at_electrons(
-        r_e, a_0[0], a, b, r_neighbor_e, i_sort_e, b_t_e
-    )
+    calculate_b_theta_at_particle_centers(a, b, r_e, b_t_e)
     check_b_theta(b_t_e)
     if ion_motion:
-        calculate_b_theta_at_ions(
-            r_i, r_e, a_0[0], a, b, i_sort_i, i_sort_e, b_t_i
+        calculate_b_theta_with_interpolation(
+            r_i, a_0[0], a, b, r_e, b_t_i
         )
         check_b_theta(b_t_i)
 
 
 @njit_serial(error_model='numpy')
-def calculate_b_theta_at_electrons(r, a_0, a, b, r_neighbor, idx, b_theta):
-    """
-    Calculate the azimuthal magnetic field from the plasma at the location
-    of the plasma electrons using Eqs. (24), (26) and (27) from the paper
-    of P. Baxevanis and G. Stupakov.
-
-    As indicated in the original paper, the value of the fields at the
-    position of each electron presents a discontinuity. To avoid this, the
-    at each electron is calculated as a linear interpolation between the two
-    values at its left and right neighboring points.
-
-    """
-    # Calculate field at particles as average between neighboring values.
-    n_part = r.shape[0]
-
-    a_i_left = a_0
-    b_i_left = 0.
-    r_left = r_neighbor[0]
-    inv_r_left = 1. / r_left
-    for i_sort in range(n_part):
-        i = idx[i_sort]
-        r_i = r[i]
-        
-        # Calculate b_theta at left neighboring point.
-        b_theta_left = a_i_left * r_left + b_i_left * inv_r_left
-
-        # Calculate b_theta at right neighboring point.
-        r_right = r_neighbor[i_sort + 1]
-        inv_r_right = 1. / r_right
-        a_i_right = a[i]
-        b_i_right = b[i]
-        b_theta_right = a_i_right * r_right + b_i_right * inv_r_right
-
-        # Do interpolation.
-        c2 = (b_theta_right - b_theta_left) / (r_right - r_left)
-        c1 = b_theta_left - c2*r_left
-        b_theta[i] = c1 + c2*r_i
-
-        # Use right value as left values for next iteration.
-        a_i_left = a_i_right
-        b_i_left = b_i_right
-        r_left = r_right
-        inv_r_left = inv_r_right
-
-
-@njit_serial(error_model='numpy')
-def calculate_b_theta_at_ions(r_i, r_e, a_0, a, b, idx_i, idx_e, b_theta):
-    """
-    Calculate the azimuthal magnetic field at the plasma ions. This method
-    is identical to `calculate_b_theta` except in that `r_i` is not
-    sorted and thus need the additonal `idx_i` argument.
-
-    """
-    # Calculate field at particles as average between neighboring values.
-    n_i = r_i.shape[0]
-    n_e = r_e.shape[0]
-    i_last = 0
-    a_i = a_0
-    b_i = 0.
-    for i_sort in range(n_i):
-        i_i = idx_i[i_sort]
-        r_i_i = r_i[i_i]        
-        # Get index of last plasma electron with r_i_e < r_i_i, continuing from
-        # last electron found in previous iteration.
-        while i_last < n_e:
-            i_e = idx_e[i_last]
-            r_i_e = r_e[i_e]
-            if r_i_e >= r_i_i:
-                break
-            i_last += 1
-        if i_last > 0:
-            i_e = idx_e[i_last - 1]
-            a_i = a[i_e]
-            b_i = b[i_e]
-        b_theta[i_i] = a_i * r_i_i + b_i / r_i_i
-
-
-@njit_serial(error_model='numpy')
-def calculate_b_theta(r_fld, a_0, a, b, r, idx, b_theta):
+def calculate_b_theta_with_interpolation(r_fld, a_0, a, b, r, b_theta):
     """
     Calculate the azimuthal magnetic field from the plasma at the radial
     locations in `r_fld`.
@@ -216,25 +134,51 @@ def calculate_b_theta(r_fld, a_0, a, b, r, idx, b_theta):
     i_last = 0
     a_i = a_0
     b_i = 0.
+    b_theta_left = 0.
+    r_left = 0.
     for j in range(n_points):
         r_j = r_fld[j]
         # Get index of last plasma particle with r_i < r_j, continuing from
         # last particle found in previous iteration.
         while i_last < n_part:
-            i = idx[i_last]
-            r_i = r[i]
+            r_i = r[i_last]
             if r_i >= r_j:
                 break
             i_last += 1
-        if i_last > 0:
-            i = idx[i_last - 1]
-            a_i = a[i]
-            b_i = b[i]
-        b_theta[j] = a_i * r_j + b_i / r_j
+        if i_last < n_part:
+            if i_last > 0:
+                r_left = r[i_last - 1]
+                a_i = a[i_last - 1]
+                b_i = b[i_last - 1]
+                b_theta_left = a_i * r_left + b_i / r_left
+            r_right = r[i_last]
+            a_i = a[i_last]
+            b_i = b[i_last]
+            b_theta_right = a_i * r_right + b_i / r_right
+            slope = (b_theta_right - b_theta_left) / (r_right - r_left)
+            b_theta_j = b_theta_left + slope * (r_j - r_left)
+        else:
+            b_theta_j = a_i * r_j + b_i / r_j
+        b_theta[j] = b_theta_j
+
+@njit_serial(error_model='numpy')
+def calculate_b_theta_at_particle_centers(a, b, r, b_theta):
+    """
+    Calculate the azimuthal magnetic field from the plasma at the radial
+    locations in `r_fld`.
+
+    """
+    # Calculate fields at r_fld
+    n_part = r.shape[0]
+    for i in range(n_part):
+        a_i = a[i]
+        b_i = b[i]
+        r_i = r[i]
+        b_theta[i] = a_i * r_i + b_i / r_i
 
 
 @njit_serial(error_model='numpy')
-def calculate_ai_bi_from_axis(r, A, B, C, K, U, idx, a_0, a, b):
+def calculate_ai_bi_from_axis(r, q, q_center, A, B, C, K, U, a_0, a, b):
     """
     Calculate the values of a_i and b_i which are needed to determine
     b_theta at any r position.
@@ -256,37 +200,45 @@ def calculate_ai_bi_from_axis(r, A, B, C, K, U, idx, a_0, a, b):
     while i_start < n_part:
 
         # Iterate over particles
-        for i_sort in range(i_start, n_part):
-            i = idx[i_sort]
+        for i in range(i_start, n_part):
             r_i = r[i]
+            q_i = q[i]
+            q_center_i = q_center[i]
             A_i = A[i]
             B_i = B[i]
             C_i = C[i]
+            A_inv_r_i = A_i / r_i
+            A_r_i = A_i * r_i
+            A_r_i_3 =  A_r_i * r_i * r_i
 
-            l_i = (1. + 0.5 * A_i * r_i)
-            m_i = 0.5 * A_i / r_i
-            n_i = -0.5 * A_i * r_i ** 3
-            o_i = (1. - 0.5 * A_i * r_i)
+            # Calculate value of coefficients at the center of the particles.
+            l_i = 1. + 0.5 * q_center_i * A_r_i
+            m_i = 0.5 * q_center_i * A_inv_r_i
+            n_i = -0.5 * q_center_i * A_r_i_3
+            o_i = 1. - 0.5 * q_center_i * A_r_i
+            a[i] = l_i * T_im1 + m_i * P_im1 + 0.5 * q_center_i * B_i + 0.25 * q_center_i * q_center_i * A_i * C_i
+            b[i] = n_i * T_im1 + o_i * P_im1 + r_i * (
+                    q_center_i * C_i - 0.5 * q_center_i * B_i * r_i - 0.25 * q_center_i * q_center_i  * A_i * C_i * r_i)
 
-            T_i = l_i * T_im1 + m_i * P_im1 + 0.5 * B_i + 0.25 * A_i * C_i
+            # But add total charge for next iteration.
+            l_i = 1. + 0.5 * q_i * A_r_i
+            m_i = 0.5 * q_i * A_inv_r_i
+            n_i = -0.5 * q_i * A_r_i_3
+            o_i = 1. - 0.5 * q_i * A_r_i
+            T_i = l_i * T_im1 + m_i * P_im1 + 0.5 * q_i * B_i + 0.25 * q_i * q_i * A_i * C_i
             P_i = n_i * T_im1 + o_i * P_im1 + r_i * (
-                    C_i - 0.5 * B_i * r_i - 0.25 * A_i * C_i * r_i)
-
-            a[i] = T_i
-            b[i] = P_i
-
+                    q_i * C_i - 0.5 * q_i * B_i * r_i - 0.25 * q_i * q_i * A_i * C_i * r_i)
             T_im1 = T_i
             P_im1 = P_i
 
         # Calculate a_0_diff.
-        a_0_diff = - T_im1 / K[i]
+        a_0_diff = - a[i] / K[i]
         a_0 += a_0_diff
 
         # Calculate a_i (in T_i) and b_i (in P_i) as functions of a_0_diff.
         i_stop = n_part
         im1 = 0
-        for i_sort in range(i_start, n_part):
-            i = idx[i_sort]
+        for i in range(i_start, n_part):
             T_old = a[i]
             P_old = b[i]
             K_old = K[i] * a_0_diff
@@ -300,9 +252,9 @@ def calculate_ai_bi_from_axis(r, A, B, C, K, U, idx, a_0, a, b):
             # Angel: if T_old + K_old (small number) is less than 10 orders
             # of magnitude smaller than T_old - K_old (big number), then we
             # have enough precision (from simulation tests).
-            if (i_sort == i_start or i_sort == (n_part-1) or
-                    abs(T_old + K_old) >= 1e-10 * abs(T_old - K_old) and
-                    abs(P_old + U_old) >= 1e-10 * abs(P_old - U_old)):
+            if (i == i_start or i == (n_part-1) or
+                abs(T_old + K_old) >= 1e-10 * abs(T_old - K_old) and
+                abs(P_old + U_old) >= 1e-10 * abs(P_old - U_old)):
                 # Calculate a_i and b_i as functions of a_0_diff.
                 # Store the result in T and P
                 a[i] = T_old + K_old
@@ -310,7 +262,7 @@ def calculate_ai_bi_from_axis(r, A, B, C, K, U, idx, a_0, a, b):
             else:
                 # If the precision is not sufficient, stop this iteration
                 # and rescale T_im1 and P_im1 for the next one.
-                i_stop = i_sort
+                i_stop = i
                 T_im1 = a[im1]
                 P_im1 = b[im1]
                 break
@@ -321,16 +273,18 @@ def calculate_ai_bi_from_axis(r, A, B, C, K, U, idx, a_0, a, b):
 
 
 @njit_serial(error_model='numpy')
-def calculate_ABC(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
-                  nabla_a2, idx, A, B, C):
-    """Calculate the A_i, B_i and C_i coefficients of the linear system."""
+def calculate_ABC(r, pr, gamma, psi, dr_psi, dxi_psi, b_theta_0,
+                  nabla_a2, A, B, C):
+    """Calculate the A_i, B_i and C_i coefficients of the linear system.
+    
+    The coefficients are missing the q_i term. They are multiplied by it
+    in following functions.
+    """
     n_part = r.shape[0]
 
-    for i_sort in range(n_part):
-        i = idx[i_sort]
+    for i in range(n_part):
         r_i = r[i]
         pr_i = pr[i]
-        q_i = q[i]
         gamma_i = gamma[i]
         psi_i = psi[i]
         dr_psi_i = dr_psi[i]
@@ -347,18 +301,18 @@ def calculate_ABC(r, pr, q, gamma, psi, dr_psi, dxi_psi, b_theta_0,
         c = inv_a2 * inv_r_i
         pr_i2 = pr_i * pr_i
 
-        A[i] = q_i * b
-        B[i] = q_i * (- (gamma_i * dr_psi_i) * c
+        A[i] = b
+        B[i] = (- (gamma_i * dr_psi_i) * c
                       + (pr_i2 * dr_psi_i) * inv_r_i * inv_a3
                       + (pr_i * dxi_psi_i) * c
                       + pr_i2 * inv_r_i * inv_r_i * inv_a2
                       + b_theta_0_i * b
                       + nabla_a2_i * c * 0.5)
-        C[i] = q_i * (pr_i2 * c - (gamma_i * inv_a - 1.) * inv_r_i)
+        C[i] = (pr_i2 * c - (gamma_i * inv_a - 1.) * inv_r_i)
 
 
 @njit_serial(error_model='numpy')
-def calculate_KU(r, A, idx, K, U):
+def calculate_KU(r, q, q_center, A, K, U):
     """Calculate the K_i and U_i values of the linear system."""
     n_part = r.shape[0]
 
@@ -366,22 +320,30 @@ def calculate_KU(r, A, idx, K, U):
     K_im1 = 1.
     U_im1 = 0.
 
-    for i_sort in range(n_part):
-        i = idx[i_sort]
+    for i in range(n_part):
         r_i = r[i]
+        q_i = q[i]
+        q_center_i = q_center[i]
         A_i = A[i]
+        A_inv_r_i = A_i / r_i
+        A_r_i = A_i * r_i
+        A_r_i_3 =  A_r_i * r_i * r_i
 
-        l_i = (1. + 0.5 * A_i * r_i)
-        m_i = 0.5 * A_i / r_i
-        n_i = -0.5 * A_i * r_i ** 3
-        o_i = (1. - 0.5 * A_i * r_i)
+        # Calculate value of coefficients at the center of the particles.
+        l_i = (1. + 0.5 * q_center_i * A_r_i)
+        m_i = 0.5 * q_center_i * A_inv_r_i
+        n_i = -0.5 * q_center_i * A_r_i_3
+        o_i = (1. - 0.5 * q_center_i * A_r_i)
+        K[i] = l_i * K_im1 + m_i * U_im1
+        U[i] = n_i * K_im1 + o_i * U_im1
 
+        # But add total charge for next iteration.
+        l_i = (1. + 0.5 * q_i * A_r_i)
+        m_i = 0.5 * q_i * A_inv_r_i
+        n_i = -0.5 * q_i * A_r_i_3
+        o_i = (1. - 0.5 * q_i * A_r_i)
         K_i = l_i * K_im1 + m_i * U_im1
         U_i = n_i * K_im1 + o_i * U_im1
-
-        K[i] = K_i
-        U[i] = U_i
-
         K_im1 = K_i
         U_im1 = U_i
 

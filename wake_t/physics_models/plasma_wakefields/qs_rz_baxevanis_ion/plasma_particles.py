@@ -4,15 +4,16 @@ from typing import Optional, List, Callable
 import numpy as np
 import scipy.constants as ct
 
-from wake_t.utilities.numba import njit_serial
-from .psi_and_derivatives import (calculate_psi,
+from .psi_and_derivatives import (calculate_psi_with_interpolation,
                                   calculate_psi_and_derivatives_at_particles)
 from .deposition import deposit_plasma_particles
 from .gather import gather_bunch_sources, gather_laser_sources
-from .b_theta import calculate_b_theta_at_particles, calculate_b_theta
+from .b_theta import (calculate_b_theta_at_particles,
+                      calculate_b_theta_with_interpolation)
 from .plasma_push.ab2 import evolve_plasma_ab2
-from .utils import (log, calculate_chi, calculate_rho,
-                    determine_neighboring_points)
+from .utils import (
+    calculate_chi, calculate_rho, update_gamma_and_pz, sort_particle_arrays,
+    check_gamma, log)
 
 
 class PlasmaParticles():
@@ -141,38 +142,46 @@ class PlasmaParticles():
         self.n_part = self.n_elec * 2
 
         # Initialize particle arrays.
+        # `q_center` represents the charge until the particle center. That is,
+        # the charge of the first half of the particle.
         pr = np.zeros(self.n_elec)
         pz = np.zeros(self.n_elec)
         gamma = np.ones(self.n_elec)
         q = dr_p * r * self.radial_density(r)
+        q_center = q / 2 - dr_p ** 2 / 8
         q *= self.free_electrons_per_ion
+        q_center *= self.free_electrons_per_ion
         m_e = np.ones(self.n_elec)
         m_i = np.ones(self.n_elec) * self.ion_mass / ct.m_e
         q_species_e = np.ones(self.n_elec)
         q_species_i = - np.ones(self.n_elec) * self.free_electrons_per_ion
+        tag = np.arange(self.n_elec, dtype=np.int32)
 
+        # Combine arrays of both species.
         self.r = np.concatenate((r, r))
         self.dr_p = np.concatenate((dr_p, dr_p))
         self.pr = np.concatenate((pr, pr))
         self.pz = np.concatenate((pz, pz))
         self.gamma = np.concatenate((gamma, gamma))
         self.q = np.concatenate((q, -q))
+        self.q_center = np.concatenate((q_center, -q_center))
         self.q_species = np.concatenate((q_species_e, q_species_i))
         self.m = np.concatenate((m_e, m_i))
         self.r_to_x = np.ones(self.n_part, dtype=np.int32)
+        self.tag = np.concatenate((tag, tag))
 
         # Create history arrays.
         if self.store_history:
             self.r_hist = np.zeros((self.nz, self.n_part))
+            self.log_r_hist = np.zeros((self.nz, self.n_part))
             self.xi_hist = np.zeros((self.nz, self.n_part))
             self.pr_hist = np.zeros((self.nz, self.n_part))
             self.pz_hist = np.zeros((self.nz, self.n_part))
             self.w_hist = np.zeros((self.nz, self.n_part))
-            self.r_to_x_hist = np.zeros((self.nz, self.n_part))
-            self.sum_1_hist = np.zeros((self.nz, self.n_part))
-            self.sum_2_hist = np.zeros((self.nz, self.n_part))
-            self.i_sort_hist = np.zeros((self.nz, self.n_part), dtype=np.int64)
-            self.psi_max_hist = np.zeros(self.nz)
+            self.r_to_x_hist = np.zeros((self.nz, self.n_part), dtype=np.int32)
+            self.tag_hist = np.zeros((self.nz, self.n_part), dtype=np.int32)
+            self.sum_1_hist = np.zeros((self.nz, self.n_part + 2))
+            self.sum_2_hist = np.zeros((self.nz, self.n_part + 2))
             self.a_i_hist = np.zeros((self.nz, self.n_elec))
             self.b_i_hist = np.zeros((self.nz, self.n_elec))
             self.a_0_hist = np.zeros(self.nz)
@@ -191,22 +200,42 @@ class PlasmaParticles():
             self._allocate_ab2_arrays()
 
     def sort(self):
-        """Sort plasma particles radially (only by index)."""
-        self.i_sort_e = np.argsort(self.r_elec, kind='stable')
-        if self.ion_motion or not self.ions_computed:
-            self.i_sort_i = np.argsort(self.r_ion, kind='stable')
-
-    def determine_neighboring_points(self):        
-        """Determine the neighboring points of each plasma particle."""
-        determine_neighboring_points(
-            self.r_elec, self.dr_p_elec, self.i_sort_e, self._r_neighbor_e
+        """Sort plasma particles radially (only by index).
+        
+        The `q_species` and `m` arrays do not need to be sorted because all
+        particles have the same value.
+        """
+        i_sort_e = np.argsort(self.r_elec, kind='stable')
+        sort_particle_arrays(
+            self.r_elec,
+            self.dr_p_elec,
+            self.pr_elec,
+            self.pz_elec,
+            self.gamma_elec,
+            self.q_elec,
+            self.q_center_elec,
+            self.r_to_x_elec,
+            self.tag_elec,
+            self._dr_e,
+            self._dpr_e,
+            i_sort_e,
         )
-        log(self._r_neighbor_e, self._log_r_neighbor_e)
         if self.ion_motion:
-            determine_neighboring_points(
-                self.r_ion, self.dr_p_ion, self.i_sort_i, self._r_neighbor_i
+            i_sort_i = np.argsort(self.r_ion, kind='stable')
+            sort_particle_arrays(
+                self.r_ion,
+                self.dr_p_ion,
+                self.pr_ion,
+                self.pz_ion,
+                self.gamma_ion,
+                self.q_ion,
+                self.q_center_ion,
+                self.r_to_x_ion,
+                self.tag_ion,
+                self._dr_i,
+                self._dpr_i,
+                i_sort_i,
             )
-            log(self._r_neighbor_i, self._log_r_neighbor_i)
 
     def gather_laser_sources(self, a2, nabla_a2, r_min, r_max, dr):
         """Gather the source terms (a^2 and nabla(a)^2) from the laser."""
@@ -243,21 +272,22 @@ class PlasmaParticles():
 
     def calculate_fields(self):
         """Calculate the fields at the plasma particles."""
+        # Precalculate logarithms (expensive) to avoid doing so several times.
+        log(self.r_elec, self.log_r_elec)
+        if self.ion_motion or not self.ions_computed:
+            log(self.r_ion, self.log_r_ion)
+
         calculate_psi_and_derivatives_at_particles(
-            self.r_elec, self.pr_elec, self.q_elec, self.dr_p_elec,
-            self.r_ion, self.pr_ion, self.q_ion, self.dr_p_ion,
-            self.i_sort_e, self.i_sort_i,
+            self.r_elec, self.log_r_elec, self.pr_elec, self.q_elec,
+            self.q_center_elec,
+            self.r_ion, self.log_r_ion, self.pr_ion, self.q_ion,
+            self.q_center_ion,
             self.ion_motion, self.ions_computed,
-            self._r_neighbor_e, self._log_r_neighbor_e,
-            self._r_neighbor_i, self._log_r_neighbor_i,
             self._sum_1_e, self._sum_2_e, self._sum_3_e,
             self._sum_1_i, self._sum_2_i, self._sum_3_i,
-            self._psi_bg_i, self._dr_psi_bg_i, self._dxi_psi_bg_i,
-            self._psi_bg_e, self._dr_psi_bg_e, self._dxi_psi_bg_e,
             self._psi_e, self._dr_psi_e, self._dxi_psi_e,
             self._psi_i, self._dr_psi_i, self._dxi_psi_i,
-            self._psi_max,
-            self._psi, self._dxi_psi
+            self._psi, self._dr_psi, self._dxi_psi
         )
         if self.ion_motion:
             update_gamma_and_pz(
@@ -272,11 +302,10 @@ class PlasmaParticles():
         check_gamma(self.gamma_elec, self.pz_elec, self.pr_elec,
                     self.max_gamma)
         calculate_b_theta_at_particles(
-            self.r_elec, self.pr_elec, self.q_elec, self.gamma_elec,
+            self.r_elec, self.pr_elec, self.q_elec, self.q_center_elec,
+            self.gamma_elec,
             self.r_ion,
-            self.i_sort_e, self.i_sort_i,
             self.ion_motion,
-            self._r_neighbor_e,
             self._psi_e, self._dr_psi_e, self._dxi_psi_e,
             self._b_t_0_e, self._nabla_a2_e,
             self._A, self._B, self._C,
@@ -285,23 +314,22 @@ class PlasmaParticles():
             self._b_t_e, self._b_t_i
         )
 
-    def calculate_psi_at_grid(self, r_eval, log_r_eval, psi):
+    def calculate_psi_at_grid(self, r_eval, psi):
         """Calculate psi on the current grid slice."""
-        calculate_psi(
-            r_eval, log_r_eval, self.r_elec, self._sum_1_e, self._sum_2_e,
-            self.i_sort_e, psi
+        calculate_psi_with_interpolation(
+            r_eval, self.r_elec, self.log_r_elec, self._sum_1_e, self._sum_2_e,
+            psi
         )
-        calculate_psi(
-            r_eval, log_r_eval, self.r_ion, self._sum_1_i, self._sum_2_i,
-            self.i_sort_i, psi
+        calculate_psi_with_interpolation(
+            r_eval, self.r_ion, self.log_r_ion, self._sum_1_i, self._sum_2_i,
+            psi, add=True
         )
-        psi -= self._psi_max
 
     def calculate_b_theta_at_grid(self, r_eval, b_theta):
         """Calculate b_theta on the current grid slice."""
-        calculate_b_theta(
+        calculate_b_theta_with_interpolation(
             r_eval, self._a_0[0], self._a_i, self._b_i, self.r_elec,
-            self.i_sort_e, b_theta
+            b_theta
         )
 
     def evolve(self, dxi):
@@ -363,18 +391,18 @@ class PlasmaParticles():
         if self.store_history:
             history = {
                 'r_hist': self.r_hist,
+                'log_r_hist': self.log_r_hist,
                 'xi_hist': self.xi_hist,
                 'pr_hist': self.pr_hist,
                 'pz_hist': self.pz_hist,
                 'w_hist': self.w_hist,
                 'r_to_x_hist': self.r_to_x_hist,
+                'tag_hist': self.tag_hist,
                 'sum_1_hist': self.sum_1_hist,
                 'sum_2_hist': self.sum_2_hist,
                 'a_i_hist': self.a_i_hist,
                 'b_i_hist': self.b_i_hist,
                 'a_0_hist': self.a_0_hist,
-                'psi_max_hist': self.psi_max_hist,
-                'i_sort_hist': self.i_sort_hist,
             }
             return history
 
@@ -392,10 +420,9 @@ class PlasmaParticles():
             self.w_hist[-1 - self.i_push] = self._rho
         if 'r_to_x' in self.diags:
             self.r_to_x_hist[-1 - self.i_push] = self.r_to_x
+        if 'tag' in self.diags:
+            self.tag_hist[-1 - self.i_push] = self.tag
         if self.store_history:
-            self.i_sort_hist[-1 - self.i_push, :self.n_elec] = self.i_sort_e
-            self.i_sort_hist[-1 - self.i_push, self.n_elec:] = self.i_sort_i
-            self.psi_max_hist[-1 - self.i_push] = self._psi_max[0]
             self.a_0_hist[-1 - self.i_push] = self._a_0[0]
 
     def _allocate_field_arrays(self):
@@ -414,12 +441,14 @@ class PlasmaParticles():
             self._sum_1 = self.sum_1_hist[-1]
             self._sum_2 = self.sum_2_hist[-1]
             self._rho = self.w_hist[-1]
+            self._log_r = self.log_r_hist[-1]
         else:
             self._a_i = np.zeros(self.n_elec)
             self._b_i = np.zeros(self.n_elec)
-            self._sum_1 = np.zeros(self.n_part)
-            self._sum_2 = np.zeros(self.n_part)
+            self._sum_1 = np.zeros(self.n_part + 2)
+            self._sum_2 = np.zeros(self.n_part + 2)
             self._rho = np.zeros(self.n_part)
+            self._log_r = np.zeros(self.n_part)
 
         self._a2 = np.zeros(self.n_part)
         self._nabla_a2 = np.zeros(self.n_part)
@@ -429,48 +458,42 @@ class PlasmaParticles():
         self._dr_psi = np.zeros(self.n_part)
         self._dxi_psi = np.zeros(self.n_part)
         self._chi = np.zeros(self.n_part)
-        self._sum_3_e = np.zeros(self.n_elec)
-        self._sum_3_i = np.zeros(self.n_elec)
-        self._psi_bg_e = np.zeros(self.n_elec+1)
-        self._dr_psi_bg_e = np.zeros(self.n_elec+1)
-        self._dxi_psi_bg_e = np.zeros(self.n_elec+1)
-        self._psi_bg_i = np.zeros(self.n_elec+1)
-        self._dr_psi_bg_i = np.zeros(self.n_elec+1)
-        self._dxi_psi_bg_i = np.zeros(self.n_elec+1)
+        self._sum_3_e = np.zeros(self.n_elec + 1)
+        self._sum_3_i = np.zeros(self.n_elec + 1)
         self._a_0 = np.zeros(1)
         self._A = np.zeros(self.n_elec)
         self._B = np.zeros(self.n_elec)
         self._C = np.zeros(self.n_elec)
         self._K = np.zeros(self.n_elec)
         self._U = np.zeros(self.n_elec)
-        self._r_neighbor_e = np.zeros(self.n_elec+1)
-        self._r_neighbor_i = np.zeros(self.n_elec+1)
-        self._log_r_neighbor_e = np.zeros(self.n_elec+1)
-        self._log_r_neighbor_i = np.zeros(self.n_elec+1)
-
-        self._psi_max = np.zeros(1)
 
     def _make_species_views(self):
         """Make species arrays as partial views of the particle arrays."""
         self.r_elec = self.r[:self.n_elec]
+        self.log_r_elec = self._log_r[:self.n_elec]
         self.dr_p_elec = self.dr_p[:self.n_elec]
         self.pr_elec = self.pr[:self.n_elec]
         self.pz_elec = self.pz[:self.n_elec]
         self.gamma_elec = self.gamma[:self.n_elec]
         self.q_elec = self.q[:self.n_elec]
+        self.q_center_elec = self.q_center[:self.n_elec]
         self.q_species_elec = self.q_species[:self.n_elec]
         self.m_elec = self.m[:self.n_elec]
         self.r_to_x_elec = self.r_to_x[:self.n_elec]
+        self.tag_elec = self.tag[:self.n_elec]
 
         self.r_ion = self.r[self.n_elec:]
+        self.log_r_ion = self._log_r[self.n_elec:]
         self.dr_p_ion = self.dr_p[self.n_elec:]
         self.pr_ion = self.pr[self.n_elec:]
         self.pz_ion = self.pz[self.n_elec:]
         self.gamma_ion = self.gamma[self.n_elec:]
         self.q_ion = self.q[self.n_elec:]
+        self.q_center_ion = self.q_center[self.n_elec:]
         self.q_species_ion = self.q_species[self.n_elec:]
         self.m_ion = self.m[self.n_elec:]
         self.r_to_x_ion = self.r_to_x[self.n_elec:]
+        self.tag_ion = self.tag[self.n_elec:]
 
         self._psi_e = self._psi[:self.n_elec]
         self._dr_psi_e = self._dr_psi[:self.n_elec]
@@ -483,10 +506,10 @@ class PlasmaParticles():
         self._b_t_0_e = self._b_t_0[:self.n_elec]
         self._nabla_a2_e = self._nabla_a2[:self.n_elec]
         self._a2_e = self._a2[:self.n_elec]
-        self._sum_1_e = self._sum_1[:self.n_elec]
-        self._sum_2_e = self._sum_2[:self.n_elec]
-        self._sum_1_i = self._sum_1[self.n_elec:]
-        self._sum_2_i = self._sum_2[self.n_elec:]
+        self._sum_1_e = self._sum_1[:self.n_elec + 1]
+        self._sum_2_e = self._sum_2[:self.n_elec + 1]
+        self._sum_1_i = self._sum_1[self.n_elec + 1:]
+        self._sum_2_i = self._sum_2[self.n_elec + 1:]
         self._rho_e = self._rho[:self.n_elec]
         self._rho_i = self._rho[self.n_elec:]
         self._chi_e = self._chi[:self.n_elec]
@@ -505,6 +528,10 @@ class PlasmaParticles():
             size = self.n_elec
         self._dr = np.zeros((2, size))
         self._dpr = np.zeros((2, size))
+        self._dr_e = self._dr[:, :self.n_elec]
+        self._dpr_e = self._dpr[:, :self.n_elec]
+        self._dr_i = self._dr[:, self.n_elec:]
+        self._dpr_i = self._dpr[:, self.n_elec:]
 
     def _move_auxiliary_arrays_to_next_slice(self):
         """Point auxiliary 1D arrays to next slice of the 2D history arrays.
@@ -526,50 +553,17 @@ class PlasmaParticles():
         self._sum_1 = self.sum_1_hist[-1 - self.i_push]
         self._sum_2 = self.sum_2_hist[-1 - self.i_push]
         self._rho = self.w_hist[-1 - self.i_push]
+        self._log_r = self.log_r_hist[-1 - self.i_push]
 
-        self._sum_1_e = self._sum_1[:self.n_elec]
-        self._sum_2_e = self._sum_2[:self.n_elec]
-        self._sum_1_i = self._sum_1[self.n_elec:]
-        self._sum_2_i = self._sum_2[self.n_elec:]
+        self._sum_1_e = self._sum_1[:self.n_elec + 1]
+        self._sum_2_e = self._sum_2[:self.n_elec + 1]
+        self._sum_1_i = self._sum_1[self.n_elec + 1:]
+        self._sum_2_i = self._sum_2[self.n_elec + 1:]
         self._rho_e = self._rho[:self.n_elec]
         self._rho_i = self._rho[self.n_elec:]
+        self.log_r_elec = self._log_r[:self.n_elec]
+        self.log_r_ion = self._log_r[self.n_elec:]
 
         if not self.ion_motion:
             self._sum_1_i[:] = self.sum_1_hist[-self.i_push, self.n_elec:]
             self._sum_2_i[:] = self.sum_2_hist[-self.i_push, self.n_elec:]
-
-
-@njit_serial(error_model='numpy')
-def update_gamma_and_pz(gamma, pz, pr, a2, psi, q, m):
-    """
-    Update the gamma factor and longitudinal momentum of the plasma particles.
-
-    Parameters
-    ----------
-    gamma, pz : ndarray
-        Arrays containing the current gamma factor and longitudinal momentum
-        of the plasma particles (will be modified here).
-    pr, a2, psi : ndarray
-        Arrays containing the radial momentum of the particles and the
-        value of a2 and psi at the position of the particles.
-
-    """
-    for i in range(pr.shape[0]):
-        q_over_m = q[i] / m[i]
-        psi_i = psi[i] * q_over_m
-        pz_i = (
-            (1 + pr[i] ** 2 + q_over_m ** 2 * a2[i] - (1 + psi_i) ** 2) /
-            (2 * (1 + psi_i))
-        )
-        pz[i] = pz_i
-        gamma[i] = 1. + pz_i + psi_i
-
-
-@njit_serial()
-def check_gamma(gamma, pz, pr, max_gamma):
-    """Check that the gamma of particles does not exceed `max_gamma`"""
-    for i in range(gamma.shape[0]):
-        if gamma[i] > max_gamma:
-            gamma[i] = 1.
-            pz[i] = 0.
-            pr[i] = 0.
