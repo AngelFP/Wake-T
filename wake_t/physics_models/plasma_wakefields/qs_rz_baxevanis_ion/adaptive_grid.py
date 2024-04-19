@@ -334,16 +334,16 @@ def calculate_fields_on_grid(
             r_eval=r_grid / s_d,
             r=r_hist[j, :n_elec],
             log_r=log_r_hist[j, :n_elec],
-            sum_1_arr=sum_1_hist[j, :n_elec],
-            sum_2_arr=sum_2_hist[j, :n_elec],
+            sum_1_arr=sum_1_hist[j, :n_elec + 1],
+            sum_2_arr=sum_2_hist[j, :n_elec + 1],
             psi=psi
         )
         calculate_psi_with_interpolation(
             r_eval=r_grid / s_d,
             r=r_hist[j, n_elec:],
             log_r=log_r_hist[j, n_elec:],
-            sum_1_arr=sum_1_hist[j, n_elec:],
-            sum_2_arr=sum_2_hist[j, n_elec:],
+            sum_1_arr=sum_1_hist[j, n_elec + 1:],
+            sum_2_arr=sum_2_hist[j, n_elec + 1:],
             psi=psi,
             add=True,
         )
