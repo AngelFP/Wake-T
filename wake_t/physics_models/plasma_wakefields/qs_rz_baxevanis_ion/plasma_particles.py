@@ -565,5 +565,5 @@ class PlasmaParticles():
         self.log_r_ion = self._log_r[self.n_elec:]
 
         if not self.ion_motion:
-            self._sum_1_i[:] = self.sum_1_hist[-self.i_push, self.n_elec:]
-            self._sum_2_i[:] = self.sum_2_hist[-self.i_push, self.n_elec:]
+            self._sum_1_i[:] = self.sum_1_hist[-self.i_push, self.n_elec + 1:]
+            self._sum_2_i[:] = self.sum_2_hist[-self.i_push, self.n_elec + 1:]
