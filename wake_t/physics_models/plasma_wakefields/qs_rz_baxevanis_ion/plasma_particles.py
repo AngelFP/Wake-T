@@ -18,25 +18,13 @@ from .utils import (
 
 class PlasmaParticles():
     """
-    Class containing the 1D slice of plasma particles used in the quasi-static
-    Baxevanis wakefield model.
+    Class containing a 1D slice of plasma particles.
 
-    Parameters
-    ----------
-    r_max : float
-        Maximum radial extension of the simulation box in normalized units.
-    r_max_plasma : float
-        Maximum radial extension of the plasma column in normalized units.
-    parabolic_coefficient : float
-        The coefficient for the transverse parabolic density profile.
-    dr : float
-        Radial step size of the discretized simulation box.
-    ppc : int
-        Number of particles per cell.
-    pusher : str
-        Particle pusher used to evolve the plasma particles. Possible
-        values are `'ab2'`.
-
+    In the current implementation, this class stores both the plasma electrons
+    and ions. It would be useful to change this in the future so that it
+    stores only a single species. This would allow us to more easily
+    extend the wakefield model to cases with more than 2 species, which would
+    be great to model ionization, for example.
 
     Parameters
     ----------
@@ -72,7 +60,8 @@ class PlasmaParticles():
         values are 'linear' or 'cubic'. By default 'linear'.
     store_history : bool, optional
         Whether to store the plasma particle evolution. This might be needed
-        for diagnostics or the use of adaptive grids. By default, False.
+        for diagnostics or because of the use of adaptive grids. By default,
+        ``False``.
     diags : list, optional
         List of particle quantities to save to diagnostics.
     """
@@ -200,7 +189,7 @@ class PlasmaParticles():
             self._allocate_ab2_arrays()
 
     def sort(self):
-        """Sort plasma particles radially (only by index).
+        """Sort plasma particles radially.
         
         The `q_species` and `m` arrays do not need to be sorted because all
         particles have the same value.
