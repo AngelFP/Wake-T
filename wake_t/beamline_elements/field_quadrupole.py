@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import List, Literal, Union, Optional
 from .field_element import FieldElement
 from wake_t.physics_models.em_fields.quadrupole import QuadrupoleField
 
@@ -34,10 +34,10 @@ class FieldQuadrupole(FieldElement):
         self,
         length: float,
         foc_strength: float,
-        dt_bunch: float | str | List[float | str],
+        dt_bunch: Union[float, str, List[Union[float, str]]],
         bunch_pusher: Literal['boris', 'rk4'] = 'boris',
-        n_out: int | None = 1,
-        name: str | None = 'quadrupole',
+        n_out: Optional[int] = 1,
+        name: Optional[str] = 'quadrupole',
     ) -> None:
         self.foc_strength = foc_strength
         super().__init__(
