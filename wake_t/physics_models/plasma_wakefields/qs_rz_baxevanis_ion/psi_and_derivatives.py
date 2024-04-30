@@ -365,8 +365,11 @@ def check_psi(psi):
     This is used to prevent issues at the peak of a blowout wake, for example).
     """
     for i in range(psi.shape[0]):
-        if psi[i] < -0.9:
-            psi[i] = -0.9
+        psi_i = psi[i]
+        if psi_i < -0.99:
+            psi[i] = -0.99
+        elif psi_i > 0.99:
+            psi[i] = 0.99
 
 
 @njit_serial()
