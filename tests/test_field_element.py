@@ -102,7 +102,7 @@ def test_field_element_error():
     with raises(ValueError) as e_info:
         element.track(bunch, opmd_diag=False)
     # This one should instead work.
-    element.track([bunch, copy.deepcopy(bunch)], opmd_diag=False)
+    element.track([bunch, bunch.copy()], opmd_diag=False)
 
 
 

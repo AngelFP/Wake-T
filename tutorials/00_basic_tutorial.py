@@ -63,7 +63,6 @@ bunch.show()
 # average energy of :math:`100 \ \mathrm{MeV}` with a :math:`1 \ \%` spread
 # and a total charge of :math:`30 \ \mathrm{pC}`.
 
-from copy import deepcopy
 from wake_t.utilities.bunch_generation import get_gaussian_bunch_from_size
 
 # Beam parameters.
@@ -82,7 +81,7 @@ bunch = get_gaussian_bunch_from_size(
     q_bunch, n_part, name='elec_bunch')
 
 # Store bunch copy (will be needed later).
-bunch_bkp = deepcopy(bunch)
+bunch_bkp = bunch.copy()
 
 # Show phase space.
 bunch.show()
@@ -148,7 +147,7 @@ bunch.show()
 # :math:`0.4 \ cm`, :math:`0.6 \ cm`, :math:`0.8 \ cm` and :math:`1.0 \ cm`.
 
 # Get again the original distribution.
-bunch = deepcopy(bunch_bkp)
+bunch = bunch_bkp.copy()
 
 # Create a 1 cm drift with 5 outputs (one every 0.2 cm).
 drift = Drift(length=1e-2, n_out=5)
@@ -195,7 +194,7 @@ plt.show()
 
 
 # Get again the original distribution.
-bunch = deepcopy(bunch_bkp)
+bunch = bunch_bkp.copy()
 
 # Create a 1 cm drift with 5 outputs (one every 0.2 cm).
 drift = Drift(length=1e-2, n_out=5)
