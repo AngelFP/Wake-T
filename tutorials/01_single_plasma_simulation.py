@@ -104,7 +104,7 @@ bunch.show()
 from wake_t import GaussianPulse
 
 # Get again the original distribution.
-bunch = bunch.copy()
+bunch = bunch_bkp.copy()
 
 # Laser parameters.
 laser_xi_c = 60e-6  # m (laser centroid in simulation box)
