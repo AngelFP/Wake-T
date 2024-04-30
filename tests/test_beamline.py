@@ -30,12 +30,12 @@ def test_single_element():
     bl = Beamline([deepcopy(plasma)])
 
     # Track plasma.
-    bunch_1 = deepcopy(bunch)
+    bunch_1 = bunch.copy()
     out_dir_1 = os.path.join(output_folder, 'plasma_diags')
     plasma.track(bunch_1, opmd_diag=True, diag_dir=out_dir_1)
 
     # Track beamline.
-    bunch_2 = deepcopy(bunch)
+    bunch_2 = bunch.copy()
     out_dir_2 = os.path.join(output_folder, 'bl_diags')
     bl.track(bunch_2, opmd_diag=True, diag_dir=out_dir_2)
 
@@ -81,7 +81,7 @@ def test_multiple_element():
     bl = Beamline([deepcopy(d1), deepcopy(plasma), deepcopy(d2)])
 
     # Track elements individually.
-    bunch_1 = deepcopy(bunch)
+    bunch_1 = bunch.copy()
     out_dir_d1 = os.path.join(output_folder, 'd1_diags')
     out_dir_plasma = os.path.join(output_folder, 'plasma_diags')
     out_dir_d2 = os.path.join(output_folder, 'd2_diags')
@@ -90,7 +90,7 @@ def test_multiple_element():
     d2.track(bunch_1, opmd_diag=True, diag_dir=out_dir_d2)
 
     # Track beamline.
-    bunch_2 = deepcopy(bunch)
+    bunch_2 = bunch.copy()
     out_dir_bl = os.path.join(output_folder, 'bl_diags')
     bl.track(bunch_2, opmd_diag=True, diag_dir=out_dir_bl)
 

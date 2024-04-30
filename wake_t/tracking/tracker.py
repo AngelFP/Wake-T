@@ -1,6 +1,5 @@
 """ This module contains the Tracker class. """
 from typing import Optional, Callable, List, Literal
-from copy import deepcopy
 
 import numpy as np
 import scipy.constants as ct
@@ -298,21 +297,7 @@ class Tracker():
         """Generate tracking diagnostics."""
         # Make copy of current bunches and store in output list.
         for i, bunch in enumerate(self.bunches):
-            self.bunch_list[i].append(
-                ParticleBunch(
-                    deepcopy(bunch.w),
-                    deepcopy(bunch.x),
-                    deepcopy(bunch.y),
-                    deepcopy(bunch.xi),
-                    deepcopy(bunch.px),
-                    deepcopy(bunch.py),
-                    deepcopy(bunch.pz),
-                    prop_distance=deepcopy(bunch.prop_distance),
-                    name=deepcopy(bunch.name),
-                    q_species=deepcopy(bunch.q_species),
-                    m_species=deepcopy(bunch.m_species)
-                )
-            )
+            self.bunch_list[i].append(bunch.copy())
 
         # If needed, write also the openPMD diagnostics.
         if self.opmd_diags is not None:

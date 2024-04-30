@@ -2,6 +2,8 @@
 This module contains the class defining a particle bunch.
 """
 # TODO: clean methods to set and get bunch matrix
+from __future__ import annotations
+from copy import deepcopy
 from typing import Optional
 
 import numpy as np
@@ -294,6 +296,29 @@ class ParticleBunch():
                 "Possible values are 'boris' and 'rk4'"
             )
         self.prop_distance += dt * ct.c
+
+    def copy(self) -> ParticleBunch:
+        """Return a copy of the bunch.
+
+        To improve performance, this copy won't contain copies of auxiliary
+        arrays, only of the particle coordinates and properties.
+        """
+        bunch_copy = ParticleBunch(
+            w=deepcopy(self.w),
+            x=deepcopy(self.x),
+            y=deepcopy(self.y),
+            xi=deepcopy(self.xi),
+            px=deepcopy(self.px),
+            py=deepcopy(self.py),
+            pz=deepcopy(self.pz),
+            prop_distance=deepcopy(self.prop_distance),
+            name=deepcopy(self.name),
+            q_species=deepcopy(self.q_species),
+            m_species=deepcopy(self.m_species)
+        )
+        bunch_copy.x_ref = self.x_ref
+        bunch_copy.theta_ref = self.theta_ref
+        return bunch_copy
 
     def get_field_arrays(self):
         """Get the arrays where the gathered fields will be stored."""
