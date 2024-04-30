@@ -184,6 +184,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         ppc: Optional[ArrayLike] = 2,
         dz_fields: Optional[float] = None,
         r_max_plasma: Optional[float] = None,
+        parabolic_coefficient: Optional[float] = None,
         p_shape: Optional[str] = 'cubic',
         max_gamma: Optional[float] = 10,
         plasma_pusher: Optional[str] = 'ab2',
@@ -224,6 +225,13 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self._t_reset_bunch_arrays = -1.
         if len(self.ppc.shape) in [0, 1]:
             self.ppc = np.array([[self.r_max_plasma, self.ppc.flatten()[0]]])
+        # Only for backwards compatibility.
+        if parabolic_coefficient is not None:
+            parabolic_coefficient = self._get_parabolic_coefficient_fn(
+                parabolic_coefficient
+            )
+        self.parabolic_coefficient = parabolic_coefficient
+            
         super().__init__(
             density_function=density_function,
             r_max=r_max,
@@ -439,8 +447,25 @@ class Quasistatic2DWakefieldIon(RZWakefield):
     def _get_radial_density(self, z_current):
         """ Get radial density profile function """
         def radial_density(r):
-            return self.density_function(z_current, r)
+            n_p = self.density_function(z_current, r)
+            if self.parabolic_coefficient is not None:
+                pc = self.parabolic_coefficient(z_current)
+                n_p += n_p * pc * r ** 2
+            return n_p
         return radial_density
+    
+    def _get_parabolic_coefficient_fn(self, parabolic_coefficient):
+        """ Get parabolic_coefficient profile function """
+        if isinstance(parabolic_coefficient, float):
+            def uniform_parabolic_coefficient(z):
+                return np.ones_like(z) * parabolic_coefficient
+            return uniform_parabolic_coefficient
+        elif callable(parabolic_coefficient):
+            return parabolic_coefficient
+        else:
+            raise ValueError(
+                'Type {} not supported for parabolic_coefficient.'.format(
+                    type(parabolic_coefficient)))
 
     def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name):
         # If using adaptive grids, gather fields from them.
