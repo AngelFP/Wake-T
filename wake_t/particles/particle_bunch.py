@@ -299,7 +299,7 @@ class ParticleBunch():
 
     def copy(self) -> ParticleBunch:
         """Return a copy of the bunch.
-        
+
         To improve performance, this copy won't contain copies of auxiliary
         arrays, only of the particle coordinates and properties.
         """
