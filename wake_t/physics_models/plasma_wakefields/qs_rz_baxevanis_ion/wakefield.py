@@ -450,7 +450,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             n_p = self.density_function(z_current, r)
             if self.parabolic_coefficient is not None:
                 pc = self.parabolic_coefficient(z_current)
-                n_p += n_p * pc * r ** 2
+                n_p = n_p + n_p * pc * r ** 2
             return n_p
         return radial_density
     
