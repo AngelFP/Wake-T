@@ -62,6 +62,20 @@ class Tracker():
     bunch_pusher : str, optional
         The particle pusher used to evolve the bunches. Possible values
         are `'boris'` or `'rk4'`.
+    push_bunches_before_diags : bool, optional
+        Whether to push the bunches before saving them to the diagnostics.
+        Since the time step of the diagnostics can be different from that
+        of the bunches, it could happen that the bunches appear in the
+        diagnostics as they were at the last push, but not at the actual
+        time of the diagnostics. Setting this parameter to ``True``
+        (default) ensures that an additional push is given to all bunches
+        to evolve them to the diagnostics time before saving.
+        This additional push will always have a time step smaller than
+        the the time step of the bunch, so it has no detrimental impact
+        on the accuracy of the simulation. However, it could make
+        convergence studies more difficult to interpret,
+        since the number of pushes will depend on `n_diags`. Therefore,
+        it is exposed as an option so that it can be disabled if needed.
     section_name : str, optional
         Name of the section to be tracked. This will be appended to the
         beginning of the progress bar.
@@ -78,6 +92,7 @@ class Tracker():
         opmd_diags: Optional[OpenPMDDiagnostics] = None,
         auto_dt_bunch_f: Optional[Callable[[ParticleBunch], float]] = None,
         bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
+        push_bunches_before_diags: Optional[bool] = True,
         section_name: Optional[str] = 'Simulation'
     ) -> None:
         self.t_final = t_final
@@ -88,6 +103,7 @@ class Tracker():
         self.n_diags = n_diags
         self.auto_dt_bunch_f = auto_dt_bunch_f
         self.bunch_pusher = bunch_pusher
+        self.push_bunches_before_diags = push_bunches_before_diags
         self.section_name = section_name
 
         # Get all numerical fields and their time steps.
@@ -187,20 +203,14 @@ class Tracker():
 
             # If next object is a ParticleBunch, update it.
             if isinstance(obj_next, ParticleBunch):
-                obj_next.evolve(
-                    self.fields, t_current, dt_next, self.bunch_pusher)
-                # Update the time step if set to `'auto'`.
-                if obj_next in self.auto_dt_bunches:
-                    dt_objects[i_next] = self.auto_dt_bunch_f(obj_next)
-                # Determine if this was the last push.
-                final_push = np.float32(t_next) == np.float32(self.t_final)
-                # Determine if next push brings the bunch beyond `t_final`.
-                next_push_beyond_final_time = (
-                    t_next + dt_objects[i_next] > self.t_final)
-                # Make sure the last push of the bunch advances it to exactly
-                # `t_final`.
-                if not final_push and next_push_beyond_final_time:
-                    dt_objects[i_next] = self.t_final - t_next
+                self.evolve_bunch(
+                    bunch=obj_next,
+                    t_current=t_current,
+                    t_next=t_next,
+                    dt_next=dt_next,
+                    i_next=i_next,
+                    dt_objects=dt_objects,
+                )
 
             # If next object is a NumericalField, update it.
             elif isinstance(obj_next, NumericalField):
@@ -208,6 +218,20 @@ class Tracker():
 
             # If next object are the diagnostics, generate them.
             elif obj_next == 'diags':
+                # Evolve all bunches to the diagnostics time.
+                if self.push_bunches_before_diags:
+                    for i, obj in enumerate(self.objects_to_track):
+                        if isinstance(obj, ParticleBunch):
+                            dt_bunch = t_next - t_objects[i]
+                            self.evolve_bunch(
+                                bunch=obj,
+                                t_current=t_objects[i],
+                                t_next=t_next,
+                                dt_next=dt_bunch,
+                                i_next=i,
+                                dt_objects=dt_objects,
+                            )
+                            t_objects[i] += dt_bunch
                 self.generate_diagnostics()
 
             # Advance current time of the update object.
@@ -229,6 +253,46 @@ class Tracker():
         set_num_threads(num_threads_outside_waket)
 
         return self.bunch_list
+    
+    def evolve_bunch(
+        self,
+        bunch: ParticleBunch,
+        t_current: float,
+        t_next: float,
+        dt_next: float,
+        i_next: int,
+        dt_objects: List,
+    ):
+        """Evolve particle bunch to next time step.
+
+        Parameters
+        ----------
+        bunch : ParticleBunch
+            The particle bunch to evolve.
+        t_current : float
+            The current time of the simulation.
+        t_next : float
+            The time of the next step.
+        dt_next : float
+            The time step by which to advance the bunch.
+        i_next : int
+            The index of the bunch in the list of objects to track.
+        dt_objects : List
+            The time steps of all objects to track.
+        """
+        bunch.evolve(self.fields, t_current, dt_next, self.bunch_pusher)
+        # Update the time step if set to `'auto'`.
+        if bunch in self.auto_dt_bunches:
+            dt_objects[i_next] = self.auto_dt_bunch_f(bunch)
+        # Determine if this was the last push.
+        final_push = np.float32(t_next) == np.float32(self.t_final)
+        # Determine if next push brings the bunch beyond `t_final`.
+        next_push_beyond_final_time = (
+            t_next + dt_objects[i_next] > self.t_final)
+        # Make sure the last push of the bunch advances it to exactly
+        # `t_final`.
+        if not final_push and next_push_beyond_final_time:
+            dt_objects[i_next] = self.t_final - t_next
 
     def generate_diagnostics(self) -> None:
         """Generate tracking diagnostics."""

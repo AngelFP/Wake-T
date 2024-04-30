@@ -64,7 +64,8 @@ class FieldElement():
         self,
         bunches: Optional[Union[ParticleBunch, List[ParticleBunch]]] = [],
         opmd_diag: Optional[Union[bool, OpenPMDDiagnostics]] = False,
-        diag_dir: Optional[str] = None
+        diag_dir: Optional[str] = None,
+        push_bunches_before_diags: Optional[bool] = True,
     ) -> Union[List[ParticleBunch], List[List[ParticleBunch]]]:
         """
         Track bunch through element.
@@ -83,6 +84,20 @@ class FieldElement():
             Directory into which the openPMD output will be written. By default
             this is a 'diags' folder in the current directory. Only needed if
             `opmd_diag=True`.
+        push_bunches_before_diags : bool, optional
+            Whether to push the bunches before saving them to the diagnostics.
+            Since the time step of the diagnostics can be different from that
+            of the bunches, it could happen that the bunches appear in the
+            diagnostics as they were at the last push, but not at the actual
+            time of the diagnostics. Setting this parameter to ``True``
+            (default) ensures that an additional push is given to all bunches
+            to evolve them to the diagnostics time before saving.
+            This additional push will always have a time step smaller than
+            the the time step of the bunch, so it has no detrimental impact
+            on the accuracy of the simulation. However, it could make
+            convergence studies more difficult to interpret,
+            since the number of pushes will depend on `n_diags`. Therefore,
+            it is exposed as an option so that it can be disabled if needed.
 
         Returns
         -------
@@ -119,6 +134,7 @@ class FieldElement():
             opmd_diags=opmd_diag,
             bunch_pusher=self.bunch_pusher,
             auto_dt_bunch_f=self.auto_dt_bunch,
+            push_bunches_before_diags=push_bunches_before_diags,
             section_name=self.name
         )
 
