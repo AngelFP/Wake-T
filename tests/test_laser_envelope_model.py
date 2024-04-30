@@ -3,6 +3,7 @@ from numpy.testing import assert_almost_equal
 import scipy.constants as ct
 import matplotlib.pyplot as plt
 from wake_t.physics_models.laser.laser_pulse import GaussianPulse
+from wake_t.physics_models.laser.utils import unwrap
 
 
 def test_gaussian_laser_in_vacuum(plot=False):
@@ -190,6 +191,15 @@ def test_gaussian_laser_in_vacuum_with_subgrid(plot=False):
         plt.show()
 
 
+def test_unwrap():
+    """Test that the custom function for phase unwrapping implemented for
+    numba agrees with the numpy version.
+    """
+    phase = np.linspace(0, np.pi, num=5)
+    phase[3:] += np.pi
+    np.testing.assert_allclose(np.unwrap(phase), unwrap(phase))
+
+
 def calculate_spot_size(a_env, dr):
     # Project envelope to r
     a_proj = np.sum(np.abs(a_env), axis=0)
@@ -230,3 +240,4 @@ def calculate_a0(a_env):
 if __name__ == "__main__":
     test_gaussian_laser_in_vacuum(plot=True)
     test_gaussian_laser_in_vacuum_with_subgrid(plot=True)
+    test_unwrap()
