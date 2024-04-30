@@ -33,7 +33,7 @@ def test_downramp():
     downramp.track(bunch)
     bunch_params = analyze_bunch(bunch)
     beta_x = bunch_params['beta_x']
-    assert beta_x == 0.009750309290619276
+    assert beta_x == 0.009750308724018872
 
 
 def test_upramp():
@@ -64,7 +64,7 @@ def test_upramp():
     downramp.track(bunch)
     bunch_params = analyze_bunch(bunch)
     beta_x = bunch_params['beta_x']
-    assert beta_x == 0.0007631600676104024
+    assert beta_x == 0.000763155045965493
 
 
 if __name__ == '__main__':
