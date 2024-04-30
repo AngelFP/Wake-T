@@ -209,6 +209,15 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self.ppc = np.array(ppc)
         if r_max_plasma is None:
             r_max_plasma = r_max - r_max / n_r / 2
+        # Check pusher for backwards compatibility.
+        if plasma_pusher not in ["ab2"]:
+            if plasma_pusher in ["rk4", "ab5"]:
+                plasma_pusher = "ab2"
+            else:
+                raise ValueError(
+                    "Plasma pusher {plasma_pusher} not recognized. "
+                    "Possible values are ['ab2']."
+                )
         self.r_max_plasma = r_max_plasma
         self.p_shape = p_shape
         self.max_gamma = max_gamma
