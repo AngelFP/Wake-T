@@ -43,7 +43,7 @@ def evolve_plasma_ab2(
     apply_ab2(pr, dxi, dpr)
 
     # Shift derivatives for next step (i.e., the derivative at step i will be
-    # the derivative at step i+i in the next iteration.)
+    # the derivative at step i+1 in the next iteration.)
     dr[1] = dr[0]
     dpr[1] = dpr[0]
 
