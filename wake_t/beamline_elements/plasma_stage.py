@@ -48,6 +48,20 @@ class PlasmaStage(FieldElement):
         stage. A list of values can also be provided. In this case, the list
         should have the same order as the list of bunches given to the
         ``track`` method.
+    push_bunches_before_diags : bool, optional
+        Whether to push the bunches before saving them to the diagnostics.
+        Since the time step of the diagnostics can be different from that
+        of the bunches, it could happen that the bunches appear in the
+        diagnostics as they were at the last push, but not at the actual
+        time of the diagnostics. Setting this parameter to ``True``
+        (default) ensures that an additional push is given to all bunches
+        to evolve them to the diagnostics time before saving.
+        This additional push will always have a time step smaller than
+        the the time step of the bunch, so it has no detrimental impact
+        on the accuracy of the simulation. However, it could make
+        convergence studies more difficult to interpret,
+        since the number of pushes will depend on `n_diags`. Therefore,
+        it is exposed as an option so that it can be disabled if needed.
     n_out : int, optional
         Number of times along the stage in which the particle distribution
         should be returned (A list with all output bunches is returned
@@ -77,6 +91,7 @@ class PlasmaStage(FieldElement):
         wakefield_model: Optional[str] = 'simple_blowout',
         bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
         dt_bunch: Optional[DtBunchType] = 'auto',
+        push_bunches_before_diags: Optional[bool] = True,
         n_out: Optional[int] = 1,
         name: Optional[str] = 'Plasma stage',
         external_fields: Optional[List[Field]] = [],
@@ -96,7 +111,8 @@ class PlasmaStage(FieldElement):
             n_out=n_out,
             name=name,
             fields=fields,
-            auto_dt_bunch=self._get_optimized_dt
+            auto_dt_bunch=self._get_optimized_dt,
+            push_bunches_before_diags=push_bunches_before_diags,
         )
 
     def _get_density_profile(self, density):

@@ -10,7 +10,7 @@ from tqdm import tqdm
 warnings.filterwarnings('ignore', '.*clamping.*', )
 
 
-def get_progress_bar(description, total_length):
+def get_progress_bar(description, total_length, disable):
     """Get progress bar for the tracker.
 
     Parameters
@@ -19,6 +19,8 @@ def get_progress_bar(description, total_length):
         Description to be appended to start of the progress bar.
     total_length : float
         Total length in metres of the stage to be tracked.
+    disable : bool
+        Whether to disable (not show) the progress bar.
 
     Returns
     -------
@@ -31,6 +33,7 @@ def get_progress_bar(description, total_length):
         total=total_length,
         unit='m',
         bar_format=l_bar + "{bar}" + r_bar,
-        file=sys.stdout
+        file=sys.stdout,
+        disable=disable
     )
     return progress_bar
