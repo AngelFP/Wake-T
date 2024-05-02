@@ -153,11 +153,11 @@ class Tracker():
         set_num_threads(num_threads)
 
         # Initialize progress bar.
-        if self.show_progress_bar:
-            progress_bar = get_progress_bar(
-                description=self.section_name,
-                total_length=self.t_final*ct.c,
-            )
+        progress_bar = get_progress_bar(
+            description=self.section_name,
+            total_length=self.t_final*ct.c,
+            disable=not self.show_progress_bar,
+        )
 
         # Calculate fields at t=0.
         for field in self.num_fields:
@@ -245,16 +245,14 @@ class Tracker():
             t_objects[i_next] += dt_next
 
             # Update progress bar.
-            if self.show_progress_bar:
-                progress_bar.update(self.t_tracking*ct.c - progress_bar.n)
+            progress_bar.update(self.t_tracking*ct.c - progress_bar.n)
 
         # Finalize tracking by increasing z position of diagnostics.
         if self.opmd_diags is not None:
             self.opmd_diags.increase_z_pos(self.t_final * ct.c)
 
         # Close progress bar.
-        if self.show_progress_bar:
-            progress_bar.close()
+        progress_bar.close()
 
         # Reset the number of threads to the value outside of Wake-T.
         # This should help avoiding Wake-T to affect the behavior of other
