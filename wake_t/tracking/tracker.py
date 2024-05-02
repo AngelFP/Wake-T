@@ -75,6 +75,8 @@ class Tracker():
         convergence studies more difficult to interpret,
         since the number of pushes will depend on `n_diags`. Therefore,
         it is exposed as an option so that it can be disabled if needed.
+    show_progress_bar : bool, optional
+        Whether to show a progress bar of the tracking. By default ``True``.
     section_name : str, optional
         Name of the section to be tracked. This will be appended to the
         beginning of the progress bar.
@@ -92,6 +94,7 @@ class Tracker():
         auto_dt_bunch_f: Optional[Callable[[ParticleBunch], float]] = None,
         bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
         push_bunches_before_diags: Optional[bool] = True,
+        show_progress_bar: Optional[bool] = True,
         section_name: Optional[str] = 'Simulation'
     ) -> None:
         self.t_final = t_final
@@ -103,6 +106,7 @@ class Tracker():
         self.auto_dt_bunch_f = auto_dt_bunch_f
         self.bunch_pusher = bunch_pusher
         self.push_bunches_before_diags = push_bunches_before_diags
+        self.show_progress_bar = show_progress_bar
         self.section_name = section_name
 
         # Get all numerical fields and their time steps.
@@ -149,7 +153,11 @@ class Tracker():
         set_num_threads(num_threads)
 
         # Initialize progress bar.
-        progress_bar = get_progress_bar(self.section_name, self.t_final*ct.c)
+        if self.show_progress_bar:
+            progress_bar = get_progress_bar(
+                description=self.section_name,
+                total_length=self.t_final*ct.c,
+            )
 
         # Calculate fields at t=0.
         for field in self.num_fields:
@@ -237,14 +245,16 @@ class Tracker():
             t_objects[i_next] += dt_next
 
             # Update progress bar.
-            progress_bar.update(self.t_tracking*ct.c - progress_bar.n)
+            if self.show_progress_bar:
+                progress_bar.update(self.t_tracking*ct.c - progress_bar.n)
 
         # Finalize tracking by increasing z position of diagnostics.
         if self.opmd_diags is not None:
             self.opmd_diags.increase_z_pos(self.t_final * ct.c)
 
         # Close progress bar.
-        progress_bar.close()
+        if self.show_progress_bar:
+            progress_bar.close()
 
         # Reset the number of threads to the value outside of Wake-T.
         # This should help avoiding Wake-T to affect the behavior of other

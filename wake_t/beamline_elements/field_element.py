@@ -66,6 +66,7 @@ class FieldElement():
         opmd_diag: Optional[Union[bool, OpenPMDDiagnostics]] = False,
         diag_dir: Optional[str] = None,
         push_bunches_before_diags: Optional[bool] = True,
+        show_progress_bar: Optional[bool] = True,
     ) -> Union[List[ParticleBunch], List[List[ParticleBunch]]]:
         """
         Track bunch through element.
@@ -98,6 +99,9 @@ class FieldElement():
             convergence studies more difficult to interpret,
             since the number of pushes will depend on `n_diags`. Therefore,
             it is exposed as an option so that it can be disabled if needed.
+        show_progress_bar : bool, optional
+            Whether to show a progress bar of the tracking. By default
+            ``True``.
 
         Returns
         -------
@@ -135,6 +139,7 @@ class FieldElement():
             bunch_pusher=self.bunch_pusher,
             auto_dt_bunch_f=self.auto_dt_bunch,
             push_bunches_before_diags=push_bunches_before_diags,
+            show_progress_bar=show_progress_bar,
             section_name=self.name
         )
 
