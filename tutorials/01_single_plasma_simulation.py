@@ -27,7 +27,6 @@ All cases are simulated using the ``'quasistatic_2d'`` wakefield model.
 # As a first step, let's generate a gaussian electron beam and keep a copy
 # of it for later use:
 
-from copy import deepcopy
 from wake_t.utilities.bunch_generation import get_gaussian_bunch_from_size
 
 # Beam parameters.
@@ -46,7 +45,7 @@ bunch = get_gaussian_bunch_from_size(
     q_bunch, n_part, name='elec_bunch')
 
 # Store bunch copy (will be needed later).
-bunch_bkp = deepcopy(bunch)
+bunch_bkp = bunch.copy()
 
 # Show phase space.
 bunch.show()
@@ -105,7 +104,7 @@ bunch.show()
 from wake_t import GaussianPulse
 
 # Get again the original distribution.
-bunch = deepcopy(bunch_bkp)
+bunch = bunch_bkp.copy()
 
 # Laser parameters.
 laser_xi_c = 60e-6  # m (laser centroid in simulation box)
@@ -211,7 +210,7 @@ plt.tight_layout()
 import scipy.constants as ct
 
 # Get again the original distribution.
-bunch = deepcopy(bunch_bkp)
+bunch = bunch_bkp.copy()
 
 # Calculate transverse parabolic profile.
 r_e = ct.e**2 / (4. * np.pi * ct.epsilon_0 * ct.m_e * ct.c**2)  # elec. radius
