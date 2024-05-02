@@ -207,10 +207,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         adaptive_grid_r_lim: Optional[Union[float, List[float]]] = None,
         adaptive_grid_diags: Optional[List[str]] = ['E', 'B'],
     ) -> None:
-        self.ppc = np.array(ppc)
-        if r_max_plasma is None:
-            r_max_plasma = r_max - r_max / n_r / 2
-        # Check pusher for backwards compatibility.
+        # Checks for backward compatibility.
         if plasma_pusher not in ["ab2"]:
             if plasma_pusher in ["rk4", "ab5"]:
                 plasma_pusher = "ab2"
@@ -224,7 +221,22 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                     "Plasma pusher {plasma_pusher} not recognized. "
                     "Possible values are ['ab2']."
                 )
+        if parabolic_coefficient is not None:
+            warn(
+                "The 'parabolic_coefficient' parameter has been deprecated. "
+                "It will still work in order to maintain backward "
+                "compatibility, but the "
+                "new recommended approach is to provide a density function "
+                "that takes `z` and `r` as input parameters.",
+                DeprecationWarning
+            )
+            parabolic_coefficient = self._get_parabolic_coefficient_fn(
+                parabolic_coefficient
+            )
+        if r_max_plasma is None:
+            r_max_plasma = r_max - r_max / n_r / 2
         self.r_max_plasma = r_max_plasma
+        self.ppc = np.array(ppc)
         self.p_shape = p_shape
         self.max_gamma = max_gamma
         self.plasma_pusher = plasma_pusher
@@ -240,19 +252,6 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         self._t_reset_bunch_arrays = -1.
         if len(self.ppc.shape) in [0, 1]:
             self.ppc = np.array([[self.r_max_plasma, self.ppc.flatten()[0]]])
-        # Only for backwards compatibility.
-        if parabolic_coefficient is not None:
-            warn(
-                "The 'parabolic_coefficient' parameter has been deprecated. "
-                "It will still work in order to maintain backward "
-                "compatibility, but the "
-                "new recommended approach is to provide a density function "
-                "that takes `z` and `r` as input parameters.",
-                DeprecationWarning
-            )
-            parabolic_coefficient = self._get_parabolic_coefficient_fn(
-                parabolic_coefficient
-            )
         self.parabolic_coefficient = parabolic_coefficient
             
         super().__init__(
