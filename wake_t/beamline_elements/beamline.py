@@ -56,7 +56,7 @@ class Beamline():
         for element in self.elements:
             bunch_list.extend(
                 element.track(
-                    bunchs=bunches,
+                    bunches=bunches,
                     opmd_diag=opmd_diag,
                     show_progress_bar=show_progress_bar,
                 )
