@@ -76,7 +76,8 @@ class TMElement():
         backtrack: Optional[bool] = False,
         out_initial: Optional[bool] = False,
         opmd_diag: Optional[Union[bool, OpenPMDDiagnostics]] = False,
-        diag_dir: Optional[str] = None
+        diag_dir: Optional[str] = None,
+        show_progress_bar: Optional[bool] = True,
     ) -> List[ParticleBunch]:
         """
         Track bunch through element.
@@ -99,6 +100,9 @@ class TMElement():
             Directory into which the openPMD output will be written. By default
             this is a 'diags' folder in the current directory. Only needed if
             `opmd_diag=True`.
+        show_progress_bar : bool, optional
+            Whether to show a progress bar of the tracking. By default
+            ``True``.
 
         Returns
         -------
@@ -125,15 +129,16 @@ class TMElement():
             opmd_diag = None
 
         # Print output header
-        print('')
-        print(self.element_name.capitalize())
-        print('-'*len(self.element_name))
-        self._print_element_properties()
-        csr_string = 'on' if self.csr_on else 'off'
-        print('CSR {}.'.format(csr_string))
-        print('')
-        n_steps = len(track_steps)
-        st_0 = 'Tracking in {} step(s)... '.format(n_steps)
+        if show_progress_bar:
+            print('')
+            print(self.element_name.capitalize())
+            print('-'*len(self.element_name))
+            self._print_element_properties()
+            csr_string = 'on' if self.csr_on else 'off'
+            print('CSR {}.'.format(csr_string))
+            print('')
+            n_steps = len(track_steps)
+            st_0 = 'Tracking in {} step(s)... '.format(n_steps)
 
         # Start tracking
         start_time = time.time()
@@ -144,7 +149,8 @@ class TMElement():
                 opmd_diag.write_diagnostics(
                     0., l_step/ct.c, [output_bunch_list[-1]])
         for i in track_steps:
-            print_progress_bar(st_0, i+1, n_steps)
+            if show_progress_bar:
+                print_progress_bar(st_0, i+1, n_steps)
             l_curr = (i+1) * l_step * (1-2*backtrack)
             # Track with transfer matrix
             bunch_mat = track_with_transfer_map(
@@ -173,9 +179,10 @@ class TMElement():
             opmd_diag.increase_z_pos(self.length)
 
         # Finalize
-        tracking_time = time.time() - start_time
-        print('Done ({} s).'.format(tracking_time))
-        print('-'*80)
+        if show_progress_bar:
+            tracking_time = time.time() - start_time
+            print('Done ({} s).'.format(tracking_time))
+            print('-'*80)
         return output_bunch_list
 
     def _get_beam_matrix_for_tracking(self, bunch):

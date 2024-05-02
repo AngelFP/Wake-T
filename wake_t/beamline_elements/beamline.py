@@ -20,7 +20,8 @@ class Beamline():
         self,
         bunches: Optional[Union[ParticleBunch, List[ParticleBunch]]] = [],
         opmd_diag: Optional[bool] = False,
-        diag_dir: Optional[str] = None
+        diag_dir: Optional[str] = None,
+        show_progress_bar: Optional[bool] = True,
     ) -> Union[List[ParticleBunch], List[List[ParticleBunch]]]:
         """
         Track bunch through beamline.
@@ -40,6 +41,9 @@ class Beamline():
             Directory into which the openPMD output will be written. By default
             this is a 'diags' folder in the current directory. Only needed if
             `opmd_diag=True`.
+        show_progress_bar : bool, optional
+            Whether to show a progress bar of the tracking through each
+            element. By default ``True``.
 
         Returns
         -------
@@ -50,5 +54,11 @@ class Beamline():
         if type(opmd_diag) is not OpenPMDDiagnostics and opmd_diag:
             opmd_diag = OpenPMDDiagnostics(write_dir=diag_dir)
         for element in self.elements:
-            bunch_list.extend(element.track(bunches, opmd_diag=opmd_diag))
+            bunch_list.extend(
+                element.track(
+                    bunches,
+                    opmd_diag=opmd_diag,
+                    show_progress_bar=show_progress_bar,
+                )
+            )
         return bunch_list
