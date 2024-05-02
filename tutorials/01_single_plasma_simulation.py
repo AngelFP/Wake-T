@@ -68,7 +68,7 @@ from wake_t import PlasmaStage
 
 plasma_target = PlasmaStage(
     length=1e-2, density=1e23, wakefield_model='quasistatic_2d',
-    xi_max=30e-6, xi_min=-30e-6, r_max=30e-6, n_xi=60, n_r=30, ppc=4)
+    xi_max=30e-6, xi_min=-30e-6, r_max=30e-6, n_xi=120, n_r=60, ppc=4)
 
 # %%
 # Once the target is defined, we can track the beam through it simply by doing:
