@@ -1,4 +1,5 @@
 from typing import Optional, Callable, List, Union, Dict
+from warnings import warn
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -213,6 +214,11 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         if plasma_pusher not in ["ab2"]:
             if plasma_pusher in ["rk4", "ab5"]:
                 plasma_pusher = "ab2"
+                warn(
+                    "Plasma pusher {plasma_pusher} has been deprecated. "
+                    "Using 'ab2' pusher instead.",
+                    DeprecationWarning
+                )
             else:
                 raise ValueError(
                     "Plasma pusher {plasma_pusher} not recognized. "
@@ -236,6 +242,14 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             self.ppc = np.array([[self.r_max_plasma, self.ppc.flatten()[0]]])
         # Only for backwards compatibility.
         if parabolic_coefficient is not None:
+            warn(
+                "The 'parabolic_coefficient' parameter has been deprecated. "
+                "It will still work in order to maintain backward "
+                "compatibility, but the "
+                "new recommended approach is to provide a density function "
+                "that takes `z` and `r` as input parameters.",
+                DeprecationWarning
+            )
             parabolic_coefficient = self._get_parabolic_coefficient_fn(
                 parabolic_coefficient
             )
