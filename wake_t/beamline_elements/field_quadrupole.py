@@ -1,4 +1,4 @@
-from typing import Literal,  Optional
+from typing import Literal, Optional
 
 import numpy as np
 import scipy.constants as ct
