@@ -75,22 +75,22 @@ class AdaptiveGrid():
     
     @property
     def r_min_cell(self):
-        """Get radial position of first grid cell (ignoring guard cells)."""
+        """Radial position of first cell (ignoring guard cells)."""
         return self.r_grid[0]
 
     @property
     def r_max_cell(self):
-        """Get radial position of last grid cell (ignoring guard and border cells)."""
+        """Radial position of last cell (ignoring guard and border cells)."""
         return self.r_grid[-1 - self.nr_border]
 
     @property
     def r_max(self):
-        """Get radial extent of the grid, ignoring guard and border cells."""
+        """Radial extent of the grid, ignoring guard and border cells."""
         return self.r_max_cell + 0.5 * self.dr
 
     @property
     def r_max_cell_guard(self):
-        """Get radial position of last guard grid cell."""
+        """Radial position of last guard grid cell."""
         return self.r_grid[-1] + 2 * self.dr
 
     def update_if_needed(self, x, y, xi, n_p, pp_hist):
