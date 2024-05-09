@@ -24,12 +24,12 @@ class QuadrupoleField(AnalyticalField):
 
     In Cartesian coordinates, the field is given by:
     ```
-        b_x = k * y
-        b_y = k * x
+        b_x = - k * y
+        b_y = - k * x
     ```
 
-    When `k > 0`, it corresponds to focussing electrons in the `y` direction
-    and defocussing in `x`. When `k < 0`, the result is the opposite.
+    When `k > 0`, it corresponds to focussing electrons in the `x` direction
+    and defocussing in `y`. When `k < 0`, the result is the opposite.
 
     Parameters
     ----------

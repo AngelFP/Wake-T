@@ -18,8 +18,8 @@ class FieldQuadrupole(FieldElement):
         Length of the quadrupole lens in :math:`m`.
     foc_strength : float
         Focusing strength of the quadrupole in :math:`T/m`. Defined so
-        that a positive value is focusing for electrons in the :math:`y`
-        plane and defocusing in the :math:`x` plane.
+        that a positive value is focusing for electrons in the :math:`x`
+        plane and defocusing in the :math:`y` plane.
     dt_bunch : float, str, or list of float and str
         The time step for evolving the particle bunches. If ``'auto'``, it will
         be automatically set to :math:`dt = T/(10*2*pi)`, where T is the
