@@ -136,15 +136,15 @@ class PlasmaParticles():
         pr = np.zeros(self.n_elec)
         pz = np.zeros(self.n_elec)
         gamma = np.ones(self.n_elec)
-        q = dr_p * r * self.radial_density(r)
-        q_center = q / 2 - dr_p ** 2 / 8
-        q *= self.free_electrons_per_ion
-        q_center *= self.free_electrons_per_ion
-        m_e = np.ones(self.n_elec)
-        m_i = np.ones(self.n_elec) * self.ion_mass / ct.m_e
-        q_species_e = np.ones(self.n_elec)
-        q_species_i = - np.ones(self.n_elec) * self.free_electrons_per_ion
         tag = np.arange(self.n_elec, dtype=np.int32)
+        w = dr_p * r * self.radial_density(r)
+        w_center = w / 2 - dr_p ** 2 / 8
+
+        # Charge and mass of the macroparticles of each species.
+        self.m_elec = self.free_electrons_per_ion
+        self.m_ion = self.ion_mass / ct.m_e
+        self.q_species_elec = self.free_electrons_per_ion
+        self.q_species_ion = - self.free_electrons_per_ion
 
         # Combine arrays of both species.
         self.r = np.concatenate((r, r))
@@ -152,10 +152,8 @@ class PlasmaParticles():
         self.pr = np.concatenate((pr, pr))
         self.pz = np.concatenate((pz, pz))
         self.gamma = np.concatenate((gamma, gamma))
-        self.q = np.concatenate((q, -q))
-        self.q_center = np.concatenate((q_center, -q_center))
-        self.q_species = np.concatenate((q_species_e, q_species_i))
-        self.m = np.concatenate((m_e, m_i))
+        self.w = np.concatenate((w, w))
+        self.w_center = np.concatenate((w_center, w_center))
         self.r_to_x = np.ones(self.n_part, dtype=np.int32)
         self.tag = np.concatenate((tag, tag))
 
@@ -201,8 +199,8 @@ class PlasmaParticles():
             self.pr_elec,
             self.pz_elec,
             self.gamma_elec,
-            self.q_elec,
-            self.q_center_elec,
+            self.w_elec,
+            self.w_center_elec,
             self.r_to_x_elec,
             self.tag_elec,
             self._dr_e,
@@ -217,8 +215,8 @@ class PlasmaParticles():
                 self.pr_ion,
                 self.pz_ion,
                 self.gamma_ion,
-                self.q_ion,
-                self.q_center_ion,
+                self.w_ion,
+                self.w_center_ion,
                 self.r_to_x_ion,
                 self.tag_ion,
                 self._dr_i,
@@ -267,10 +265,10 @@ class PlasmaParticles():
             log(self.r_ion, self.log_r_ion)
 
         calculate_psi_and_derivatives_at_particles(
-            self.r_elec, self.log_r_elec, self.pr_elec, self.q_elec,
-            self.q_center_elec,
-            self.r_ion, self.log_r_ion, self.pr_ion, self.q_ion,
-            self.q_center_ion,
+            self.r_elec, self.log_r_elec, self.pr_elec, self.w_elec,
+            self.w_center_elec, self.q_species_elec,
+            self.r_ion, self.log_r_ion, self.pr_ion, self.w_ion,
+            self.w_center_ion, self.q_species_ion,
             self.ion_motion, self.ions_computed,
             self._sum_1_e, self._sum_2_e, self._sum_3_e,
             self._sum_1_i, self._sum_2_i, self._sum_3_i,
@@ -278,21 +276,20 @@ class PlasmaParticles():
             self._psi_i, self._dr_psi_i, self._dxi_psi_i,
             self._psi, self._dr_psi, self._dxi_psi
         )
+        update_gamma_and_pz(
+            self.gamma_elec, self.pz_elec, self.pr_elec,
+            self._a2_e, self._psi_e, self.q_species_elec, self.m_elec
+        )            
         if self.ion_motion:
             update_gamma_and_pz(
-                self.gamma, self.pz, self.pr,
-                self._a2, self._psi, self.q_species, self.m
-            )
-        else:
-            update_gamma_and_pz(
-                self.gamma_elec, self.pz_elec, self.pr_elec,
-                self._a2_e, self._psi_e, self.q_species_elec, self.m_elec
+                self.gamma_ion, self.pz_ion, self.pr_ion,
+                self._a2_i, self._psi_i, self.q_species_ion, self.m_ion
             )
         check_gamma(self.gamma_elec, self.pz_elec, self.pr_elec,
                     self.max_gamma)
         calculate_b_theta_at_particles(
-            self.r_elec, self.pr_elec, self.q_elec, self.q_center_elec,
-            self.gamma_elec,
+            self.r_elec, self.pr_elec, self.w_elec, self.w_center_elec,
+            self.gamma_elec, self.q_species_elec,
             self.r_ion,
             self.ion_motion,
             self._psi_e, self._dr_psi_e, self._dxi_psi_e,
@@ -323,18 +320,18 @@ class PlasmaParticles():
 
     def evolve(self, dxi):
         """Evolve plasma particles to next longitudinal slice."""
+        evolve_plasma_ab2(
+            dxi, self.r_elec, self.pr_elec, self.gamma_elec, self.m_elec,
+            self.q_species_elec, self.r_to_x_elec, 
+            self._nabla_a2_e, self._b_t_0_e,
+            self._b_t_e, self._psi_e, self._dr_psi_e, self._dr_e, self._dpr_e
+        )
         if self.ion_motion:
             evolve_plasma_ab2(
-                dxi, self.r, self.pr, self.gamma, self.m, self.q_species,
-                self.r_to_x, self._nabla_a2, self._b_t_0, self._b_t,
-                self._psi, self._dr_psi, self._dr, self._dpr
-            )
-        else:
-            evolve_plasma_ab2(
-                dxi, self.r_elec, self.pr_elec, self.gamma_elec, self.m_elec,
-                self.r_to_x_elec, self.q_species_elec,
-                self._nabla_a2_e, self._b_t_0_e,
-                self._b_t_e, self._psi_e, self._dr_psi_e, self._dr, self._dpr
+                dxi, self.r_ion, self.pr_ion, self.gamma_ion, self.m_ion,
+                self.q_species_ion, self.r_to_x_ion,
+                self._nabla_a2_i, self._b_t_0_i,
+                self._b_t_i, self._psi_i, self._dr_psi_i, self._dr_i, self._dpr_i
             )
 
         if self.store_history:
@@ -344,7 +341,13 @@ class PlasmaParticles():
 
     def calculate_weights(self):
         """Calculate the plasma density weights of each particle."""
-        calculate_rho(self.q, self.pz, self.gamma, self._rho)
+        calculate_rho(
+            self.q_species_elec, self.w_elec, self.pz_elec, self.gamma_elec,
+            self._rho_e)
+        if self.ion_motion or not self.ions_computed:
+            calculate_rho(
+                self.q_species_ion, self.w_ion, self.pz_ion, self.gamma_ion,
+                self._rho_i)
 
 
     def deposit_rho(self, rho, rho_e, rho_i, r_fld, nr, dr):
@@ -364,7 +367,9 @@ class PlasmaParticles():
 
     def deposit_chi(self, chi, r_fld, nr, dr):
         """Deposit plasma susceptibility on a grid slice."""
-        calculate_chi(self.q_elec, self.pz_elec, self.gamma_elec, self._chi_e)
+        calculate_chi(
+            self.q_species_elec, self.w_elec, self.pz_elec, self.gamma_elec,
+            self._chi_e)
         deposit_plasma_particles(
             self.r_elec, self._chi_e, r_fld[0], nr, dr, chi, self.shape
         )
@@ -464,10 +469,8 @@ class PlasmaParticles():
         self.pr_elec = self.pr[:self.n_elec]
         self.pz_elec = self.pz[:self.n_elec]
         self.gamma_elec = self.gamma[:self.n_elec]
-        self.q_elec = self.q[:self.n_elec]
-        self.q_center_elec = self.q_center[:self.n_elec]
-        self.q_species_elec = self.q_species[:self.n_elec]
-        self.m_elec = self.m[:self.n_elec]
+        self.w_elec = self.w[:self.n_elec]
+        self.w_center_elec = self.w_center[:self.n_elec]
         self.r_to_x_elec = self.r_to_x[:self.n_elec]
         self.tag_elec = self.tag[:self.n_elec]
 
@@ -477,10 +480,8 @@ class PlasmaParticles():
         self.pr_ion = self.pr[self.n_elec:]
         self.pz_ion = self.pz[self.n_elec:]
         self.gamma_ion = self.gamma[self.n_elec:]
-        self.q_ion = self.q[self.n_elec:]
-        self.q_center_ion = self.q_center[self.n_elec:]
-        self.q_species_ion = self.q_species[self.n_elec:]
-        self.m_ion = self.m[self.n_elec:]
+        self.w_ion = self.w[self.n_elec:]
+        self.w_center_ion = self.w_center[self.n_elec:]
         self.r_to_x_ion = self.r_to_x[self.n_elec:]
         self.tag_ion = self.tag[self.n_elec:]
 
@@ -493,8 +494,11 @@ class PlasmaParticles():
         self._b_t_e = self._b_t[:self.n_elec]
         self._b_t_i = self._b_t[self.n_elec:]
         self._b_t_0_e = self._b_t_0[:self.n_elec]
+        self._b_t_0_i = self._b_t_0[self.n_elec:]
         self._nabla_a2_e = self._nabla_a2[:self.n_elec]
+        self._nabla_a2_i = self._nabla_a2[self.n_elec:]
         self._a2_e = self._a2[:self.n_elec]
+        self._a2_i = self._a2[self.n_elec:]
         self._sum_1_e = self._sum_1[:self.n_elec + 1]
         self._sum_2_e = self._sum_2[:self.n_elec + 1]
         self._sum_1_i = self._sum_1[self.n_elec + 1:]

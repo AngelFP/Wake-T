@@ -15,23 +15,23 @@ def log(input, output):
 
 
 @njit_serial(error_model="numpy")
-def calculate_chi(q, pz, gamma, chi):
+def calculate_chi(q, w, pz, gamma, chi):
     """Calculate the contribution of each particle to `chi`."""
-    for i in range(q.shape[0]):
-        q_i = q[i]
+    for i in range(w.shape[0]):
+        w_i = w[i]
         pz_i = pz[i]
         inv_gamma_i = 1. / gamma[i]
-        chi[i] = q_i / (1. - pz_i * inv_gamma_i) * inv_gamma_i
+        chi[i] = q * w_i / (1. - pz_i * inv_gamma_i) * inv_gamma_i
 
 
 @njit_serial(error_model="numpy")
-def calculate_rho(q, pz, gamma, chi):
+def calculate_rho(q, w, pz, gamma, rho):
     """Calculate the contribution of each particle to `rho`."""
-    for i in range(q.shape[0]):
-        q_i = q[i]
+    for i in range(w.shape[0]):
+        w_i = w[i]
         pz_i = pz[i]
         inv_gamma_i = 1. / gamma[i]
-        chi[i] = q_i / (1. - pz_i * inv_gamma_i)
+        rho[i] = q * w_i / (1. - pz_i * inv_gamma_i)
 
 
 @njit_serial()
@@ -175,10 +175,12 @@ def update_gamma_and_pz(gamma, pz, pr, a2, psi, q, m):
     pr, a2, psi : ndarray
         Arrays containing the radial momentum of the particles and the
         value of a2 and psi at the position of the particles.
+    q, m : float
+        Charge and mass of the plasma species.
 
     """
+    q_over_m = q / m
     for i in range(pr.shape[0]):
-        q_over_m = q[i] / m[i]
         psi_i = psi[i] * q_over_m
         pz_i = (
             (1 + pr[i] ** 2 + q_over_m ** 2 * a2[i] - (1 + psi_i) ** 2) /

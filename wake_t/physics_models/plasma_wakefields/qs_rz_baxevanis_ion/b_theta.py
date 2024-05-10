@@ -9,7 +9,7 @@ from wake_t.utilities.numba import njit_serial
 
 @njit_serial()
 def calculate_b_theta_at_particles(
-    r_e, pr_e, q_e, q_center_e, gamma_e,
+    r_e, pr_e, w_e, w_center_e, gamma_e, q_e,
     r_i,      
     ion_motion,
     psi_e, dr_psi_e, dxi_psi_e,
@@ -67,9 +67,11 @@ def calculate_b_theta_at_particles(
 
     Parameters
     ----------
-    r_e, pr_e, q_e, gamma_e : ndarray
-        Radial position, momentum, charge and Lorenz factor of the plasma
+    r_e, pr_e, w_e, w_center_e, gamma_e : ndarray
+        Radial position, momentum, weight and Lorenz factor of the plasma
         electrons.
+    q_e : float
+        Charge of the plasma electron species.
     r_i : ndarray
         Radial position of the plasma ions.
     i_sort_e, i_sort_i : ndarray
@@ -100,6 +102,9 @@ def calculate_b_theta_at_particles(
         Arrays where azimuthal magnetic field at the plasma electrons and ions
         will be stored.
     """
+    # Only the magnetic field from the electrons is computed, so the equations
+    # below assume that q_i/m_i = 1.
+
     # Calculate the A_i, B_i, C_i coefficients in Eq. (26).
     calculate_ABC(
         r_e, pr_e, gamma_e,
@@ -108,8 +113,8 @@ def calculate_b_theta_at_particles(
     )
 
     # Calculate the a_i, b_i coefficients in Eq. (27).
-    calculate_KU(r_e, q_e, q_center_e, A, K, U)
-    calculate_ai_bi_from_axis(r_e, q_e, q_center_e, A, B, C, K, U, a_0, a, b)
+    calculate_KU(r_e, q_e, w_e, w_center_e, A, K, U)
+    calculate_ai_bi_from_axis(r_e, q_e, w_e, w_center_e, A, B, C, K, U, a_0, a, b)
 
     # Calculate b_theta at plasma particles.
     calculate_b_theta_at_particle_centers(a, b, r_e, b_t_e)
@@ -178,7 +183,7 @@ def calculate_b_theta_at_particle_centers(a, b, r, b_theta):
 
 
 @njit_serial(error_model='numpy')
-def calculate_ai_bi_from_axis(r, q, q_center, A, B, C, K, U, a_0, a, b):
+def calculate_ai_bi_from_axis(r, q, w, w_center, A, B, C, K, U, a_0, a, b):
     """
     Calculate the values of a_i and b_i which are needed to determine
     b_theta at any r position.
@@ -202,8 +207,8 @@ def calculate_ai_bi_from_axis(r, q, q_center, A, B, C, K, U, a_0, a, b):
         # Iterate over particles
         for i in range(i_start, n_part):
             r_i = r[i]
-            q_i = q[i]
-            q_center_i = q_center[i]
+            q_i = q * w[i]
+            q_center_i = q * w_center[i]
             A_i = A[i]
             B_i = B[i]
             C_i = C[i]
@@ -277,7 +282,7 @@ def calculate_ABC(r, pr, gamma, psi, dr_psi, dxi_psi, b_theta_0,
                   nabla_a2, A, B, C):
     """Calculate the A_i, B_i and C_i coefficients of the linear system.
     
-    The coefficients are missing the q_i term. They are multiplied by it
+    The coefficients are missing the q_i * w_i term. They are multiplied by it
     in following functions.
     """
     n_part = r.shape[0]
@@ -312,7 +317,7 @@ def calculate_ABC(r, pr, gamma, psi, dr_psi, dxi_psi, b_theta_0,
 
 
 @njit_serial(error_model='numpy')
-def calculate_KU(r, q, q_center, A, K, U):
+def calculate_KU(r, q, w, w_center, A, K, U):
     """Calculate the K_i and U_i values of the linear system."""
     n_part = r.shape[0]
 
@@ -322,8 +327,8 @@ def calculate_KU(r, q, q_center, A, K, U):
 
     for i in range(n_part):
         r_i = r[i]
-        q_i = q[i]
-        q_center_i = q_center[i]
+        q_i = q * w[i]
+        q_center_i = q * w_center[i]
         A_i = A[i]
         A_inv_r_i = A_i / r_i
         A_r_i = A_i * r_i

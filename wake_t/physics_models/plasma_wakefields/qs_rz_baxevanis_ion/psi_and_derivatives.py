@@ -11,8 +11,8 @@ from wake_t.utilities.numba import njit_serial
 
 @njit_serial(fastmath=True, error_model="numpy")
 def calculate_psi_and_derivatives_at_particles(
-    r_e, log_r_e, pr_e, q_e, q_center_e,
-    r_i, log_r_i, pr_i, q_i, q_center_i,
+    r_e, log_r_e, pr_e, w_e, w_center_e, q_e,
+    r_i, log_r_i, pr_i, w_i, w_center_i, q_i,
     ion_motion, calculate_ion_sums,
     sum_1_e, sum_2_e, sum_3_e,
     sum_1_i, sum_2_i, sum_3_i,
@@ -24,13 +24,16 @@ def calculate_psi_and_derivatives_at_particles(
 
     Parameters
     ----------
-    r_e, log_r_e, pr_e, q_e, q_center_e : ndarray
-        Radial position (and log), momentum, charge (and central charge)
+    r_e, log_r_e, pr_e, w_e, w_center_e : ndarray
+        Radial position (and log), momentum, weight (and central weight)
         of the plasma electrons.
-    
-    r_i, log_r_i, pr_i, q_i, q_center_i, dr_p_i : ndarray
-        Radial position (and log), momentum, charge (and central charge)
+    q_e : float
+        Charge of the plasma electron species.
+    r_i, log_r_i, pr_i, w_i, w_center_i, dr_p_i : ndarray
+        Radial position (and log), momentum, weight (and central weight)
         of the plasma ions.
+    q_i : float
+        Charge of the plasma ion species.
     ion_motion : bool
         Whether the ions can move. If `True`, the potential and its derivatives
         will also be calculated at the ions.
@@ -53,11 +56,11 @@ def calculate_psi_and_derivatives_at_particles(
     """
 
     # Calculate cumulative sums 1 and 2 (Eqs. (29) and (31)).
-    calculate_cumulative_sum_1(q_e, q_center_e, sum_1_e)
-    calculate_cumulative_sum_2(log_r_e, q_e, q_center_e, sum_2_e)
+    calculate_cumulative_sum_1(q_e, w_e, w_center_e, sum_1_e)
+    calculate_cumulative_sum_2(q_e, log_r_e, w_e, w_center_e, sum_2_e)
     if ion_motion or not calculate_ion_sums:
-        calculate_cumulative_sum_1(q_i, q_center_i, sum_1_i)
-        calculate_cumulative_sum_2(log_r_i, q_i, q_center_i, sum_2_i)
+        calculate_cumulative_sum_1(q_i, w_i, w_center_i, sum_1_i)
+        calculate_cumulative_sum_2(q_i, log_r_i, w_i, w_center_i, sum_2_i)
 
     # Calculate the psi and dr_psi background at the neighboring points.
     # For the electrons, compute the psi and dr_psi due to the ions at
@@ -83,9 +86,9 @@ def calculate_psi_and_derivatives_at_particles(
     check_psi_derivative(dr_psi)
 
     # Calculate cumulative sum 3 (Eq. (32)).
-    calculate_cumulative_sum_3(r_e, pr_e, q_e, q_center_e, psi_e, sum_3_e)
+    calculate_cumulative_sum_3(q_e, r_e, pr_e, w_e, w_center_e, psi_e, sum_3_e)
     if ion_motion or not calculate_ion_sums:
-        calculate_cumulative_sum_3(r_i, pr_i, q_i, q_center_i, psi_i, sum_3_i)
+        calculate_cumulative_sum_3(q_i, r_i, pr_i, w_i, w_center_i, psi_i, sum_3_i)
 
     # Calculate the dxi_psi background at the neighboring points.
     # For the electrons, compute the psi and dr_psi due to the ions at
@@ -104,50 +107,50 @@ def calculate_psi_and_derivatives_at_particles(
 
 
 @njit_serial(fastmath=True)
-def calculate_cumulative_sum_1(q, q_center, sum_1_arr):
+def calculate_cumulative_sum_1(q, w, w_center, sum_1_arr):
     """Calculate the cumulative sum in Eq. (29)."""
     sum_1 = 0.
-    for i in range(q.shape[0]):
-        q_i = q[i]
-        q_center_i = q_center[i]
+    for i in range(w.shape[0]):
+        w_i = w[i]
+        w_center_i = w_center[i]
         # Integrate up to particle centers.
-        sum_1_arr[i] = sum_1 + q_center_i
+        sum_1_arr[i] = sum_1 + q * w_center_i
         # And add all charge for next iteration.
-        sum_1 += q_i
+        sum_1 += q * w_i
     # Total sum after last particle.
     sum_1_arr[-1] = sum_1
 
 
 @njit_serial(fastmath=True)
-def calculate_cumulative_sum_2(log_r, q, q_center, sum_2_arr):
+def calculate_cumulative_sum_2(q, log_r, w, w_center, sum_2_arr):
     """Calculate the cumulative sum in Eq. (31)."""
     sum_2 = 0.
     for i in range(log_r.shape[0]):
         log_r_i = log_r[i]
-        q_i = q[i]
-        q_center_i = q_center[i]
+        w_i = w[i]
+        w_center_i = w_center[i]
         # Integrate up to particle centers.
-        sum_2_arr[i] = sum_2 + q_center_i * log_r_i
+        sum_2_arr[i] = sum_2 + q * w_center_i * log_r_i
         # And add all charge for next iteration.
-        sum_2 += q_i * log_r_i
+        sum_2 += q * w_i * log_r_i
     # Total sum after last particle.
     sum_2_arr[-1] = sum_2
 
 
 @njit_serial(fastmath=True, error_model="numpy")
-def calculate_cumulative_sum_3(r, pr, q, q_center, psi, sum_3_arr):
+def calculate_cumulative_sum_3(q, r, pr, w, w_center, psi, sum_3_arr):
     """Calculate the cumulative sum in Eq. (32)."""
     sum_3 = 0.
     for i in range(r.shape[0]):
         r_i = r[i]
         pr_i = pr[i]
-        q_i = q[i]
-        q_center_i = q_center[i]
+        w_i = w[i]
+        w_center_i = w_center[i]
         psi_i = psi[i]
         # Integrate up to particle centers.
-        sum_3_arr[i] = sum_3 + (q_center_i * pr_i) / (r_i * (1 + psi_i))
+        sum_3_arr[i] = sum_3 + (q * w_center_i * pr_i) / (r_i * (1 + psi_i))
         # And add all charge for next iteration.
-        sum_3 += (q_i * pr_i) / (r_i * (1 + psi_i))
+        sum_3 += (q * w_i * pr_i) / (r_i * (1 + psi_i))
     # Total sum after last particle.
     sum_3_arr[-1] = sum_3
 

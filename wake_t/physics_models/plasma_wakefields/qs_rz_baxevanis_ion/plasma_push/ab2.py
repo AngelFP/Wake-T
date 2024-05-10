@@ -20,10 +20,11 @@ def evolve_plasma_ab2(
     ----------
     dxi : float
         Longitudinal step.
-    r, pr, gamma, m, q, r_to_x : ndarray
-        Radial position, radial momentum, Lorentz factor, mass and charge of
-        the plasma particles as well an array that keeps track of axis crosses
-        to convert from r to x.
+    r, pr, gamma, r_to_x : ndarray
+        Radial position, radial momentum, Lorentz factor as well an array that
+        keeps track of axis crosses to convert from r to x.
+    m, q : float
+        Mass and charge of the plasma species.
     nabla_a2, b_theta_0, b_theta, psi, dr_psi : ndarray
         Arrays with the value of the fields at the particle positions.
     dr, dpr : ndarray
@@ -63,6 +64,8 @@ def calculate_derivatives(
     pr, gamma : ndarray
         Arrays containing the radial momentum and Lorentz factor of the
         plasma particles.
+    m, q : float
+        Mass and charge of the plasma species.
     b_theta_0 : ndarray
         Array containing the value of the azimuthal magnetic field from
         the beam distribution at the position of each plasma particle.
@@ -80,8 +83,8 @@ def calculate_derivatives(
         radial momentum will be stored.
     """
     # Calculate derivatives of r and pr.
+    q_over_m = q / m
     for i in range(pr.shape[0]):
-        q_over_m = q[i] / m[i]
         inv_psi_i = 1. / (1. + psi[i] * q_over_m)
         dpr[i] = (gamma[i] * dr_psi[i] * inv_psi_i
                   - b_theta_bar[i]
