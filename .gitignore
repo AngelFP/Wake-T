@@ -10,6 +10,9 @@ __pycache__
 /examples/tests.py
 /old_stuff
 
+# Test output
+/tests_output
+
 # IDEs
 /.vscode
 
