@@ -26,7 +26,7 @@ def test_field_vs_tm_quadrupole():
         ene=gamma_avg, ene_sp=ene_spread, s_t=s_t, xi_c=xi_avg,
         q_tot=q_bunch, n_part=n_part, name='elec_bunch')
 
-    bunch_2 = copy.deepcopy(bunch_1)
+    bunch_2 = bunch_1.copy()
 
     foc_strength = 100  # T/m
     quadrupole_length = 0.05  # m
