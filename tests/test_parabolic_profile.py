@@ -55,8 +55,8 @@ def test_variable_parabolic_coefficient():
     # Create identical bunches for each case.
     bunch = get_matched_bunch(
         1e-6, 1e-6, 200, 1, 3, laser.xi_c - 30e-6, 1e-6, 1e4, n_p=n_p)
-    bunch_1 = deepcopy(bunch)
-    bunch_2 = deepcopy(bunch)
+    bunch_1 = bunch.copy()
+    bunch_2 = bunch.copy()
 
     # Create single plasma stage (containing all sections).
     plasma_single = PlasmaStage(
