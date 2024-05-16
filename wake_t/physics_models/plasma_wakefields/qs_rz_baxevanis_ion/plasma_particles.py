@@ -269,12 +269,11 @@ class PlasmaParticles():
             self.w_center_elec, self.q_species_elec,
             self.r_ion, self.log_r_ion, self.pr_ion, self.w_ion,
             self.w_center_ion, self.q_species_ion,
-            self.ion_motion, self.ions_computed,
+            self.ion_motion, not self.ions_computed,
             self._sum_1_e, self._sum_2_e, self._sum_3_e,
             self._sum_1_i, self._sum_2_i, self._sum_3_i,
             self._psi_e, self._dr_psi_e, self._dxi_psi_e,
             self._psi_i, self._dr_psi_i, self._dxi_psi_i,
-            self._psi, self._dr_psi, self._dxi_psi
         )
         update_gamma_and_pz(
             self.gamma_elec, self.pz_elec, self.pr_elec,

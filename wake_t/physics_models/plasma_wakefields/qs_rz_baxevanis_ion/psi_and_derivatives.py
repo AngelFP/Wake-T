@@ -18,7 +18,6 @@ def calculate_psi_and_derivatives_at_particles(
     sum_1_i, sum_2_i, sum_3_i,
     psi_e, dr_psi_e, dxi_psi_e,
     psi_i, dr_psi_i, dxi_psi_i,
-    psi, dr_psi, dxi_psi,
 ):
     """Calculate wakefield potential and derivatives at the plasma particles.
 
@@ -58,36 +57,37 @@ def calculate_psi_and_derivatives_at_particles(
     # Calculate cumulative sums 1 and 2 (Eqs. (29) and (31)).
     calculate_cumulative_sum_1(q_e, w_e, w_center_e, sum_1_e)
     calculate_cumulative_sum_2(q_e, log_r_e, w_e, w_center_e, sum_2_e)
-    if ion_motion or not calculate_ion_sums:
-        calculate_cumulative_sum_1(q_i, w_i, w_center_i, sum_1_i)
-        calculate_cumulative_sum_2(q_i, log_r_i, w_i, w_center_i, sum_2_i)
-
-    # Calculate the psi and dr_psi background at the neighboring points.
-    # For the electrons, compute the psi and dr_psi due to the ions at
-    # r_neighbor_e. For the ions, compute the psi and dr_psi due to the
-    # electrons at r_neighbor_i.
     calculate_psi_and_dr_psi_at_particle_centers(
         r_e, log_r_e, sum_1_e, sum_2_e, psi_e, dr_psi_e
     )
-    calculate_psi_and_dr_psi_with_interpolation(
-        r_e, r_i, log_r_i, sum_1_i, sum_2_i, psi_e, dr_psi_e, add=True
-    )
-    if ion_motion:
+    if ion_motion or calculate_ion_sums:
+        calculate_cumulative_sum_1(q_i, w_i, w_center_i, sum_1_i)
+        calculate_cumulative_sum_2(q_i, log_r_i, w_i, w_center_i, sum_2_i)
         calculate_psi_and_dr_psi_at_particle_centers(
             r_i, log_r_i, sum_1_i, sum_2_i, psi_i, dr_psi_i
         )
+        psi_e_cp = psi_e.copy()
+        dr_psi_e_cp = dr_psi_e.copy()
+
+    calculate_psi_and_dr_psi_with_interpolation(
+        r_e, r_i, psi_i, dr_psi_i, sum_1_i[-1], sum_2_i[-1], psi_e, dr_psi_e
+    )
+    if ion_motion:
         calculate_psi_and_dr_psi_with_interpolation(
-            r_i, r_e, log_r_e, sum_1_e, sum_2_e, psi_i, dr_psi_i, add=True
+            r_i, r_e, psi_e_cp, dr_psi_e_cp, sum_1_e[-1], sum_2_e[-1], psi_i, dr_psi_i
         )
 
     # Check that the values of psi are within a reasonable range (prevents
     # issues at the peak of a blowout wake, for example).
-    check_psi(psi)
-    check_psi_derivative(dr_psi)
+    check_psi(psi_e)
+    check_psi_derivative(dr_psi_e)
+    if ion_motion:
+        check_psi(psi_i)
+        check_psi_derivative(dr_psi_i)
 
     # Calculate cumulative sum 3 (Eq. (32)).
     calculate_cumulative_sum_3(q_e, r_e, pr_e, w_e, w_center_e, psi_e, sum_3_e)
-    if ion_motion or not calculate_ion_sums:
+    if ion_motion or calculate_ion_sums:
         calculate_cumulative_sum_3(q_i, r_i, pr_i, w_i, w_center_i, psi_i, sum_3_i)
 
     # Calculate the dxi_psi background at the neighboring points.
@@ -96,14 +96,17 @@ def calculate_psi_and_derivatives_at_particles(
     # electrons at r_neighbor_i.
     calculate_dxi_psi_at_particle_centers(r_e, sum_3_e, dxi_psi_e)
     if ion_motion:
-        calculate_dxi_psi_with_interpolation(r_e, r_i, sum_3_i, dxi_psi_e, add=True)
         calculate_dxi_psi_at_particle_centers(r_i, sum_3_i, dxi_psi_i)
-        calculate_dxi_psi_with_interpolation(r_i, r_e, sum_3_e, dxi_psi_i, add=True)
+        dxi_psi_e_cp = dxi_psi_e.copy()
+        calculate_dxi_psi_with_interpolation(r_e, r_i, dxi_psi_i, sum_3_i[-1], dxi_psi_e)
+        calculate_dxi_psi_with_interpolation(r_i, r_e, dxi_psi_e_cp, sum_3_e[-1], dxi_psi_i)
 
 
     # Check that the values of dxi_psi are within a reasonable range (prevents
     # issues at the peak of a blowout wake, for example).
-    check_psi_derivative(dxi_psi)
+    check_psi_derivative(dxi_psi_e)
+    if ion_motion:
+        check_psi_derivative(dxi_psi_i)
 
 
 @njit_serial(fastmath=True)
@@ -212,10 +215,9 @@ def calculate_psi_with_interpolation(
         else:
             psi[j] = psi_j
 
-
 @njit_serial(fastmath=True, error_model="numpy")
 def calculate_psi_and_dr_psi_with_interpolation(
-        r_eval, r, log_r, sum_1_arr, sum_2_arr, psi, dr_psi, add=False):
+        r_eval, r, psi, dr_psi, sum_1_max, sum_2_max, psi_eval, dr_psi_eval):
     """Calculate psi and dr_psi at the radial positions given in `r_eval`."""
     # Get number of plasma particles.
     n_part = r.shape[0]
@@ -226,13 +228,11 @@ def calculate_psi_and_dr_psi_with_interpolation(
     # Calculate psi after the last plasma plasma particle
     # This is used to ensure the boundary condition psi=0, which also
     # assumes that the total electron and ion charge are the same.
-    sum_2_max = sum_2_arr[-1]
+    # sum_2_max = sum_2_arr[-1]
 
     # Calculate fields at r_eval.
     i_last = 0
     r_left = 0.
-    sum_1_left = 0.
-    sum_2_left = 0.
     psi_left = 0.
     dr_psi_left = 0.
     for j in range(n_points):
@@ -247,36 +247,24 @@ def calculate_psi_and_dr_psi_with_interpolation(
             i_last += 1
         if i_last < n_part:
             if i_last > 0:
-                log_r_left = log_r[i_last - 1]
-                sum_1_left = sum_1_arr[i_last - 1]
-                sum_2_left = sum_2_arr[i_last - 1]
-                dr_psi_left = sum_1_left / r_left
-                psi_left = sum_1_left * log_r_left - sum_2_left
-            log_r_right = log_r[i_last]
-            sum_1_right = sum_1_arr[i_last]
-            sum_2_right = sum_2_arr[i_last]
-            dr_psi_right = sum_1_right / r_right
-            psi_right = sum_1_right * log_r_right - sum_2_right
+                dr_psi_left = dr_psi[i_last-1]
+                psi_left = psi[i_last-1]
+            dr_psi_right = dr_psi[i_last]
+            psi_right = psi[i_last]
 
             # Interpolate sums.
             inv_dr = 1. / (r_right - r_left)
             slope_1 = (dr_psi_right - dr_psi_left) * inv_dr
             slope_2 = (psi_right - psi_left) * inv_dr
             dr_psi_j = dr_psi_left + slope_1 * (r_j - r_left)
-            psi_j = psi_left + slope_2 * (r_j - r_left) + sum_2_max
+            psi_j = psi_left + slope_2 * (r_j - r_left)
         else:
-            sum_1_left = sum_1_arr[-1]
-            sum_2_left = sum_2_arr[-1]
-            dr_psi_j = sum_1_left / r_j
-            psi_j = sum_1_left * np.log(r_j) - sum_2_left + sum_2_max
+            dr_psi_j = sum_1_max / r_j
+            psi_j = sum_1_max * np.log(r_j) - sum_2_max
 
         # Calculate fields at r_j.
-        if add:
-            psi[j] += psi_j
-            dr_psi[j] += dr_psi_j
-        else:
-            psi[j] = psi_j
-            dr_psi[j] = dr_psi_j
+        psi_eval[j] += psi_j
+        dr_psi_eval[j] += dr_psi_j
 
 
 @njit_serial(fastmath=True, error_model="numpy")
@@ -302,7 +290,7 @@ def calculate_psi_and_dr_psi_at_particle_centers(
 
 
 @njit_serial()
-def calculate_dxi_psi_with_interpolation(r_eval, r, sum_3_arr, dxi_psi, add=False):
+def calculate_dxi_psi_with_interpolation(r_eval, r, dxi_psi, sum_3_max, dxi_psi_eval):
     """Calculate dxi_psi at the radial position given in `r_eval`."""
     # Get number of plasma particles.
     n_part = r.shape[0]
@@ -313,12 +301,12 @@ def calculate_dxi_psi_with_interpolation(r_eval, r, sum_3_arr, dxi_psi, add=Fals
     # Calculate dxi_psi after the last plasma plasma particle
     # This is used to ensure the boundary condition dxi_psi=0, which also
     # assumes that the total electron and ion charge are the same.
-    sum_3_max = sum_3_arr[-1]
+    # sum_3_max = sum_3_arr[-1]
 
     # Calculate fields at r_eval.
     i_last = 0
     r_left = 0.
-    dxi_psi_left = 0.
+    dxi_psi_left = - sum_3_max
     for j in range(n_points):
         r_j = r_eval[j]
         # Get index of last plasma particle with r_i < r_j, continuing from
@@ -331,17 +319,14 @@ def calculate_dxi_psi_with_interpolation(r_eval, r, sum_3_arr, dxi_psi, add=Fals
         if i_last < n_part:
             if i_last > 0:
                 r_left = r[i_last - 1]
-                dxi_psi_left = - sum_3_arr[i_last - 1]
+                dxi_psi_left = dxi_psi[i_last - 1]
             r_right = r[i_last]
-            dxi_psi_right = - sum_3_arr[i_last]
+            dxi_psi_right = dxi_psi[i_last]
             slope = (dxi_psi_right - dxi_psi_left) / (r_right - r_left)
-            dxi_psi_j = dxi_psi_left + slope * (r_j - r_left) + sum_3_max
+            dxi_psi_j = dxi_psi_left + slope * (r_j - r_left)
         else:
-            dxi_psi_j = - sum_3_arr[-1] + sum_3_max
-        if add:
-            dxi_psi[j] += dxi_psi_j
-        else:
-            dxi_psi[j] = dxi_psi_j
+            dxi_psi_j = 0.
+        dxi_psi_eval[j] += dxi_psi_j
 
 
 @njit_serial(fastmath=True, error_model="numpy")
