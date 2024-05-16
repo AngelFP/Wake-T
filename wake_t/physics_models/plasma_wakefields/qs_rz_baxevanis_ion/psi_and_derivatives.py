@@ -233,7 +233,7 @@ def calculate_psi_and_dr_psi_with_interpolation(
     # Calculate fields at r_eval.
     i_last = 0
     r_left = 0.
-    psi_left = 0.
+    psi_left = sum_2_max
     dr_psi_left = 0.
     for j in range(n_points):
         r_j = r_eval[j]
@@ -260,7 +260,7 @@ def calculate_psi_and_dr_psi_with_interpolation(
             psi_j = psi_left + slope_2 * (r_j - r_left)
         else:
             dr_psi_j = sum_1_max / r_j
-            psi_j = sum_1_max * np.log(r_j) - sum_2_max
+            psi_j = sum_1_max * np.log(r_j)
 
         # Calculate fields at r_j.
         psi_eval[j] += psi_j
