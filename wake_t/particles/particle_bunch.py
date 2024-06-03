@@ -257,7 +257,8 @@ class ParticleBunch():
             'm': self.m_species,
             'name': self.name,
             'z_off': global_time * ct.c,
-            'geometry': '3d_cartesian'
+            'geometry': '3d_cartesian',
+            'id': self.tags
         }
         return diag_dict
 
