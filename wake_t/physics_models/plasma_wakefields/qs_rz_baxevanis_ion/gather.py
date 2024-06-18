@@ -61,11 +61,11 @@ def gather_laser_sources(a2, nabla_a, r_min, r_max, dr, r, a2_pp, nabla_a_pp):
             # Interpolate in r
             dr_u = ir_upper - r_i_cell
             dr_l = 1 - dr_u
-            a2_pp[i] = dr_u*fld_1_l + dr_l*fld_1_u
-            nabla_a_pp[i] = dr_u*fld_2_l + dr_l*fld_2_u
+            a2_pp[i] = dr_u * fld_1_l + dr_l * fld_1_u
+            nabla_a_pp[i] = dr_u * fld_2_l + dr_l * fld_2_u
         else:
-            a2_pp[i] = 0.
-            nabla_a_pp[i] = 0.
+            a2_pp[i] = 0.0
+            nabla_a_pp[i] = 0.0
 
 
 @njit_serial(error_model="numpy")
@@ -131,12 +131,12 @@ def gather_bunch_sources(b_t, r_min, r_max, dr, r, b_t_pp):
             fld_l = b_t[ir_lower] * sign
             fld_u = b_t[ir_upper]
         else:
-            r_lower = (0.5 + ir_lower-2) * dr
-            r_upper = (0.5 + ir_upper-2) * dr
+            r_lower = (0.5 + ir_lower - 2) * dr
+            r_upper = (0.5 + ir_upper - 2) * dr
             fld_l = b_t[-1] * r_max / r_lower * sign
             fld_u = b_t[-1] * r_max / r_upper
 
         # Interpolate in r
         dr_u = ir_upper - r_i_cell
         dr_l = 1 - dr_u
-        b_t_pp[i] += dr_u*fld_l + dr_l*fld_u
+        b_t_pp[i] += dr_u * fld_l + dr_l * fld_u

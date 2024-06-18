@@ -20,8 +20,8 @@ def calculate_chi(q, w, pz, gamma, chi):
     for i in range(w.shape[0]):
         w_i = w[i]
         pz_i = pz[i]
-        inv_gamma_i = 1. / gamma[i]
-        chi[i] = q * w_i / (1. - pz_i * inv_gamma_i) * inv_gamma_i
+        inv_gamma_i = 1.0 / gamma[i]
+        chi[i] = q * w_i / (1.0 - pz_i * inv_gamma_i) * inv_gamma_i
 
 
 @njit_serial(error_model="numpy")
@@ -30,8 +30,8 @@ def calculate_rho(q, w, pz, gamma, rho):
     for i in range(w.shape[0]):
         w_i = w[i]
         pz_i = pz[i]
-        inv_gamma_i = 1. / gamma[i]
-        rho[i] = q * w_i / (1. - pz_i * inv_gamma_i)
+        inv_gamma_i = 1.0 / gamma[i]
+        rho[i] = q * w_i / (1.0 - pz_i * inv_gamma_i)
 
 
 @njit_serial()
@@ -52,19 +52,19 @@ def longitudinal_gradient(f, dz, dz_f):
         Array where the longitudinal gradient will be stored.
     """
     nz, nr = f.shape
-    inv_dz = 1. / dz
+    inv_dz = 1.0 / dz
     inv_h = 0.5 * inv_dz
-    a = - 1.5 * inv_dz
-    b = 2. * inv_dz
-    c = - 0.5 * inv_dz
+    a = -1.5 * inv_dz
+    b = 2.0 * inv_dz
+    c = -0.5 * inv_dz
     for j in range(nr):
-        f_right = f[nz-1, j]
+        f_right = f[nz - 1, j]
         for i in range(1, nz - 1):
             f_left = f[i - 1, j]
-            f_right = f[i + 1, j]            
+            f_right = f[i + 1, j]
             dz_f[i, j] = (f_right - f_left) * inv_h
         dz_f[0, j] = a * f[0, j] + b * f[1, j] + c * f[2, j]
-        dz_f[-1, j] = - a * f[-1, j] - b * f[-2, j] - c * f[-3, j]
+        dz_f[-1, j] = -a * f[-1, j] - b * f[-2, j] - c * f[-3, j]
 
 
 @njit_serial()
@@ -86,18 +86,18 @@ def radial_gradient(f, dr, dr_f):
         Array where the radial gradient will be stored.
     """
     nz, nr = f.shape
-    inv_dr = 1. / dr
+    inv_dr = 1.0 / dr
     inv_h = 0.5 * inv_dr
-    a = - 1.5 * inv_dr
-    b = 2. * inv_dr
-    c = - 0.5 * inv_dr
+    a = -1.5 * inv_dr
+    b = 2.0 * inv_dr
+    c = -0.5 * inv_dr
     for i in range(nz):
         for j in range(1, nr - 1):
             f_left = f[i, j - 1]
             f_right = f[i, j + 1]
             dr_f[i, j] = (f_right - f_left) * inv_h
         dr_f[i, 0] = (f[i, 1] - f[i, 0]) * inv_h
-        dr_f[i, -1] = - a * f[i, -1] - b * f[i, -2] - c * f[i, -3]
+        dr_f[i, -1] = -a * f[i, -1] - b * f[i, -2] - c * f[i, -3]
 
 
 @njit_serial()
@@ -121,7 +121,7 @@ def calculate_laser_a2(a_complex, a2):
             a2[2 + i, 2 + j] = ar * ar + ai * ai
 
 
-@njit_serial(error_model='numpy')
+@njit_serial(error_model="numpy")
 def update_gamma_and_pz(gamma, pz, pr, a2, psi, q, m):
     """
     Update the gamma factor and longitudinal momentum of the plasma particles.
@@ -141,12 +141,11 @@ def update_gamma_and_pz(gamma, pz, pr, a2, psi, q, m):
     q_over_m = q / m
     for i in range(pr.shape[0]):
         psi_i = psi[i] * q_over_m
-        pz_i = (
-            (1 + pr[i] ** 2 + q_over_m ** 2 * a2[i] - (1 + psi_i) ** 2) /
-            (2 * (1 + psi_i))
+        pz_i = (1 + pr[i] ** 2 + q_over_m**2 * a2[i] - (1 + psi_i) ** 2) / (
+            2 * (1 + psi_i)
         )
         pz[i] = pz_i
-        gamma[i] = 1. + pz_i + psi_i
+        gamma[i] = 1.0 + pz_i + psi_i
 
 
 @njit_serial()
@@ -154,15 +153,17 @@ def check_gamma(gamma, pz, pr, max_gamma):
     """Check that the gamma of particles does not exceed `max_gamma`"""
     for i in range(gamma.shape[0]):
         if gamma[i] > max_gamma:
-            gamma[i] = 1.
-            pz[i] = 0.
-            pr[i] = 0.
+            gamma[i] = 1.0
+            pz[i] = 0.0
+            pr[i] = 0.0
 
 
 @njit_serial()
-def sort_particle_arrays(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
+def sort_particle_arrays(
+    a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices
+):
     """Sort all the particle arrays with a given sorting order.
-    
+
     Implementing it like this looks very ugly, but it is much faster than
     repeating `array = array[indices]` for each array. It is also much faster
     than implementing a `sort_array` function that is called on each array.

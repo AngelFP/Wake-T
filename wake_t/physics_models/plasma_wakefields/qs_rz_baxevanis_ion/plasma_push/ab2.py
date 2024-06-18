@@ -1,17 +1,25 @@
 """ Contains the 5th order Adams–Bashforth pusher for the plasma particles. """
 
-
-import numpy as np
-
 from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial()
 def evolve_plasma_ab2(
-        dxi, r, pr, gamma, m, q, r_to_x,
-        nabla_a2, b_theta_0, b_theta, psi, dr_psi,
-        dr, dpr
-        ):
+    dxi,
+    r,
+    pr,
+    gamma,
+    m,
+    q,
+    r_to_x,
+    nabla_a2,
+    b_theta_0,
+    b_theta,
+    psi,
+    dr_psi,
+    dr,
+    dpr,
+):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
     using an Adams-Bashforth method of 2nd order.
@@ -33,8 +41,17 @@ def evolve_plasma_ab2(
     """
 
     calculate_derivatives(
-        pr, gamma, m, q, b_theta_0, nabla_a2, b_theta,
-        psi, dr_psi, dr[0], dpr[0]
+        pr,
+        gamma,
+        m,
+        q,
+        b_theta_0,
+        nabla_a2,
+        b_theta,
+        psi,
+        dr_psi,
+        dr[0],
+        dpr[0],
     )
 
     # Push radial position.
@@ -54,7 +71,8 @@ def evolve_plasma_ab2(
 
 @njit_serial(fastmath=True, error_model="numpy")
 def calculate_derivatives(
-        pr, gamma, m, q, b_theta_0, nabla_a2, b_theta_bar, psi, dr_psi, dr, dpr):
+    pr, gamma, m, q, b_theta_0, nabla_a2, b_theta_bar, psi, dr_psi, dr, dpr
+):
     """
     Calculate the derivative of the radial position and the radial momentum
     of the plasma particles at the current slice.
@@ -85,11 +103,13 @@ def calculate_derivatives(
     # Calculate derivatives of r and pr.
     q_over_m = q / m
     for i in range(pr.shape[0]):
-        inv_psi_i = 1. / (1. + psi[i] * q_over_m)
-        dpr[i] = (gamma[i] * dr_psi[i] * inv_psi_i
-                  - b_theta_bar[i]
-                  - b_theta_0[i]
-                  - nabla_a2[i] * 0.5 * inv_psi_i * q_over_m) * q_over_m
+        inv_psi_i = 1.0 / (1.0 + psi[i] * q_over_m)
+        dpr[i] = (
+            gamma[i] * dr_psi[i] * inv_psi_i
+            - b_theta_bar[i]
+            - b_theta_0[i]
+            - nabla_a2[i] * 0.5 * inv_psi_i * q_over_m
+        ) * q_over_m
         dr[i] = pr[i] * inv_psi_i
 
 
@@ -114,9 +134,9 @@ def apply_ab2(x, dt, dx):
 def check_axis_crossing(r, pr, dr, dpr, r_to_x):
     """Check for particles with r < 0 and invert them."""
     for i in range(r.shape[0]):
-        if r[i] < 0.:
-            r[i] *= -1.
-            pr[i] *= -1.
-            dr[i] *= -1.
-            dpr[i] *= -1.
+        if r[i] < 0.0:
+            r[i] *= -1.0
+            pr[i] *= -1.0
+            dr[i] *= -1.0
+            dpr[i] *= -1.0
             r_to_x[i] *= -1
