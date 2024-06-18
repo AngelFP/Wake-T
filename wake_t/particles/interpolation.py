@@ -210,6 +210,7 @@ def gather_main_fields_cyl_linear(
             gathered[i] = False
     return not np.any(gathered)
 
+
 @njit_serial()
 def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
                                 r_max, dz, dr, r, z, fld_1_pp, fld_2_pp,
