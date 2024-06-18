@@ -172,7 +172,11 @@ def calculate_wakefields(
 
         if laser_source:
             pp.gather_laser_sources(
-                laser_a2[slice_i + 2], nabla_a2[slice_i + 2], r_fld[0], r_fld[-1], dr
+                laser_a2[slice_i + 2],
+                nabla_a2[slice_i + 2],
+                r_fld[0],
+                r_fld[-1],
+                dr,
             )
         pp.gather_bunch_sources(
             bunch_source_arrays,
