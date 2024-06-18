@@ -259,6 +259,8 @@ class ParticleBunch():
             'z_off': global_time * ct.c,
             'geometry': '3d_cartesian'
         }
+        if self.tags is not None:
+            diag_dict['id'] = self.tags
         return diag_dict
 
     def show(self, **kwargs):
@@ -315,7 +317,8 @@ class ParticleBunch():
             prop_distance=deepcopy(self.prop_distance),
             name=deepcopy(self.name),
             q_species=deepcopy(self.q_species),
-            m_species=deepcopy(self.m_species)
+            m_species=deepcopy(self.m_species),
+            tags=deepcopy(self.tags)
         )
         bunch_copy.x_ref = self.x_ref
         bunch_copy.theta_ref = self.theta_ref
