@@ -1,5 +1,5 @@
 """This module contains the base class for plasma wakefields in r-z geometry"""
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 
 import numpy as np
 import scipy.constants as ct
@@ -17,7 +17,7 @@ class RZWakefield(NumericalField):
     ----------
     density_function : callable
         Function of that returns the relative value of the plasma density
-        at each `z` position.
+        at each `z` and `r` position.
     r_max : float
         Maximum radial position up to which plasma wakefield will be
         calculated.
@@ -37,6 +37,9 @@ class RZWakefield(NumericalField):
         only updated every time the simulation window advances by
         10 micron. By default ``dz_fields=xi_max-xi_min``, i.e., the
         length the simulation box.
+    species_rho_diags : bool, optional
+        Whether the model should save the charge density of each plasma species
+        separately.
     laser : LaserPulse, optional
         Laser driver of the plasma stage.
     laser_evolution : bool, optional
@@ -58,6 +61,12 @@ class RZWakefield(NumericalField):
         Determines whether to take into account the terms related to the
         longitudinal derivative of the complex phase in the envelope
         solver.
+    field_diags : list, optional
+        List of fields to save to openpmd diagnostics. By default ['rho', 'E',
+        'B', 'a_mod', 'a_phase'].
+    field_diags : list, optional
+        List of particle quantities to save to openpmd diagnostics. By default
+        [].
     model_name : str, optional
         Name of the wakefield model. This will be stored in the openPMD
         diagnostics.
@@ -66,19 +75,23 @@ class RZWakefield(NumericalField):
 
     def __init__(
         self,
-        density_function: Callable[[float], float],
+        density_function: Callable[[float, float], float],
         r_max: float,
         xi_min: float,
         xi_max: float,
         n_r: int,
         n_xi: int,
         dz_fields=None,
+        species_rho_diags: Optional[bool] = False,
         laser: Optional[LaserPulse] = None,
         laser_evolution: Optional[bool] = True,
         laser_envelope_substeps: Optional[int] = 1,
         laser_envelope_nxi: Optional[int] = None,
         laser_envelope_nr: Optional[int] = None,
         laser_envelope_use_phase: Optional[bool] = True,
+        field_diags: Optional[List[str]] = ['rho', 'E', 'B', 'a_mod',
+                                            'a_phase', 'a'],
+        particle_diags: Optional[List[str]] = [],
         model_name: Optional[str] = ''
     ) -> None:
         dz_fields = xi_max - xi_min if dz_fields is None else dz_fields
@@ -89,6 +102,7 @@ class RZWakefield(NumericalField):
         self.laser_envelope_nxi = laser_envelope_nxi
         self.laser_envelope_nr = laser_envelope_nr
         self.laser_envelope_use_phase = laser_envelope_use_phase
+        self.species_rho_diags = species_rho_diags
         self.r_max = r_max
         self.xi_min = xi_min
         self.xi_max = xi_max
@@ -96,6 +110,8 @@ class RZWakefield(NumericalField):
         self.n_xi = n_xi
         self.dr = r_max / n_r
         self.dxi = (xi_max - xi_min) / (n_xi - 1)
+        self.field_diags = field_diags
+        self.particle_diags = particle_diags
         self.model_name = model_name
         # If a laser is included, make sure it is evolved for the whole
         # duration of the plasma stage. See `force_even_updates` parameter.
@@ -117,6 +133,8 @@ class RZWakefield(NumericalField):
 
         # Initialize field arrays
         self.rho = np.zeros((self.n_xi+4, self.n_r+4))
+        self.rho_e = np.zeros((self.n_xi+4, self.n_r+4))
+        self.rho_i = np.zeros((self.n_xi+4, self.n_r+4))
         self.chi = np.zeros((self.n_xi+4, self.n_r+4))
         self.e_z = np.zeros((self.n_xi+4, self.n_r+4))
         self.e_r = np.zeros((self.n_xi+4, self.n_r+4))
@@ -134,24 +152,25 @@ class RZWakefield(NumericalField):
                 self.laser.evolve(self.chi[2:-2, 2:-2], self.n_p)
 
     def _calculate_field(self, bunches):
-        self.n_p = self.density_function(self.t*ct.c)
+        self.n_p = self.density_function(self.t*ct.c, 0.)
         self.rho[:] = 0.
         self.chi[:] = 0.
         self.e_z[:] = 0.
         self.e_r[:] = 0.
         self.b_t[:] = 0.
+        if self.species_rho_diags:
+            self.rho_e[:] = 0.
+            self.rho_i[:] = 0.
         self._calculate_wakefield(bunches)
 
     def _calculate_wakefield(self, bunches):
         """To be implemented by the subclasses."""
         raise NotImplementedError
 
-    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
-        dr = self.r_fld[1] - self.r_fld[0]
-        dxi = self.xi_fld[1] - self.xi_fld[0]
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name):
         gather_main_fields_cyl_linear(
             self.e_r, self.e_z, self.b_t, self.xi_fld[0], self.xi_fld[-1],
-            self.r_fld[0], self.r_fld[-1], dxi, dr, x, y, z,
+            self.r_fld[0], self.r_fld[-1], self.dxi, self.dr, x, y, z,
             ex, ey, ez, bx, by, bz)
 
     def _get_openpmd_diagnostics_data(self, global_time):
@@ -171,31 +190,75 @@ class RZWakefield(NumericalField):
         grid_global_offset = [0., global_time*ct.c+self.xi_min]
         # Cell-centered in 'r' and node centered in 'z'.
         fld_position = [0.5, 0.]
-        fld_names = ['E', 'B', 'rho']
-        fld_comps = [['r', 't', 'z'], ['r', 't', 'z'], None]
-        fld_attrs = [{}, {}, {}]
-        fld_arrays = [
-            [np.ascontiguousarray(self.e_r.T[2:-2, 2:-2]),
-             np.ascontiguousarray(self.e_t.T[2:-2, 2:-2]),
-             np.ascontiguousarray(self.e_z.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.b_r.T[2:-2, 2:-2]),
-             np.ascontiguousarray(self.b_t.T[2:-2, 2:-2]),
-             np.ascontiguousarray(self.b_z.T[2:-2, 2:-2])],
-            [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * self.n_p * (-ct.e)]
-        ]
-        if self.laser is not None:
-            fld_names += ['a_mod', 'a_phase', 'a']
-            fld_comps += [None, None, None]
-            fld_attrs += [
-                {'polarization': self.laser.polarization},
-                {},
-                {'angularFrequency': 2 * np.pi * ct.c / self.laser.l_0}
-            ]
+        fld_names = []
+        fld_comps = []
+        fld_attrs = []
+        fld_arrays = []
+        rho_norm = self.n_p * (-ct.e)
+
+        # Add requested fields to diagnostics.
+        if 'E' in self.field_diags:
+            fld_names += ['E']
+            fld_comps += [['r', 't', 'z']]
+            fld_attrs += [{}]
             fld_arrays += [
-                [np.ascontiguousarray(np.abs(self.laser.get_envelope().T))],
-                [np.ascontiguousarray(np.angle(self.laser.get_envelope().T))],
-                [np.ascontiguousarray(self.laser.get_envelope().T)]
+                [np.ascontiguousarray(self.e_r.T[2:-2, 2:-2]),
+                 np.ascontiguousarray(self.e_t.T[2:-2, 2:-2]),
+                 np.ascontiguousarray(self.e_z.T[2:-2, 2:-2])]
             ]
+        if 'B' in self.field_diags:
+            fld_names += ['B']
+            fld_comps += [['r', 't', 'z']]
+            fld_attrs += [{}]
+            fld_arrays += [
+                [np.ascontiguousarray(self.b_r.T[2:-2, 2:-2]),
+                 np.ascontiguousarray(self.b_t.T[2:-2, 2:-2]),
+                 np.ascontiguousarray(self.b_z.T[2:-2, 2:-2])]
+            ]
+        if 'rho' in self.field_diags:
+            fld_names += ['rho']
+            fld_comps += [None]
+            fld_attrs += [{}]
+            fld_arrays += [
+                [np.ascontiguousarray(self.rho.T[2:-2, 2:-2]) * rho_norm]
+            ]
+        if self.species_rho_diags:
+            if 'rho_e' in self.field_diags:
+                fld_names += ['rho_e']
+                fld_comps += [None]
+                fld_attrs += [{}]
+                fld_arrays += [
+                    [np.ascontiguousarray(self.rho_e.T[2:-2, 2:-2]) * rho_norm]
+                ]
+            if 'rho_i' in self.field_diags:
+                fld_names += ['rho_i']
+                fld_comps += [None]
+                fld_attrs += [{}]
+                fld_arrays += [
+                    [np.ascontiguousarray(self.rho_i.T[2:-2, 2:-2]) * rho_norm]
+                ]
+        if self.laser is not None:
+            if 'a_mod' in self.field_diags:
+                a_mod = np.abs(self.laser.get_envelope().T)
+                fld_names += ['a_mod']
+                fld_comps += [None]
+                fld_attrs += [{'polarization': self.laser.polarization}]
+                fld_arrays += [[np.ascontiguousarray(a_mod)]]
+            if 'a_phase' in self.field_diags:
+                a_phase = np.angle(self.laser.get_envelope().T)
+                fld_names += ['a_phase']
+                fld_comps += [None]
+                fld_attrs += [{}]
+                fld_arrays += [[np.ascontiguousarray(a_phase)]]
+            if 'a' in self.field_diags:
+                a = self.laser.get_envelope().T
+                fld_names += ['a']
+                fld_comps += [None]
+                fld_attrs += [
+                    {'angularFrequency': 2 * np.pi * ct.c / self.laser.l_0}
+                ]
+                fld_arrays += [[np.ascontiguousarray(a)]]
+
         fld_comp_pos = [fld_position] * len(fld_names)
 
         # Generate dictionary for openPMD diagnostics.

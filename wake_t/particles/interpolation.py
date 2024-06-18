@@ -90,7 +90,7 @@ def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
 @njit_parallel()
 def gather_main_fields_cyl_linear(
         er, ez, bt, z_min, z_max, r_min, r_max, dz, dr, x, y, z,
-        ex_part, ey_part, ez_part, bx_part, by_part, bz_part):
+        ex_part, ey_part, ez_part, bx_part, by_part, bz_part, r_min_gather=0.):
     """
     Convenient method for interpolating at once (more efficient) the transverse
     and longitudinal wakefields.
@@ -113,8 +113,17 @@ def gather_main_fields_cyl_linear(
         Coordinates of the particle distribution.
     ex_part, ey_part, ez_part, bx_part, by_part, bz_part : 1darray
         Arrays where the gathered field components will be stored.
+    r_min_gather : float
+        The minimum radial position that particles must have in order to
+        gather from the grid.
+
+    Returns
+    -------
+    bool
+        Whether all particles managed to gather from the grid.
     """
     n_part = x.shape[0]
+    gathered = np.ones(n_part, dtype=np.bool_)
 
     # Iterate over all particles.
     for i in prange(n_part):
@@ -127,7 +136,12 @@ def gather_main_fields_cyl_linear(
         inv_r_i = 1./r_i
 
         # Gather field only if particle is within field boundaries.
-        if z_i >= z_min and z_i <= z_max and r_i <= r_max:
+        if (
+            z_i >= z_min
+            and z_i <= z_max
+            and r_i >= r_min_gather
+            and r_i <= r_max
+        ):
             # Position in cell units.
             r_i_cell = (r_i - r_min)/dr + 2
             z_i_cell = (z_i - z_min)/dz + 2
@@ -192,6 +206,9 @@ def gather_main_fields_cyl_linear(
             ez_part[i] += dr_u*ez_z_1 + dr_l*ez_z_2
             bx_part[i] += - bt_i * y_i * inv_r_i
             by_part[i] += bt_i * x_i * inv_r_i
+        else:
+            gathered[i] = False
+    return not np.any(gathered)
 
 
 @njit_serial()

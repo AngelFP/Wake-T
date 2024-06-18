@@ -1,5 +1,6 @@
 """ This module contains the definition of the PlasmaStage class """
 
+from inspect import signature
 from typing import Optional, Union, Callable, List, Literal
 
 import numpy as np
@@ -18,7 +19,8 @@ wakefield_models = {
     'custom_blowout': wf.CustomBlowoutWakefield,
     'focusing_blowout': wf.FocusingBlowoutField,
     'cold_fluid_1d': wf.NonLinearColdFluidWakefield,
-    'quasistatic_2d': wf.Quasistatic2DWakefield
+    'quasistatic_2d': wf.Quasistatic2DWakefield,
+    'quasistatic_2d_ion': wf.Quasistatic2DWakefieldIon,
 }
 
 
@@ -118,11 +120,23 @@ class PlasmaStage(FieldElement):
     def _get_density_profile(self, density):
         """ Get density profile function """
         if isinstance(density, float):
-            def uniform_density(z):
-                return np.ones_like(z) * density
+            def uniform_density(z, r):
+                return np.ones_like(z) * np.ones_like(r) * density
             return uniform_density
         elif callable(density):
-            return density
+            sig = signature(density)
+            n_inputs = len(sig.parameters)
+            if n_inputs == 2:
+                return density
+            elif n_inputs == 1:
+                # For backward compatibility when only z was supported.
+                def density_2d(z, r):
+                    return density(z)
+                return density_2d
+            else:
+                raise ValueError(
+                    'The density function must take 2 arguments. '
+                    'The provided function has {} arguments.'.format(n_inputs))
         else:
             raise ValueError(
                 'Type {} not supported for density.'.format(type(density)))
@@ -145,7 +159,7 @@ class PlasmaStage(FieldElement):
         min_gamma = np.sqrt(np.min(beam.pz)**2 + 1)
         # calculate maximum focusing along stage.
         z = np.linspace(0, self.length, 100)
-        n_p = self.density(z)
+        n_p = self.density(z, 0.)
         q_over_m = beam.q_species / beam.m_species
         w_p = np.sqrt(max(n_p)*ct.e**2/(ct.m_e*ct.epsilon_0))
         max_kx = (ct.m_e/(2*ct.e*ct.c))*w_p**2

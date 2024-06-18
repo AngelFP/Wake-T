@@ -94,7 +94,7 @@ class AnalyticalField(Field):
         """
         pass
 
-    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name):
         self._pre_gather(x, y, z, t)
         self.__e_x(x, y, z, t, ex, self.constants)
         self.__e_y(x, y, z, t, ey, self.constants)

@@ -71,7 +71,7 @@ def apply_rk4_pusher(bunch, fields, t, dt):
         if i == 0:
             # Gather field at the initial location of the particles.
             gather_fields(fields, bunch.x, bunch.y, bunch.xi, t_i,
-                          ex, ey, ez, bx, by, bz)
+                          ex, ey, ez, bx, by, bz, bunch.name)
 
             # Calculate k_1.
             calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,
@@ -95,7 +95,8 @@ def apply_rk4_pusher(bunch, fields, t, dt):
             update_coord(pz, bunch.pz, dt, k_pz, fac1)
 
             # Gather field at updated positions.
-            gather_fields(fields, x, y, xi, t_i, ex, ey, ez, bx, by, bz)
+            gather_fields(fields, x, y, xi, t_i, ex, ey, ez, bx, by, bz,
+                          bunch.name)
 
             # Calculate k_i.
             calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,

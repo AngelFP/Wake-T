@@ -94,6 +94,43 @@ def test_variable_parabolic_coefficient():
     np.testing.assert_almost_equal(a_mod_2, a_mod_1)
     np.testing.assert_almost_equal(a_phase_2, a_phase_1)
 
+    # Check final spot size value
+    dr = r_max / Nr
+    w0_final = calculate_spot_size(a_env_1, dr)
+    assert w0_final == 2.0347174136646184e-05
+
+
+def calculate_spot_size(a_env, dr):
+    # Project envelope to r
+    a_proj = np.sum(np.abs(a_env), axis=0)
+
+    # Maximum is on axis
+    a_max = a_proj[0]
+
+    # Get first index of value below a_max / e
+    i_first = np.where(a_proj <= a_max / np.e)[0][0]
+
+    # Do linear interpolation to get more accurate value of w.
+    # We build a line y = a + b*x, where:
+    #     b = (y_2 - y_1) / (x_2 - x_1)
+    #     a = y_1 - b*x_1
+    #
+    #     y_1 is the value of a_proj at i_first - 1
+    #     y_2 is the value of a_proj at i_first
+    #     x_1 and x_2 are the radial positions of y_1 and y_2
+    #
+    # We can then determine the spot size by interpolating between y_1 and y_2,
+    # that is, do x = (y - a) / b, where y = a_max/e
+    y_1 = a_proj[i_first - 1]
+    y_2 = a_proj[i_first]
+    x_1 = (i_first-1) * dr + dr/2
+    x_2 = i_first * dr + dr/2
+    b = (y_2 - y_1) / (x_2 - x_1)
+    a = y_1 - b*x_1
+    w = (a_max/np.e - a) / b
+    return w
+
+
 
 if __name__ == "__main__":
     test_variable_parabolic_coefficient()

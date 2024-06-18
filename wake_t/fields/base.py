@@ -27,7 +27,8 @@ class Field():
         ez: np.ndarray,
         bx: np.ndarray,
         by: np.ndarray,
-        bz: np.ndarray
+        bz: np.ndarray,
+        bunch_name: str
     ) -> None:
         """Gather all field components at the specified locations.
 
@@ -53,8 +54,10 @@ class Field():
             1D array where the gathered By values will be stored
         bz : ndarray
             1D array where the gathered Bz values will be stored
+        bunch_name : str
+            Name of the bunch that is gathering the fields
         """
-        self._gather(x, y, z, t, ex, ey, ez, bx, by, bz)
+        self._gather(x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name)
 
     def get_openpmd_diagnostics_data(
         self,
@@ -76,7 +79,7 @@ class Field():
         if self.__openpmd_diag_supported:
             return self._get_openpmd_diagnostics_data(global_time)
 
-    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz):
+    def _gather(self, x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name):
         """To be implemented by the subclasses."""
         raise NotImplementedError
 
