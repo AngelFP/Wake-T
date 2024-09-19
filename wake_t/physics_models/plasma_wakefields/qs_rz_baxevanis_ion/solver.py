@@ -142,7 +142,8 @@ def calculate_wakefields(laser_a2, r_max, xi_min, xi_max,
         bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
         r_fld, log_r_fld, psi, B_t, rho, rho_e, rho_i, chi, dxi,
         store_plasma_history=store_plasma_history,
-        calculate_rho=calculate_rho, particle_diags=particle_diags
+        calculate_rho=calculate_rho, particle_diags=particle_diags, n_p=n_p,
+        enable_ionization=False
     )
 
     # Calculate derived fields (E_z, W_r, and E_r).
@@ -164,22 +165,32 @@ def calculate_plasma_response(
     bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
     r_fld, log_r_fld, psi, b_t_bar, rho,
     rho_e, rho_i, chi, dxi, store_plasma_history, calculate_rho,
-    particle_diags
+    particle_diags, n_p, enable_ionization=False
 ):
     # Initialize plasma particles.
     pe = PlasmaSpecies(
         r_max, r_max_plasma, dr, ppc, n_r, n_xi, radial_density_normalized,
         max_gamma, True, ct.m_e, -free_electrons_per_ion*ct.e,
-        plasma_pusher, p_shape, store_plasma_history, particle_diags)
+        plasma_pusher, p_shape, store_plasma_history, particle_diags, n_p)
     pe.rho_species = rho_e
     pe.initialize()
     pi = PlasmaSpecies(
         r_max, r_max_plasma, dr, ppc, n_r, n_xi, radial_density_normalized,
         max_gamma, ion_motion, ion_mass, free_electrons_per_ion*ct.e,
-        plasma_pusher, p_shape, store_plasma_history, particle_diags)
+        plasma_pusher, p_shape, store_plasma_history, particle_diags, n_p)
     pi.rho_species = rho_i
     pi.initialize()
     species = [pe, pi]
+    if enable_ionization:
+        pe_i = PlasmaSpecies(
+            r_max, r_max_plasma, dr, ppc, n_r, n_xi, radial_density_normalized,
+            max_gamma, True, ct.m_e, -ct.e,
+            plasma_pusher, p_shape, store_plasma_history, particle_diags, n_p
+        )
+        s_d = ge.plasma_skin_depth(n_p * 1e-6)
+        pe_i.initialize(empty=True)
+        pi.make_ionizable('He', pe_i, dxi*s_d/ct.c, level_start=1)
+        species.append(pe_i)
 
     # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
     # chi on a grid.
@@ -196,6 +207,7 @@ def calculate_plasma_response(
                 )
             sp.gather_bunch_sources(bunch_source_arrays, bunch_source_xi_indices,
                                     bunch_source_metadata, slice_i)
+            sp.handle_ionization()
 
         calculate_psi_and_derivatives_at_species(species)
         for sp in species:
@@ -211,7 +223,7 @@ def calculate_plasma_response(
             elif 'w' in particle_diags:
                 sp.calculate_weights()
             if laser_source and sp.mass==ct.m_e:
-                sp.deposit_chi(chi[slice_i+2], r_fld, n_r, dr)
+                sp.deposit_chi(chi[slice_i+2], slice_i+2, r_fld, n_r, dr)
 
             sp.first_iteration_computed = True
 

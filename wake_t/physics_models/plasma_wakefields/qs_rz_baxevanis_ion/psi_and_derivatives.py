@@ -12,12 +12,13 @@ from .plasma_species import PlasmaSpecies
 
 def calculate_psi_and_derivatives_at_species(species: List[PlasmaSpecies]):
     """Calculate wakefield potential and derivatives at the plasma particles."""
+    species = [sp for sp in species if not sp.is_empty]
     psi_max = 0.
     # Calculate cumulative sums 1 and 2 (Eqs. (29) and (31)).
     for s in species:
         if s.can_move or not s.first_iteration_computed:
-            calculate_cumulative_sum_1(s.w, s.i_sort, s._sum_1)
-            calculate_cumulative_sum_2(s.r, s.w, s.i_sort, s._sum_2)
+            calculate_cumulative_sum_1(s.q * s.w, s.i_sort, s._sum_1)
+            calculate_cumulative_sum_2(s.r, s.q * s.w, s.i_sort, s._sum_2)
         # Calculate psi after the last plasma plasma particle (assumes
         # that the total electron and ion charge are the same).
         # This will be used to ensure the boundary condition (psi=0) after last
@@ -52,7 +53,7 @@ def calculate_psi_and_derivatives_at_species(species: List[PlasmaSpecies]):
     dxi_psi_max = 0.
     for s in species:
         if s.can_move or not s.first_iteration_computed:
-            calculate_cumulative_sum_3(s.r, s.pr, s.w, s._psi, s.i_sort, s._sum_3)
+            calculate_cumulative_sum_3(s.r, s.pr, s.q * s.w, s._psi, s.i_sort, s._sum_3)
         # Calculate dxi_psi after the last plasma plasma particle.
         # This will be used to ensure the boundary condition (dxi_psi = 0) after
         # last plasma particle.
@@ -83,6 +84,7 @@ def calculate_psi_and_derivatives_at_species(species: List[PlasmaSpecies]):
 
 def calculate_psi_at_grid(species: List[PlasmaSpecies], r_grid, log_r_grid, psi):
     """Calculate psi at the simulation grid."""
+    species = [sp for sp in species if not sp.is_empty]
     for sp in species:
         calculate_psi(
             r_grid, log_r_grid, sp.r, sp._sum_1, sp._sum_2,

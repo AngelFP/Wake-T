@@ -10,6 +10,7 @@ from .gather import gather_bunch_sources, gather_laser_sources
 from .plasma_push.ab2 import evolve_plasma_ab2
 from .utils import (log, calculate_chi, calculate_rho,
                     determine_neighboring_points)
+from .ionization.ionizer import Ionizer
 
 
 class PlasmaSpecies():
@@ -72,7 +73,8 @@ class PlasmaSpecies():
         pusher: Optional[str] = 'ab2',
         shape: Optional[str] = 'linear',
         store_history: Optional[bool] = False,
-        diags: Optional[List[str]] = []
+        diags: Optional[List[str]] = [],
+        n_p=1e23
     ):
 
         # Store parameters.
@@ -91,34 +93,42 @@ class PlasmaSpecies():
         self.charge = charge
         self.store_history = store_history
         self.diags = diags
-        self.rho_species = None
+        self.rho_species = np.zeros((nz+4, nr+4))
+        self.chi_species = np.zeros((nz+4, nr+4))
+        self.n_p = n_p
+        self.ionizer = None
 
-    def initialize(self):
+    def initialize(self, empty=False):
         """Initialize column of plasma particles."""
 
-        # Create radial distribution of plasma particles.
-        rmin = 0.
-        for i in range(self.ppc.shape[0]):
-            rmax = self.ppc[i, 0]
-            ppc = self.ppc[i, 1]
+        if not empty:
+            # Create radial distribution of plasma particles.
+            rmin = 0.
+            for i in range(self.ppc.shape[0]):
+                rmax = self.ppc[i, 0]
+                ppc = self.ppc[i, 1]
 
-            n_part = int(np.round((rmax - rmin) / self.dr * ppc))
-            dr_p_i = self.dr / ppc
-            rmax = rmin + n_part * dr_p_i
+                n_part = int(np.round((rmax - rmin) / self.dr * ppc))
+                dr_p_i = self.dr / ppc
+                rmax = rmin + n_part * dr_p_i
 
-            r_i = np.linspace(rmin + dr_p_i / 2, rmax - dr_p_i / 2, n_part)
-            dr_p_i = np.ones(n_part) * dr_p_i
-            if i == 0:
-                r = r_i
-                dr_p = dr_p_i
-            else:
-                r = np.concatenate((r, r_i))
-                dr_p = np.concatenate((dr_p, dr_p_i))
+                r_i = np.linspace(rmin + dr_p_i / 2, rmax - dr_p_i / 2, n_part)
+                dr_p_i = np.ones(n_part) * dr_p_i
+                if i == 0:
+                    r = r_i
+                    dr_p = dr_p_i
+                else:
+                    r = np.concatenate((r, r_i))
+                    dr_p = np.concatenate((dr_p, dr_p_i))
 
-            rmin = rmax
+                rmin = rmax
 
-        # Determine number of particles.
-        self.n_part = r.shape[0]
+            # Determine number of particles.
+            self.n_part = r.shape[0]
+        else:
+            self.n_part = 0
+            r = np.zeros(0)
+            dr_p = np.zeros(0)
 
         # Initialize particle arrays.
         self.r = r
@@ -127,7 +137,7 @@ class PlasmaSpecies():
         self.pz = np.zeros(self.n_part)
         self.gamma = np.ones(self.n_part)
         self.w = dr_p * r * self.radial_density(r)
-        self.w *= - self.charge / ct.e
+        # self.w *= - self.charge / ct.e
         self.m = np.ones(self.n_part) * self.mass / ct.m_e
         self.q = - np.ones(self.n_part) * self.charge / ct.e
 
@@ -157,6 +167,10 @@ class PlasmaSpecies():
         # Allocate arrays needed for the particle pusher.
         if self.can_move and self.pusher == 'ab2':
             self._allocate_ab2_arrays()
+
+    @property
+    def is_empty(self):
+        return self.r.size == 0
 
     def sort(self):
         """Sort plasma particles radially (only by index)."""
@@ -220,7 +234,7 @@ class PlasmaSpecies():
 
     def calculate_weights(self):
         """Calculate the plasma density weights of each particle."""
-        calculate_rho(self.w, self.pz, self.gamma, self._rho)
+        calculate_rho(self.w * self.q, self.pz, self.gamma, self._rho)
 
     def deposit_rho(self, rho, slice_i, r_fld, nr, dr):
         """Deposit plasma density on a grid slice."""
@@ -231,12 +245,79 @@ class PlasmaSpecies():
         )
         rho += self.rho_species[slice_i]
 
-    def deposit_chi(self, chi, r_fld, nr, dr):
+    def deposit_chi(self, chi, slice_i, r_fld, nr, dr):
         """Deposit plasma susceptibility on a grid slice."""
-        calculate_chi(self.w, self.pz, self.gamma, self._chi)
+        calculate_chi(self.w * self.q, self.pz, self.gamma, self._chi)
         deposit_plasma_particles(
-            self.r, self._chi, r_fld[0], nr, dr, chi, self.shape
+            self.r, self._chi, r_fld[0], nr, dr, self.chi_species[slice_i], self.shape
         )
+        chi += self.chi_species[slice_i]
+
+    def make_ionizable(self, element, target_species, dt,
+                       level_start=0, level_max=None):
+        """
+        Make this species ionizable.
+
+        The implemented ionization model is the **ADK model**
+        (using the **instantaneous** electric field, i.e. **without** averaging
+        over the laser period).
+
+        The expression of the ionization rate can be found in
+        `Chen, JCP 236 (2013), equation 2
+        <https://www.sciencedirect.com/science/article/pii/S0021999112007097>`_.
+
+        Note that the implementation in FBPIC evaluates this ionization rate
+        *in the reference frame of each macroparticle*, and is thus valid
+        in lab-frame simulations as well as boosted-frame simulation.
+
+        Parameters
+        ----------
+        element: string
+            The atomic symbol of the considered ionizable species
+            (e.g. 'He', 'N' ;  do not use 'Helium' or 'Nitrogen')
+
+        target_species: a `Particles` object, or a dictionary of `Particles`
+            Stores the electron macroparticles that are created in
+            the ionization process. If a single `Particles` object is passed,
+            then electrons from all ionization levels are stored into this
+            object. If a dictionary is passed, then its keys should be integers
+            (corresponding to the ionizable levels of `element`, starting
+            at `level_start`), and its values should be `Particles` objects.
+            In this case, the electrons from each distinct ionizable level
+            will be stored into these separate objects. Note that using
+            separate objects will typically require longer computing time.
+
+        level_start: int
+            The ionization level at which the macroparticles are initially
+            (e.g. 0 for initially neutral atoms)
+
+        level_max: int, optional
+            If not None, defines the maximum ionization level that
+            macroparticles can reach. Should not exceed the physical
+            limit for the chosen element.
+        """
+        # Initialize the ionizer module
+        self.ionizer = Ionizer( element, self, target_species, dt,
+                                level_start, level_max=level_max )
+        # Set charge to the elementary charge e (assumed by deposition kernel,
+        # when using self.ionizer.w_times_level as the effective weight)
+        # self.q = ct.e
+
+        # # Update the number of float and int arrays
+        # self.n_float_quantities += 1 # w_times_level
+        # self.n_integer_quantities += 1 # ionization_level
+        # # Allocate the integer sorting buffer if needed
+        # if hasattr( self, 'int_sorting_buffer' ) is False and self.use_cuda:
+        #     self.int_sorting_buffer = np.empty( self.Ntot, dtype=np.uint64 )
+
+    def handle_ionization(self):
+        """
+        Handle elementary processes for this species (e.g. ionization,
+        Compton scattering) at simulation time t.
+        """
+        # Ionization
+        if self.ionizer is not None:
+            self.ionizer.handle_ionization(self)
 
     def get_history(self):
         """Get the history of the evolution of the plasma particles.
