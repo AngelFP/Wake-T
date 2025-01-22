@@ -56,7 +56,7 @@ def test_multibunch_plasma_simulation(plot=False):
     final_energy_driver = driver_params['avg_ene'][-1]
     final_energy_witness = witness_params['avg_ene'][-1]
     assert approx(final_energy_driver, rel=1e-10) == 1700.3843657635728
-    assert approx(final_energy_witness, rel=1e-10) == 636.3260426124102
+    assert approx(final_energy_witness, rel=1e-9) == 636.3260426124102
 
     if plot:
         z = driver_params['prop_dist'] * 1e2

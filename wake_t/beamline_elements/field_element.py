@@ -1,4 +1,4 @@
-from typing import Optional, Union, List, Literal
+from typing import Optional, Union, Callable, List, Literal
 
 import scipy.constants as ct
 
@@ -64,7 +64,7 @@ class FieldElement():
         n_out: Optional[int] = 1,
         name: Optional[str] = 'field element',
         fields: Optional[List[Field]] = [],
-        auto_dt_bunch: Optional[str] = None,
+        auto_dt_bunch: Optional[Callable[[ParticleBunch], float]] = None,
         push_bunches_before_diags: Optional[bool] = True,
     ) -> None:
         self.length = length

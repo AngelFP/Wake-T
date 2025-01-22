@@ -52,8 +52,13 @@ def test_uniform_plasma_deposition():
             deposit_3d_distribution(z, x, y, w_rho, z_min, r_fld[0], n_z, n_r,
                                     dz, dr, rho_fld, p_shape=p_shape)
 
-        # Check array is uniform.
-        assert np.sum(np.abs(rho_fld[2:-2, 2:-2] - 1.)) < 1e-12
+        # Check array is uniform. Ignore last cells along r, as the edge of
+        # plasma in the deposition array looks more smooth due to the
+        # particle shape.
+        if p_shape == "linear":
+            assert np.sum(np.abs(rho_fld[2:-2, 2:-3] - 1.)) < 1e-12
+        elif p_shape == "cubic":
+            assert np.sum(np.abs(rho_fld[2:-2, 2:-4] - 1.)) < 1e-12
 
 
 if __name__ == "__main__":
