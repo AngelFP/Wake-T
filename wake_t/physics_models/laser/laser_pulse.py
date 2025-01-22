@@ -673,14 +673,18 @@ class OpenPMDPulse(LaserPulse):
         self._gaussian_filter_sigma = gaussian_filter_sigma
 
     def _envelope_function(self, xi, r, z_pos):
-        # Create laser
-        t = -xi / ct.c
+        # Change from Wake-T to Lasy coordinates:
+        # The right edge of the Wake-T grid corresponds 
+        # to the left edge of the Lasy grid.
+        xi_max = self.solver_params['zmax']
+        t_min_0 = self.lasy_profile.axes['t'][0]
+        t = (xi_max - xi) / ct.c + t_min_0 
         t_min = np.min(t)
         t_max = np.max(t)
-        t_max -= t_min
-        t_min = 0
         r_min = np.min(r)
         r_max = np.max(r)
+
+        # Create Lasy laser
         laser = Laser(
             dim='rt',
             lo=(r_min, t_min),
@@ -689,6 +693,8 @@ class OpenPMDPulse(LaserPulse):
             profile=self.lasy_profile,
             n_azimuthal_modes=1
         )
+
+        # Get vector potential
         a_env = field_to_vector_potential(laser.grid, laser.profile.omega0)
 
         # Get 2D slice and change to Wake-T ordering.
