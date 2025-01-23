@@ -650,6 +650,7 @@ class OpenPMDPulse(LaserPulse):
         coord: Optional[str] = 'x',
         prefix: Optional[str] = None,
         theta: Optional[float] = 0.,
+        t_start: Optional[float] = 0.,
         smooth_edges: Optional[bool] = False,
         apply_gaussian_filter: Optional[bool] = False,
         gaussian_filter_sigma: Optional[Union[int, float, Iterable]] = (5, 0)
@@ -668,6 +669,7 @@ class OpenPMDPulse(LaserPulse):
             theta=theta
         )
         super().__init__(self.lasy_profile.lambda0, 'linear')
+        self.t_start = t_start
         self._smooth_edges = smooth_edges
         self._apply_gaussian_filter = apply_gaussian_filter
         self._gaussian_filter_sigma = gaussian_filter_sigma
@@ -678,7 +680,7 @@ class OpenPMDPulse(LaserPulse):
         # to the left edge of the Lasy grid.
         xi_max = self.solver_params['zmax']
         t_min_0 = self.lasy_profile.axes['t'][0]
-        t = (xi_max - xi) / ct.c + t_min_0 
+        t = (xi_max - xi) / ct.c + t_min_0 - self.t_start
         t_min = np.min(t)
         t_max = np.max(t)
         r_min = np.min(r)
