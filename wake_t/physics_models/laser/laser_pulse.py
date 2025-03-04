@@ -651,6 +651,8 @@ class OpenPMDPulse(LaserPulse):
         prefix: Optional[str] = None,
         theta: Optional[float] = 0.,
         t_start: Optional[float] = 0.,
+        is_waket = False,
+        lambda0 = None,
         smooth_edges: Optional[bool] = False,
         apply_gaussian_filter: Optional[bool] = False,
         gaussian_filter_sigma: Optional[Union[int, float, Iterable]] = (5, 0)
@@ -666,13 +668,17 @@ class OpenPMDPulse(LaserPulse):
             field=field,
             coord=coord,
             prefix=prefix,
-            theta=theta
+            theta=theta,
+            is_waket=is_waket,
+            lambda0=lambda0
         )
         super().__init__(self.lasy_profile.lambda0, 'linear')
         self.t_start = t_start
         self._smooth_edges = smooth_edges
         self._apply_gaussian_filter = apply_gaussian_filter
         self._gaussian_filter_sigma = gaussian_filter_sigma
+        self._lambda0 = lambda0
+        self._is_waket = is_waket
 
     def _envelope_function(self, xi, r, z_pos):
         # Change from Wake-T to Lasy coordinates:
@@ -697,7 +703,11 @@ class OpenPMDPulse(LaserPulse):
         )
 
         # Get vector potential
-        a_env = field_to_vector_potential(laser.grid, laser.profile.omega0)
+        if self._is_waket:
+            omg0 = laser.profile.omega0
+            a_env = laser.grid.get_temporal_field() / (ct.m_e * ct.c * omg0 / ct.e)
+        else:
+            a_env = field_to_vector_potential(laser.grid, laser.profile.omega0)
 
         # Get 2D slice and change to Wake-T ordering.
         a_env = a_env[0].T[::-1]
