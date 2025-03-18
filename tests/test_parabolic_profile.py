@@ -83,9 +83,9 @@ def test_variable_parabolic_coefficient():
 
     # Create set of plasma stages, one per section.
     sub_stages = []
-    for i, (l, pc) in enumerate(zip(L_stretches, pc_stretches)):
+    for i, (length, pc) in enumerate(zip(L_stretches, pc_stretches)):
         stage = PlasmaStage(
-            l,
+            length,
             n_p,
             wakefield_model="quasistatic_2d",
             n_out=3,

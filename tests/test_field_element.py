@@ -1,5 +1,4 @@
 import os
-import copy
 
 import numpy as np
 import scipy.constants as ct
@@ -77,7 +76,6 @@ def test_field_element_tracking():
 
 def test_field_element_error():
     """Test that the expected errors are raised"""
-    output_folder = os.path.join(tests_output_folder, "test_field_element_tracking")
 
     # Create bunch.
     emitt_nx = emitt_ny = 1e-6  # m
@@ -114,7 +112,7 @@ def test_field_element_error():
 
     # Check that an error is raised because the number of `dt_bunch` does
     # not agree with the number of bunches.
-    with raises(ValueError) as e_info:
+    with raises(ValueError):
         element.track(bunch, opmd_diag=False)
     # This one should instead work.
     element.track([bunch, bunch.copy()], opmd_diag=False)

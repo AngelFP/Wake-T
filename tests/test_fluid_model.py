@@ -56,7 +56,7 @@ def test_fluid_model(plot=False):
     # Quick plot of results.
     if plot:
         z = params_evolution["prop_dist"] * 1e2
-        fig_1 = plt.figure()
+        plt.figure()
         plt.subplot(411)
         plt.plot(z, params_evolution["beta_x"] * 1e3)
         plt.tick_params(axis="x", which="both", labelbottom=False)
