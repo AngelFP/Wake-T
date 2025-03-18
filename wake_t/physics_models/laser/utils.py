@@ -1,4 +1,5 @@
 """Utilities for the laser envelope solver."""
+
 import numpy as np
 from wake_t.utilities.numba import njit_serial
 
@@ -34,23 +35,11 @@ def unwrap(p, discont=None, axis=-1, period=6.283185307179586):
         dd = np.diff(row)
         ddmod = np.mod(dd - interval_low, period) + interval_low
         if boundary_ambiguous:
-            ddmod = np.where(
-                (ddmod == interval_low) & (dd > 0),
-                interval_high,
-                ddmod
-            )
+            ddmod = np.where((ddmod == interval_low) & (dd > 0), interval_high, ddmod)
         ph_correct = ddmod - dd
 
-        ph_correct = np.where(
-            np.array([abs(x) for x in dd]) < discont,
-            0,
-            ph_correct
-        )
-        ph_ravel = np.where(
-            np.array([abs(x) for x in dd]) < discont,
-            0,
-            ph_correct
-        )
+        ph_correct = np.where(np.array([abs(x) for x in dd]) < discont, 0, ph_correct)
+        ph_ravel = np.where(np.array([abs(x) for x in dd]) < discont, 0, ph_correct)
         ph_correct = np.reshape(ph_ravel, ph_correct.shape)
         up = np.copy(row)
         up[slice1] = row[slice1] + ph_correct.cumsum()

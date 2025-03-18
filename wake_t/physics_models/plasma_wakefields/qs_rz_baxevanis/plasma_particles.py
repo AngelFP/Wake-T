@@ -3,7 +3,7 @@
 import numpy as np
 
 
-class PlasmaParticles():
+class PlasmaParticles:
     """
     Class containing the 1D slice of plasma particles used in the quasi-static
     Baxevanis wakefield model.
@@ -26,8 +26,7 @@ class PlasmaParticles():
 
     """
 
-    def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc,
-                 pusher):
+    def __init__(self, r_max, r_max_plasma, parabolic_coefficient, dr, ppc, pusher):
         # Calculate total number of plasma particles.
         n_part = int(np.round(r_max_plasma / dr * ppc))
 
@@ -50,21 +49,21 @@ class PlasmaParticles():
 
         # Initialize particle arrays.
         self.r = np.linspace(
-            self.dr_p / 2, self.r_max_plasma - self.dr_p / 2, self.n_part)
+            self.dr_p / 2, self.r_max_plasma - self.dr_p / 2, self.n_part
+        )
         self.pr = np.zeros(self.n_part)
         self.pz = np.zeros(self.n_part)
         self.gamma = np.ones(self.n_part)
-        self.q = (self.dr_p * self.r
-                  + self.dr_p * self.parabolic_coefficient * self.r**3)
+        self.q = self.dr_p * self.r + self.dr_p * self.parabolic_coefficient * self.r**3
 
         # Allocate arrays that will contain the fields experienced by the
         # particles.
         self.allocate_field_arrays()
 
         # Allocate arrays needed for the particle pusher.
-        if self.pusher == 'ab5':
+        if self.pusher == "ab5":
             self.allocate_ab5_arrays()
-        elif self.pusher == 'rk4':
+        elif self.pusher == "rk4":
             self.allocate_rk4_arrays()
             self.allocate_rk4_field_arrays()
 
@@ -84,8 +83,13 @@ class PlasmaParticles():
         self.__dr_psi = np.zeros(self.n_part)
         self.__dxi_psi = np.zeros(self.n_part)
         self.__field_arrays = [
-            self.__a2, self.__nabla_a2, self.__b_t_0, self.__b_t,
-            self.__psi, self.__dr_psi, self.__dxi_psi
+            self.__a2,
+            self.__nabla_a2,
+            self.__b_t_0,
+            self.__b_t,
+            self.__psi,
+            self.__dr_psi,
+            self.__dxi_psi,
         ]
 
     def get_field_arrays(self):
@@ -110,10 +114,19 @@ class PlasmaParticles():
         self.__dpr_4 = np.zeros(self.n_part)
         self.__dpr_5 = np.zeros(self.n_part)
         self.__dr_arrays = [
-            self.__dr_1, self.__dr_2, self.__dr_3, self.__dr_4, self.__dr_5]
+            self.__dr_1,
+            self.__dr_2,
+            self.__dr_3,
+            self.__dr_4,
+            self.__dr_5,
+        ]
         self.__dpr_arrays = [
-            self.__dpr_1, self.__dpr_2, self.__dpr_3, self.__dpr_4,
-            self.__dpr_5]
+            self.__dpr_1,
+            self.__dpr_2,
+            self.__dpr_3,
+            self.__dpr_4,
+            self.__dpr_5,
+        ]
 
     def get_ab5_arrays(self):
         """Get the arrays needed by the 5th order Adams-Bashforth pusher."""
@@ -135,8 +148,7 @@ class PlasmaParticles():
         self.__dpr_3 = np.zeros(self.n_part)
         self.__dpr_4 = np.zeros(self.n_part)
         self.__dr_arrays = [self.__dr_1, self.__dr_2, self.__dr_3, self.__dr_4]
-        self.__dpr_arrays = [
-            self.__dpr_1, self.__dpr_2, self.__dpr_3, self.__dpr_4]
+        self.__dpr_arrays = [self.__dpr_1, self.__dpr_2, self.__dpr_3, self.__dpr_4]
 
     def get_rk4_arrays(self):
         """Get the arrays needed by the 4th order Runge-Kutta pusher."""
@@ -172,14 +184,42 @@ class PlasmaParticles():
         self.__dr_psi_4 = np.zeros(self.n_part)
         self.__dxi_psi_4 = np.zeros(self.n_part)
         self.__rk4_flds = [
-            [self.__a2, self.__nabla_a2, self.__b_t_0, self.__b_t,
-             self.__psi, self.__dr_psi, self.__dxi_psi],
-            [self.__a2_2, self.__nabla_a2_2, self.__b_t_0_2, self.__b_t_2,
-             self.__psi_2, self.__dr_psi_2, self.__dxi_psi_2],
-            [self.__a2_3, self.__nabla_a2_3, self.__b_t_0_3, self.__b_t_3,
-             self.__psi_3, self.__dr_psi_3, self.__dxi_psi_3],
-            [self.__a2_4, self.__nabla_a2_4, self.__b_t_0_4, self.__b_t_4,
-             self.__psi_4, self.__dr_psi_4, self.__dxi_psi_4]
+            [
+                self.__a2,
+                self.__nabla_a2,
+                self.__b_t_0,
+                self.__b_t,
+                self.__psi,
+                self.__dr_psi,
+                self.__dxi_psi,
+            ],
+            [
+                self.__a2_2,
+                self.__nabla_a2_2,
+                self.__b_t_0_2,
+                self.__b_t_2,
+                self.__psi_2,
+                self.__dr_psi_2,
+                self.__dxi_psi_2,
+            ],
+            [
+                self.__a2_3,
+                self.__nabla_a2_3,
+                self.__b_t_0_3,
+                self.__b_t_3,
+                self.__psi_3,
+                self.__dr_psi_3,
+                self.__dxi_psi_3,
+            ],
+            [
+                self.__a2_4,
+                self.__nabla_a2_4,
+                self.__b_t_0_4,
+                self.__b_t_4,
+                self.__psi_4,
+                self.__dr_psi_4,
+                self.__dxi_psi_4,
+            ],
         ]
 
     def get_rk4_field_arrays(self, i):

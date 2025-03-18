@@ -8,13 +8,58 @@ from ..b_theta import calculate_b_theta_at_particles
 
 @njit_serial()
 def evolve_plasma_rk4(
-        dxi, dr, xi, r, pr, gamma, q, r_max_plasma, dr_p, pc,
-        a2, nabla_a2, b_t_0, r_fld, xi_fld,
-        dr_1, dr_2, dr_3, dr_4, dpr_1, dpr_2, dpr_3, dpr_4,
-        a2_1, nabla_a2_1, b_t_0_1, b_t_1, psi_1, dr_psi_1, dxi_psi_1,
-        a2_2, nabla_a2_2, b_t_0_2, b_t_2, psi_2, dr_psi_2, dxi_psi_2,
-        a2_3, nabla_a2_3, b_t_0_3, b_t_3, psi_3, dr_psi_3, dxi_psi_3,
-        a2_4, nabla_a2_4, b_t_0_4, b_t_4, psi_4, dr_psi_4, dxi_psi_4):
+    dxi,
+    dr,
+    xi,
+    r,
+    pr,
+    gamma,
+    q,
+    r_max_plasma,
+    dr_p,
+    pc,
+    a2,
+    nabla_a2,
+    b_t_0,
+    r_fld,
+    xi_fld,
+    dr_1,
+    dr_2,
+    dr_3,
+    dr_4,
+    dpr_1,
+    dpr_2,
+    dpr_3,
+    dpr_4,
+    a2_1,
+    nabla_a2_1,
+    b_t_0_1,
+    b_t_1,
+    psi_1,
+    dr_psi_1,
+    dxi_psi_1,
+    a2_2,
+    nabla_a2_2,
+    b_t_0_2,
+    b_t_2,
+    psi_2,
+    dr_psi_2,
+    dxi_psi_2,
+    a2_3,
+    nabla_a2_3,
+    b_t_0_3,
+    b_t_3,
+    psi_3,
+    dr_psi_3,
+    dxi_psi_3,
+    a2_4,
+    nabla_a2_4,
+    b_t_0_4,
+    b_t_4,
+    psi_4,
+    dr_psi_4,
+    dxi_psi_4,
+):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
     using a Runge-Kutta method of 4th order.
@@ -50,47 +95,123 @@ def evolve_plasma_rk4(
     """
     # Calculate derivatives of r and pr at the current slice.
     calculate_derivatives(
-        pr, gamma,
-        b_t_0_1, nabla_a2_1, b_t_1, psi_1, dr_psi_1,
-        dr_1, dpr_1)
+        pr, gamma, b_t_0_1, nabla_a2_1, b_t_1, psi_1, dr_psi_1, dr_1, dpr_1
+    )
 
     # Calculate derivatives of r and pr at the three RK4 substeps.
     derivatives_substep(
-        xi - dxi * 0.5, r + dxi * dr_1 * 0.5, pr + dxi * dpr_1 * 0.5, q,
-        dxi, dr, r_max_plasma, dr_p, pc,
-        a2, nabla_a2, b_t_0, r_fld, xi_fld,
-        a2_2, nabla_a2_2, b_t_0_2, b_t_2, psi_2, dr_psi_2, dxi_psi_2,
-        dr_2, dpr_2)
+        xi - dxi * 0.5,
+        r + dxi * dr_1 * 0.5,
+        pr + dxi * dpr_1 * 0.5,
+        q,
+        dxi,
+        dr,
+        r_max_plasma,
+        dr_p,
+        pc,
+        a2,
+        nabla_a2,
+        b_t_0,
+        r_fld,
+        xi_fld,
+        a2_2,
+        nabla_a2_2,
+        b_t_0_2,
+        b_t_2,
+        psi_2,
+        dr_psi_2,
+        dxi_psi_2,
+        dr_2,
+        dpr_2,
+    )
     derivatives_substep(
-        xi - dxi * 0.5, r + dxi * dr_2 * 0.5, pr + dxi * dpr_2 * 0.5, q,
-        dxi, dr, r_max_plasma, dr_p, pc,
-        a2, nabla_a2, b_t_0, r_fld, xi_fld,
-        a2_3, nabla_a2_3, b_t_0_3, b_t_3, psi_3, dr_psi_3, dxi_psi_3,
-        dr_3, dpr_3)
+        xi - dxi * 0.5,
+        r + dxi * dr_2 * 0.5,
+        pr + dxi * dpr_2 * 0.5,
+        q,
+        dxi,
+        dr,
+        r_max_plasma,
+        dr_p,
+        pc,
+        a2,
+        nabla_a2,
+        b_t_0,
+        r_fld,
+        xi_fld,
+        a2_3,
+        nabla_a2_3,
+        b_t_0_3,
+        b_t_3,
+        psi_3,
+        dr_psi_3,
+        dxi_psi_3,
+        dr_3,
+        dpr_3,
+    )
     derivatives_substep(
-        xi - dxi, r + dxi * dr_3, pr + dxi * dpr_3, q,
-        dxi, dr, r_max_plasma, dr_p, pc,
-        a2, nabla_a2, b_t_0, r_fld, xi_fld,
-        a2_4, nabla_a2_4, b_t_0_4, b_t_4, psi_4, dr_psi_4, dxi_psi_4,
-        dr_4, dpr_4)
+        xi - dxi,
+        r + dxi * dr_3,
+        pr + dxi * dpr_3,
+        q,
+        dxi,
+        dr,
+        r_max_plasma,
+        dr_p,
+        pc,
+        a2,
+        nabla_a2,
+        b_t_0,
+        r_fld,
+        xi_fld,
+        a2_4,
+        nabla_a2_4,
+        b_t_0_4,
+        b_t_4,
+        psi_4,
+        dr_psi_4,
+        dxi_psi_4,
+        dr_4,
+        dpr_4,
+    )
 
     # Advance radial position and momentum.
     apply_rk4(r, dxi, dr_1, dr_2, dr_3, dr_4)
     apply_rk4(pr, dxi, dpr_1, dpr_2, dpr_3, dpr_4)
 
     # If a particle has crossed the axis, mirror it.
-    idx_neg = np.where(r < 0.)
+    idx_neg = np.where(r < 0.0)
     if idx_neg[0].size > 0:
-        r[idx_neg] *= -1.
-        pr[idx_neg] *= -1.
+        r[idx_neg] *= -1.0
+        pr[idx_neg] *= -1.0
 
 
 @njit_serial()
 def derivatives_substep(
-        xi, r, pr, q, dxi, dr, r_max_plasma, dr_p, pc,
-        a2, nabla_a2, b_t_0, r_fld, xi_fld,
-        a2_i, nabla_a2_i, b_t_0_i, b_t_i, psi_i, dr_psi_i, dxi_psi_i,
-        dr_i, dpr_i):
+    xi,
+    r,
+    pr,
+    q,
+    dxi,
+    dr,
+    r_max_plasma,
+    dr_p,
+    pc,
+    a2,
+    nabla_a2,
+    b_t_0,
+    r_fld,
+    xi_fld,
+    a2_i,
+    nabla_a2_i,
+    b_t_0_i,
+    b_t_i,
+    psi_i,
+    dr_psi_i,
+    dxi_psi_i,
+    dr_i,
+    dpr_i,
+):
     """Calculate r and pr derivatives at the i-th RK4 substep.
 
     The Runge-Kutta method of 4th order requires knowing the derivative (slope)
@@ -127,52 +248,72 @@ def derivatives_substep(
     """
 
     # Check for particles with negative radial position and mirror them.
-    idx_neg = np.where(r < 0.)
+    idx_neg = np.where(r < 0.0)
     if idx_neg[0].size > 0:
-        r[idx_neg] *= -1.
-        pr[idx_neg] *= -1.
+        r[idx_neg] *= -1.0
+        pr[idx_neg] *= -1.0
 
     # Gather source terms at position of plasma particles.
     gather_sources_qs_baxevanis(
-        a2, nabla_a2, b_t_0, xi_fld[0], xi_fld[-1],
-        r_fld[0], r_fld[-1], dxi, dr, r, xi, a2_i, nabla_a2_i,
-        b_t_0_i)
+        a2,
+        nabla_a2,
+        b_t_0,
+        xi_fld[0],
+        xi_fld[-1],
+        r_fld[0],
+        r_fld[-1],
+        dxi,
+        dr,
+        r,
+        xi,
+        a2_i,
+        nabla_a2_i,
+        b_t_0_i,
+    )
 
     # Get sorted particle indices
     idx = np.argsort(r)
 
     # Calculate wakefield potential and derivatives at plasma particles.
     calculate_psi_and_derivatives_at_particles(
-        r, pr, q, idx, r_max_plasma, dr_p, pc,
-        psi_i, dr_psi_i, dxi_psi_i)
+        r, pr, q, idx, r_max_plasma, dr_p, pc, psi_i, dr_psi_i, dxi_psi_i
+    )
 
     # Calculate gamma of plasma particles
-    gamma = (
-        1. + pr ** 2 + a2_i + (1. + psi_i) ** 2) / (2. * (1. + psi_i))
+    gamma = (1.0 + pr**2 + a2_i + (1.0 + psi_i) ** 2) / (2.0 * (1.0 + psi_i))
 
     # Calculate azimuthal magnetic field from the plasma at the location of
     # the plasma particles.
     calculate_b_theta_at_particles(
-        r, pr, q, gamma, psi_i, dr_psi_i, dxi_psi_i,
-        b_t_0_i, nabla_a2_i, idx, dr_p, b_t_i)
+        r,
+        pr,
+        q,
+        gamma,
+        psi_i,
+        dr_psi_i,
+        dxi_psi_i,
+        b_t_0_i,
+        nabla_a2_i,
+        idx,
+        dr_p,
+        b_t_i,
+    )
 
     # Using the gathered/calculated fields, compute derivatives of r and pr
     # at the current slice.
     calculate_derivatives(
-        pr, gamma, b_t_0_i, nabla_a2_i, b_t_i,
-        psi_i, dr_psi_i, dr_i, dpr_i
+        pr, gamma, b_t_0_i, nabla_a2_i, b_t_i, psi_i, dr_psi_i, dr_i, dpr_i
     )
 
     # For particles which crossed the axis and were inverted, invert now
     # back the sign of the derivatives.
     if idx_neg[0].size > 0:
-        dr_i[idx_neg] *= -1.
-        dpr_i[idx_neg] *= -1.
+        dr_i[idx_neg] *= -1.0
+        dpr_i[idx_neg] *= -1.0
 
 
 @njit_serial()
-def calculate_derivatives(
-        pr, gamma, b_t_0, nabla_a2, b_t_bar, psi, dr_psi, dr, dpr):
+def calculate_derivatives(pr, gamma, b_t_0, nabla_a2, b_t_bar, psi, dr_psi, dr, dpr):
     """
     Calculate the derivative of the radial position and the radial momentum
     of the plasma particles at the current slice.
@@ -201,11 +342,13 @@ def calculate_derivatives(
     # Calculate derivatives of r and pr.
     for i in range(pr.shape[0]):
         psi_i = psi[i]
-        dpr[i] = (gamma[i] * dr_psi[i] / (1. + psi_i)
-                  - b_t_bar[i]
-                  - b_t_0[i]
-                  - nabla_a2[i] / (2. * (1. + psi_i)))
-        dr[i] = pr[i] / (1. + psi_i)
+        dpr[i] = (
+            gamma[i] * dr_psi[i] / (1.0 + psi_i)
+            - b_t_bar[i]
+            - b_t_0[i]
+            - nabla_a2[i] / (2.0 * (1.0 + psi_i))
+        )
+        dr[i] = pr[i] / (1.0 + psi_i)
 
 
 @njit_serial()
@@ -221,6 +364,6 @@ def apply_rk4(x, dt, kx_1, kx_2, kx_3, kx_4):
     dx_1, dx_2, dx_3, dx_4 : ndarray
         Arrays containing the derivatives of `x` at the 4 substeps.
     """
-    inv_6 = 1. / 6.
+    inv_6 = 1.0 / 6.0
     for i in range(x.shape[0]):
-        x[i] += dt * (kx_1[i] + 2. * (kx_2[i] + kx_3[i]) + kx_4[i]) * inv_6
+        x[i] += dt * (kx_1[i] + 2.0 * (kx_2[i] + kx_3[i]) + kx_4[i]) * inv_6

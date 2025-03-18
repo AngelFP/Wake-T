@@ -136,9 +136,7 @@ def calculate_b_theta_at_particles(
 
     # Calculate the a_i, b_i coefficients in Eq. (27).
     calculate_KU(r_e, q_e, w_e, w_center_e, A, K, U)
-    calculate_ai_bi_from_axis(
-        r_e, q_e, w_e, w_center_e, A, B, C, K, U, a_0, a, b
-    )
+    calculate_ai_bi_from_axis(r_e, q_e, w_e, w_center_e, A, B, C, K, U, a_0, a, b)
 
     # Calculate b_theta at plasma particles.
     calculate_b_theta_at_particle_centers(a, b, r_e, b_t_e)
@@ -226,7 +224,6 @@ def calculate_ai_bi_from_axis(r, q, w, w_center, A, B, C, K, U, a_0, a, b):
     i_start = 0
 
     while i_start < n_part:
-
         # Iterate over particles
         for i in range(i_start, n_part):
             r_i = r[i]
@@ -330,9 +327,7 @@ def calculate_ai_bi_from_axis(r, q, w, w_center, A, B, C, K, U, a_0, a, b):
 
 
 @njit_serial(error_model="numpy")
-def calculate_ABC(
-    r, pr, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2, A, B, C
-):
+def calculate_ABC(r, pr, gamma, psi, dr_psi, dxi_psi, b_theta_0, nabla_a2, A, B, C):
     """Calculate the A_i, B_i and C_i coefficients of the linear system.
 
     The coefficients are missing the q_i * w_i term. They are multiplied by it

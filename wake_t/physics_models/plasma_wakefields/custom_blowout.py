@@ -25,8 +25,15 @@ class CustomBlowoutWakefield(AnalyticalField):
 
     """
 
-    def __init__(self, n_p, laser, lon_field=None, lon_field_slope=None,
-                 foc_strength=None, xi_fields=0.):
+    def __init__(
+        self,
+        n_p,
+        laser,
+        lon_field=None,
+        lon_field_slope=None,
+        foc_strength=None,
+        xi_fields=0.0,
+    ):
         super().__init__()
         self.density = n_p
         self.xi_fields = xi_fields
@@ -51,14 +58,13 @@ class CustomBlowoutWakefield(AnalyticalField):
             xi_fields = constants[3]
             b_w = constants[4]
 
-            xi_off = - xi_fields + (1 - b_w) * ct.c * t
+            xi_off = -xi_fields + (1 - b_w) * ct.c * t
             for i in prange(x.shape[0]):
                 ez[i] = e_z_0 + e_z_p * (xi[i] + xi_off)
 
         super().__init__(e_x=e_x, e_y=e_y, e_z=e_z)
 
     def _pre_gather(self, x, y, xi, t):
-        n_p = self.density(t*ct.c, 0.)
+        n_p = self.density(t * ct.c, 0.0)
         b_w = self.laser.get_group_velocity(n_p)
-        self.constants = np.array(
-            [self.k, self.e_z_0, self.e_z_p, self.xi_fields, b_w])
+        self.constants = np.array([self.k, self.e_z_0, self.e_z_p, self.xi_fields, b_w])

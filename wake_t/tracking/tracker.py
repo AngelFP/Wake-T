@@ -1,4 +1,5 @@
-""" This module contains the Tracker class. """
+"""This module contains the Tracker class."""
+
 from typing import Optional, Callable, List, Literal
 
 import numpy as np
@@ -9,13 +10,11 @@ from wake_t.fields.base import Field
 from wake_t.fields.analytical_field import AnalyticalField
 from wake_t.fields.numerical_field import NumericalField
 from wake_t.diagnostics.openpmd_diag import OpenPMDDiagnostics
-from wake_t.utilities.numba import (
-    num_threads, set_num_threads, get_num_threads
-)
+from wake_t.utilities.numba import num_threads, set_num_threads, get_num_threads
 from .progress_bar import get_progress_bar
 
 
-class Tracker():
+class Tracker:
     """Class in charge of evolving in time the particle bunches and fields.
 
     There are 3 main ingredients in the simulation of an accelerator stage:
@@ -92,10 +91,10 @@ class Tracker():
         n_diags: Optional[int] = 0,
         opmd_diags: Optional[OpenPMDDiagnostics] = None,
         auto_dt_bunch_f: Optional[Callable[[ParticleBunch], float]] = None,
-        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
+        bunch_pusher: Optional[Literal["boris", "rk4"]] = "boris",
         push_bunches_before_diags: Optional[bool] = True,
         show_progress_bar: Optional[bool] = True,
-        section_name: Optional[str] = 'Simulation'
+        section_name: Optional[str] = "Simulation",
     ) -> None:
         self.t_final = t_final
         self.bunches = bunches
@@ -122,20 +121,20 @@ class Tracker():
         # Get list of bunches with adaptive time step.
         self.auto_dt_bunches = []
         for i, dt in enumerate(self.dt_bunches):
-            if dt == 'auto':
+            if dt == "auto":
                 self.auto_dt_bunches.append(self.bunches[i])
 
         # If needed, add diagnostics to objects to track.
         if self.n_diags > 0:
-            self.objects_to_track.append('diags')
-            self.dt_diags = self.t_final/self.n_diags
+            self.objects_to_track.append("diags")
+            self.dt_diags = self.t_final / self.n_diags
             self.dt_objects.append(self.dt_diags)
             self.bunch_list = []
             for bunch in bunches:
                 self.bunch_list.append([])
 
         # Initialize tracking time.
-        self.t_tracking = 0.
+        self.t_tracking = 0.0
 
     def do_tracking(self) -> List[List[ParticleBunch]]:
         """Do the tracking.
@@ -155,7 +154,7 @@ class Tracker():
         # Initialize progress bar.
         progress_bar = get_progress_bar(
             description=self.section_name,
-            total_length=self.t_final*ct.c,
+            total_length=self.t_final * ct.c,
             disable=not self.show_progress_bar,
         )
 
@@ -173,14 +172,13 @@ class Tracker():
 
         # Fill up time steps.
         for i, dt in enumerate(self.dt_objects):
-            if dt == 'auto':
+            if dt == "auto":
                 dt_objects[i] = self.auto_dt_bunch_f(self.bunches[i])
             else:
                 dt_objects[i] = dt
 
         # Start tracking loop.
         while True:
-
             # Calculate next time of all objects.
             t_next_objects = t_objects + dt_objects
 
@@ -224,7 +222,7 @@ class Tracker():
                 obj_next.update(self.bunches)
 
             # If next object are the diagnostics, generate them.
-            elif obj_next == 'diags':
+            elif obj_next == "diags":
                 # Evolve all bunches to the diagnostics time.
                 if self.push_bunches_before_diags:
                     for i, obj in enumerate(self.objects_to_track):
@@ -245,7 +243,7 @@ class Tracker():
             t_objects[i_next] += dt_next
 
             # Update progress bar.
-            progress_bar.update(self.t_tracking*ct.c - progress_bar.n)
+            progress_bar.update(self.t_tracking * ct.c - progress_bar.n)
 
         # Finalize tracking by increasing z position of diagnostics.
         if self.opmd_diags is not None:
@@ -294,8 +292,7 @@ class Tracker():
         # Determine if this was the last push.
         final_push = np.float32(t_next) == np.float32(self.t_final)
         # Determine if next push brings the bunch beyond `t_final`.
-        next_push_beyond_final_time = (
-            t_next + dt_objects[i_next] > self.t_final)
+        next_push_beyond_final_time = t_next + dt_objects[i_next] > self.t_final
         # Make sure the last push of the bunch advances it to exactly
         # `t_final`.
         if not final_push and next_push_beyond_final_time:
@@ -310,4 +307,5 @@ class Tracker():
         # If needed, write also the openPMD diagnostics.
         if self.opmd_diags is not None:
             self.opmd_diags.write_diagnostics(
-                self.t_tracking, self.dt_diags, self.bunches, self.fields)
+                self.t_tracking, self.dt_diags, self.bunches, self.fields
+            )

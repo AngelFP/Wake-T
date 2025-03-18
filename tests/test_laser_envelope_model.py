@@ -35,14 +35,13 @@ def test_gaussian_laser_in_vacuum(plot=False):
     tau = 25e-15  # s
     w_0 = 50e-6  # m
     l_0 = 0.8e-6  # m
-    z_c = 0.  # m
+    z_c = 0.0  # m
     a_0 = 3
     z_foc = z_tot / 2
 
     # Create and initialize laser pulse.
     laser = GaussianPulse(
-        z_c, l_0=l_0, w_0=w_0, a_0=a_0, tau=tau, z_foc=z_foc,
-        polarization='circular'
+        z_c, l_0=l_0, w_0=w_0, a_0=a_0, tau=tau, z_foc=z_foc, polarization="circular"
     )
     laser.set_envelope_solver_params(xi_min, xi_max, r_max, nxi, nr, dt)
     laser.initialize_envelope()
@@ -60,14 +59,14 @@ def test_gaussian_laser_in_vacuum(plot=False):
     for n in range(nt):
         laser.evolve(chi, n_p)
         a_env = laser.get_envelope()
-        laser_w[n+1] = calculate_spot_size(a_env, dr)
-        laser_a[n+1] = calculate_a0(a_env)
+        laser_w[n + 1] = calculate_spot_size(a_env, dr)
+        laser_a[n + 1] = calculate_a0(a_env)
 
     # Calculate analytical evolution.
     z = np.linspace(0, z_tot, nt + 1)
     rayleigh_length = ct.pi * w_0**2 / l_0
-    laser_w_an = w_0 * np.sqrt(1 + ((z-z_foc)/rayleigh_length)**2)
-    laser_a_an = a_0 / np.sqrt(1 + ((z-z_foc)/rayleigh_length)**2)
+    laser_w_an = w_0 * np.sqrt(1 + ((z - z_foc) / rayleigh_length) ** 2)
+    laser_a_an = a_0 / np.sqrt(1 + ((z - z_foc) / rayleigh_length) ** 2)
 
     # Check that evolution is as expected.
     diff_w = np.max(np.abs(laser_w - laser_w_an) / laser_w_an)
@@ -127,18 +126,24 @@ def test_gaussian_laser_in_vacuum_with_subgrid(plot=False):
     tau = 25e-15  # s
     w_0 = 50e-6  # m
     l_0 = 0.8e-6  # m
-    z_c = 0.  # m
+    z_c = 0.0  # m
     a_0 = 3
     z_foc = z_tot / 2
 
     # Create and initialize laser pulse.
     laser = GaussianPulse(
-        z_c, l_0=l_0, w_0=w_0, a_0=a_0, tau=tau, z_foc=z_foc,
-        polarization='circular'
+        z_c, l_0=l_0, w_0=w_0, a_0=a_0, tau=tau, z_foc=z_foc, polarization="circular"
     )
     laser.set_envelope_solver_params(
-        xi_min, xi_max, r_max, nxi, nr, dt, subgrid_nz=subgrid_nxi,
-        subgrid_nr=subgrid_nr)
+        xi_min,
+        xi_max,
+        r_max,
+        nxi,
+        nr,
+        dt,
+        subgrid_nz=subgrid_nxi,
+        subgrid_nr=subgrid_nr,
+    )
     laser.initialize_envelope()
 
     # Preallocate arrays
@@ -154,8 +159,8 @@ def test_gaussian_laser_in_vacuum_with_subgrid(plot=False):
     for n in range(nt):
         laser.evolve(chi, n_p)
         a_env = laser.get_envelope()
-        laser_w[n+1] = calculate_spot_size(a_env, dr)
-        laser_a[n+1] = calculate_a0(a_env)
+        laser_w[n + 1] = calculate_spot_size(a_env, dr)
+        laser_a[n + 1] = calculate_a0(a_env)
 
     # Check that the dimensions of the arrays are as expected.
     assert a_env.shape == (nxi, nr)
@@ -164,8 +169,8 @@ def test_gaussian_laser_in_vacuum_with_subgrid(plot=False):
     # Calculate analytical evolution.
     z = np.linspace(0, z_tot, nt + 1)
     rayleigh_length = ct.pi * w_0**2 / l_0
-    laser_w_an = w_0 * np.sqrt(1 + ((z-z_foc)/rayleigh_length)**2)
-    laser_a_an = a_0 / np.sqrt(1 + ((z-z_foc)/rayleigh_length)**2)
+    laser_w_an = w_0 * np.sqrt(1 + ((z - z_foc) / rayleigh_length) ** 2)
+    laser_a_an = a_0 / np.sqrt(1 + ((z - z_foc) / rayleigh_length) ** 2)
 
     # Check that evolution is as expected.
     diff_w = np.max(np.abs(laser_w - laser_w_an) / laser_w_an)
@@ -223,11 +228,11 @@ def calculate_spot_size(a_env, dr):
     # that is, do x = (y - a) / b, where y = a_max/e
     y_1 = a_proj[i_first - 1]
     y_2 = a_proj[i_first]
-    x_1 = (i_first-1) * dr + dr/2
-    x_2 = i_first * dr + dr/2
+    x_1 = (i_first - 1) * dr + dr / 2
+    x_2 = i_first * dr + dr / 2
     b = (y_2 - y_1) / (x_2 - x_1)
-    a = y_1 - b*x_1
-    w = (a_max/np.e - a) / b
+    a = y_1 - b * x_1
+    w = (a_max / np.e - a) / b
     return w
 
 

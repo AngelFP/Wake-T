@@ -9,8 +9,7 @@ from wake_t.utilities.numba import njit_parallel
 
 # Define type alias.
 FieldFunction = Callable[
-    [np.ndarray, np.ndarray, np.ndarray, float, np.ndarray, List],
-    np.ndarray
+    [np.ndarray, np.ndarray, np.ndarray, float, np.ndarray, List], np.ndarray
 ]
 
 
@@ -67,7 +66,7 @@ class AnalyticalField(Field):
         b_x: Optional[FieldFunction] = None,
         b_y: Optional[FieldFunction] = None,
         b_z: Optional[FieldFunction] = None,
-        constants: Optional[List] = None
+        constants: Optional[List] = None,
     ) -> None:
         super().__init__()
 

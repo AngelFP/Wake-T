@@ -1,4 +1,5 @@
-""" Contains the classes of all elements tracked using transfer matrices. """
+"""Contains the classes of all elements tracked using transfer matrices."""
+
 from typing import Optional, Union, List
 import time
 
@@ -9,12 +10,15 @@ from wake_t.particles.push.transfer_matrix import track_with_transfer_map
 from wake_t.particles.particle_bunch import ParticleBunch
 from wake_t.utilities.other import print_progress_bar
 from wake_t.utilities.bunch_manipulation import (
-    convert_to_ocelot_matrix, convert_from_ocelot_matrix, rotation_matrix_xz)
+    convert_to_ocelot_matrix,
+    convert_from_ocelot_matrix,
+    rotation_matrix_xz,
+)
 from wake_t.physics_models.collective_effects.csr import get_csr_calculator
 from wake_t.diagnostics import OpenPMDDiagnostics
 
 
-class TMElement():
+class TMElement:
     # TODO: fix backtracking issues.
     """
     Base class for all elements where the tracking is performed using
@@ -50,14 +54,14 @@ class TMElement():
 
     def __init__(
         self,
-        length: Optional[float] = 0.,
-        theta: Optional[float] = 0.,
-        k1: Optional[float] = 0.,
-        k2: Optional[float] = 0.,
+        length: Optional[float] = 0.0,
+        theta: Optional[float] = 0.0,
+        k1: Optional[float] = 0.0,
+        k2: Optional[float] = 0.0,
         gamma_ref: Optional[float] = None,
         csr_on: Optional[bool] = False,
         n_out: Optional[int] = None,
-        order: Optional[int] = 2
+        order: Optional[int] = 2,
     ) -> None:
         self.length = length
         self.theta = theta
@@ -68,7 +72,7 @@ class TMElement():
         self.n_out = n_out
         self.order = order
         self.csr_calculator = get_csr_calculator()
-        self.element_name = ''
+        self.element_name = ""
 
     def track(
         self,
@@ -130,15 +134,15 @@ class TMElement():
 
         # Print output header
         if show_progress_bar:
-            print('')
+            print("")
             print(self.element_name.capitalize())
-            print('-'*len(self.element_name))
+            print("-" * len(self.element_name))
             self._print_element_properties()
-            csr_string = 'on' if self.csr_on else 'off'
-            print('CSR {}.'.format(csr_string))
-            print('')
+            csr_string = "on" if self.csr_on else "off"
+            print("CSR {}.".format(csr_string))
+            print("")
             n_steps = len(track_steps)
-            st_0 = 'Tracking in {} step(s)... '.format(n_steps)
+            st_0 = "Tracking in {} step(s)... ".format(n_steps)
 
         # Start tracking
         start_time = time.time()
@@ -146,30 +150,36 @@ class TMElement():
         if out_initial:
             output_bunch_list.append(bunch.copy())
             if opmd_diag is not None:
-                opmd_diag.write_diagnostics(
-                    0., l_step/ct.c, [output_bunch_list[-1]])
+                opmd_diag.write_diagnostics(0.0, l_step / ct.c, [output_bunch_list[-1]])
         for i in track_steps:
             if show_progress_bar:
-                print_progress_bar(st_0, i+1, n_steps)
-            l_curr = (i+1) * l_step * (1-2*backtrack)
+                print_progress_bar(st_0, i + 1, n_steps)
+            l_curr = (i + 1) * l_step * (1 - 2 * backtrack)
             # Track with transfer matrix
             bunch_mat = track_with_transfer_map(
-                bunch_mat, l_step, self.length, -self.theta, self.k1, self.k2,
-                self.gamma_ref, order=self.order)
+                bunch_mat,
+                l_step,
+                self.length,
+                -self.theta,
+                self.k1,
+                self.k2,
+                self.gamma_ref,
+                order=self.order,
+            )
             # Apply CSR
             if self.csr_on:
-                self.csr_calculator.apply_csr(bunch_mat, bunch.q,
-                                              self.gamma_ref, self, l_curr)
+                self.csr_calculator.apply_csr(
+                    bunch_mat, bunch.q, self.gamma_ref, self, l_curr
+                )
             # Add bunch to output list
             if i in output_steps:
-                new_bunch_mat = convert_from_ocelot_matrix(
-                    bunch_mat, self.gamma_ref)
-                new_bunch = self._create_new_bunch(
-                    bunch, new_bunch_mat, l_curr)
+                new_bunch_mat = convert_from_ocelot_matrix(bunch_mat, self.gamma_ref)
+                new_bunch = self._create_new_bunch(bunch, new_bunch_mat, l_curr)
                 output_bunch_list.append(new_bunch)
                 if opmd_diag is not None:
                     opmd_diag.write_diagnostics(
-                        l_curr/ct.c, l_step/ct.c, [output_bunch_list[-1]])
+                        l_curr / ct.c, l_step / ct.c, [output_bunch_list[-1]]
+                    )
 
         # Update bunch data
         self._update_input_bunch(bunch, bunch_mat, output_bunch_list)
@@ -181,8 +191,8 @@ class TMElement():
         # Finalize
         if show_progress_bar:
             tracking_time = time.time() - start_time
-            print('Done ({} s).'.format(tracking_time))
-            print('-'*80)
+            print("Done ({} s).".format(tracking_time))
+            print("-" * 80)
         return output_bunch_list
 
     def _get_beam_matrix_for_tracking(self, bunch):
@@ -197,7 +207,7 @@ class TMElement():
 
     def _determine_steps(self):
         if self.n_out is not None:
-            l_step = self.length/self.n_out
+            l_step = self.length / self.n_out
             n_track = self.n_out
             frac_out = 1
         else:
@@ -220,14 +230,18 @@ class TMElement():
 
     def _update_input_bunch(self, bunch, bunch_mat, output_bunch_list):
         if len(output_bunch_list) == 0:
-            new_bunch_mat = convert_from_ocelot_matrix(
-                bunch_mat, self.gamma_ref)
-            last_bunch = self._create_new_bunch(bunch, new_bunch_mat,
-                                                self.length)
+            new_bunch_mat = convert_from_ocelot_matrix(bunch_mat, self.gamma_ref)
+            last_bunch = self._create_new_bunch(bunch, new_bunch_mat, self.length)
         else:
             last_bunch = output_bunch_list[-1].copy()
-        bunch.set_phase_space(last_bunch.x, last_bunch.y, last_bunch.xi,
-                              last_bunch.px, last_bunch.py, last_bunch.pz)
+        bunch.set_phase_space(
+            last_bunch.x,
+            last_bunch.y,
+            last_bunch.xi,
+            last_bunch.px,
+            last_bunch.py,
+            last_bunch.pz,
+        )
         bunch.prop_distance = last_bunch.prop_distance
         bunch.theta_ref = last_bunch.theta_ref
         bunch.x_ref = last_bunch.x_ref
@@ -235,20 +249,19 @@ class TMElement():
     def _create_new_bunch(self, old_bunch, new_bunch_mat, prop_dist):
         if self.theta != 0:
             # angle rotated for prop_dist
-            theta_step = self.theta*prop_dist/self.length
+            theta_step = self.theta * prop_dist / self.length
             # magnet bending radius
-            rho = abs(self.length/self.theta)
+            rho = abs(self.length / self.theta)
             # new reference angle and transverse displacement
             new_theta_ref = old_bunch.theta_ref + theta_step
-            sign = -theta_step/abs(theta_step)
-            new_x_ref = (
-                old_bunch.x_ref +
-                sign*rho*(np.cos(new_theta_ref)-np.cos(old_bunch.theta_ref)))
+            sign = -theta_step / abs(theta_step)
+            new_x_ref = old_bunch.x_ref + sign * rho * (
+                np.cos(new_theta_ref) - np.cos(old_bunch.theta_ref)
+            )
         else:
             # new reference angle and transverse displacement
             new_theta_ref = old_bunch.theta_ref
-            new_x_ref = (old_bunch.x_ref + prop_dist *
-                         np.sin(old_bunch.theta_ref))
+            new_x_ref = old_bunch.x_ref + prop_dist * np.sin(old_bunch.theta_ref)
         # new prop. distance
         new_prop_dist = old_bunch.prop_distance + prop_dist
         # rotate distribution if reference angle != 0
@@ -257,11 +270,14 @@ class TMElement():
             new_bunch_mat = np.dot(rot, new_bunch_mat)
         new_bunch_mat[0] += new_x_ref
         # create new bunch
-        new_bunch = ParticleBunch(old_bunch.w, bunch_matrix=new_bunch_mat,
-                                  prop_distance=new_prop_dist,
-                                  name=old_bunch.name,
-                                  q_species=old_bunch.q_species,
-                                  m_species=old_bunch.m_species)
+        new_bunch = ParticleBunch(
+            old_bunch.w,
+            bunch_matrix=new_bunch_mat,
+            prop_distance=new_prop_dist,
+            name=old_bunch.name,
+            q_species=old_bunch.q_species,
+            m_species=old_bunch.m_species,
+        )
         new_bunch.theta_ref = new_theta_ref
         new_bunch.x_ref = new_x_ref
         return new_bunch
@@ -295,19 +311,20 @@ class Drift(TMElement):
         `2`.
 
     """
+
     def __init__(
         self,
-        length: Optional[float] = 0.,
+        length: Optional[float] = 0.0,
         gamma_ref: Optional[float] = None,
         csr_on: Optional[bool] = False,
         n_out: Optional[int] = None,
-        order: Optional[int] = 2
+        order: Optional[int] = 2,
     ) -> None:
         super().__init__(length, 0, 0, 0, gamma_ref, csr_on, n_out, order)
-        self.element_name = 'drift'
+        self.element_name = "drift"
 
     def _print_element_properties(self):
-        print('Length = {:1.4f} m'.format(self.length))
+        print("Length = {:1.4f} m".format(self.length))
 
 
 class Dipole(TMElement):
@@ -337,24 +354,24 @@ class Dipole(TMElement):
         `2`.
 
     """
+
     def __init__(
         self,
-        length: Optional[float] = 0.,
-        theta: Optional[float] = 0.,
+        length: Optional[float] = 0.0,
+        theta: Optional[float] = 0.0,
         gamma_ref: Optional[float] = None,
         csr_on: Optional[bool] = False,
         n_out: Optional[int] = None,
-        order: Optional[int] = 2
+        order: Optional[int] = 2,
     ) -> None:
         super().__init__(length, theta, 0, 0, gamma_ref, csr_on, n_out, order)
-        self.element_name = 'dipole'
+        self.element_name = "dipole"
 
     def _print_element_properties(self):
-        ang_deg = self.theta * 180/ct.pi
-        b_field = (ct.m_e*ct.c/ct.e) * self.theta*self.gamma_ref/self.length
-        print('Bending angle = {:1.4f} rad ({:1.4f} deg)'.format(
-            self.theta, ang_deg))
-        print('Dipole field = {:1.4f} T'.format(b_field))
+        ang_deg = self.theta * 180 / ct.pi
+        b_field = (ct.m_e * ct.c / ct.e) * self.theta * self.gamma_ref / self.length
+        print("Bending angle = {:1.4f} rad ({:1.4f} deg)".format(self.theta, ang_deg))
+        print("Dipole field = {:1.4f} T".format(b_field))
 
 
 class Quadrupole(TMElement):
@@ -383,21 +400,22 @@ class Quadrupole(TMElement):
         `2`.
 
     """
+
     def __init__(
         self,
-        length: Optional[float] = 0.,
-        k1: Optional[float] = 0.,
+        length: Optional[float] = 0.0,
+        k1: Optional[float] = 0.0,
         gamma_ref: Optional[float] = None,
         csr_on: Optional[bool] = False,
         n_out: Optional[int] = None,
-        order: Optional[int] = 2
+        order: Optional[int] = 2,
     ) -> None:
         super().__init__(length, 0, k1, 0, gamma_ref, csr_on, n_out, order)
-        self.element_name = 'quadrupole'
+        self.element_name = "quadrupole"
 
     def _print_element_properties(self):
-        g = self.k1 * self.gamma_ref*(ct.m_e*ct.c/ct.e)
-        print('Quadrupole gradient = {:1.4f} T/m'.format(g))
+        g = self.k1 * self.gamma_ref * (ct.m_e * ct.c / ct.e)
+        print("Quadrupole gradient = {:1.4f} T/m".format(g))
 
 
 class Sextupole(TMElement):
@@ -426,18 +444,19 @@ class Sextupole(TMElement):
         `2`.
 
     """
+
     def __init__(
         self,
-        length: Optional[float] = 0.,
-        k2: Optional[float] = 0.,
+        length: Optional[float] = 0.0,
+        k2: Optional[float] = 0.0,
         gamma_ref: Optional[float] = None,
         csr_on: Optional[bool] = False,
         n_out: Optional[int] = None,
-        order: Optional[int] = 2
+        order: Optional[int] = 2,
     ) -> None:
         super().__init__(length, 0, 0, k2, gamma_ref, csr_on, n_out, order)
-        self.element_name = 'sextupole'
+        self.element_name = "sextupole"
 
     def _print_element_properties(self):
-        g = self.k2 * self.gamma_ref*(ct.m_e*ct.c/ct.e)
-        print('Sextupole gradient = {:1.4f} T/m^2'.format(g))
+        g = self.k2 * self.gamma_ref * (ct.m_e * ct.c / ct.e)
+        print("Sextupole gradient = {:1.4f} T/m^2".format(g))

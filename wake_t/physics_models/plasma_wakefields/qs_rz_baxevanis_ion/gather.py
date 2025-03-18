@@ -31,7 +31,6 @@ def gather_laser_sources(a2, nabla_a, r_min, r_max, dr, r, a2_pp, nabla_a_pp):
 
     # Iterate over all particles.
     for i in range(r.shape[0]):
-
         # Get particle position.
         r_i = r[i]
 
@@ -96,7 +95,6 @@ def gather_bunch_sources(b_t, r_min, r_max, dr, r, b_t_pp):
 
     # Iterate over all particles.
     for i in range(r.shape[0]):
-
         # Get particle position.
         r_i = r[i]
 

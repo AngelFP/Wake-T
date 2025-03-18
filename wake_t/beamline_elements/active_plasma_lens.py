@@ -1,4 +1,4 @@
-""" This module contains the definition of the ActivePlasmaLens class """
+"""This module contains the definition of the ActivePlasmaLens class"""
 
 from typing import Optional, Union, Callable, Literal
 
@@ -89,13 +89,13 @@ class ActivePlasmaLens(PlasmaStage):
         foc_strength: float,
         wakefields: bool = False,
         density: Optional[Union[float, Callable[[float], float]]] = None,
-        wakefield_model: Optional[str] = 'quasistatic_2d',
-        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
-        dt_bunch: Optional[DtBunchType] = 'auto',
+        wakefield_model: Optional[str] = "quasistatic_2d",
+        bunch_pusher: Optional[Literal["boris", "rk4"]] = "boris",
+        dt_bunch: Optional[DtBunchType] = "auto",
         push_bunches_before_diags: Optional[bool] = True,
         n_out: Optional[int] = 1,
-        name: Optional[str] = 'Active plasma lens',
-        **model_params
+        name: Optional[str] = "Active plasma lens",
+        **model_params,
     ) -> None:
         self.foc_strength = foc_strength
         self.wakefields = wakefields
@@ -104,10 +104,11 @@ class ActivePlasmaLens(PlasmaStage):
         if density is None:
             if wakefields:
                 raise ValueError(
-                    'A density value is required to compute plasma wakefields')
+                    "A density value is required to compute plasma wakefields"
+                )
             else:
                 # Give any value (it won't be used.)
-                density = 0.
+                density = 0.0
         self.apl_field = LinearBThetaField(-self.foc_strength)
         super().__init__(
             length=length,
@@ -119,11 +120,11 @@ class ActivePlasmaLens(PlasmaStage):
             n_out=n_out,
             name=name,
             external_fields=[self.apl_field],
-            **model_params
+            **model_params,
         )
 
     def _get_optimized_dt(self, beam):
-        """ Get tracking time step. """
+        """Get tracking time step."""
         # If plasma wakefields are active, use default dt.
         if self.wakefields:
             dt = super()._get_optimized_dt(beam)
@@ -131,8 +132,8 @@ class ActivePlasmaLens(PlasmaStage):
         else:
             # Get minimum gamma in the bunch (assumes px,py << pz).
             q_over_m = beam.q_species / beam.m_species
-            min_gamma = np.sqrt(np.min(beam.pz)**2 + 1)
-            w_x = np.sqrt(np.abs(q_over_m*ct.c * self.foc_strength/min_gamma))
-            T_x = 1/w_x
-            dt = 0.1*T_x
+            min_gamma = np.sqrt(np.min(beam.pz) ** 2 + 1)
+            w_x = np.sqrt(np.abs(q_over_m * ct.c * self.foc_strength / min_gamma))
+            T_x = 1 / w_x
+            dt = 0.1 * T_x
         return dt

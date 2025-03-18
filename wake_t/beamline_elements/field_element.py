@@ -8,7 +8,7 @@ from wake_t.fields.base import Field
 from wake_t.particles.particle_bunch import ParticleBunch
 
 
-class FieldElement():
+class FieldElement:
     """
     Generic class for any beamline element based on field tracking.
 
@@ -60,9 +60,9 @@ class FieldElement():
         self,
         length: float,
         dt_bunch: Union[float, str, List[Union[float, str]]],
-        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
+        bunch_pusher: Optional[Literal["boris", "rk4"]] = "boris",
         n_out: Optional[int] = 1,
-        name: Optional[str] = 'field element',
+        name: Optional[str] = "field element",
         fields: Optional[List[Field]] = [],
         auto_dt_bunch: Optional[Callable[[ParticleBunch], float]] = None,
         push_bunches_before_diags: Optional[bool] = True,
@@ -118,8 +118,8 @@ class FieldElement():
             n_dt, n_bunches = len(self.dt_bunch), len(bunches)
             if n_dt != n_bunches:
                 raise ValueError(
-                    f'The number of time steps in `dt_bunch` ({n_dt}) '
-                    f'does not match the number of bunches ({n_bunches}).'
+                    f"The number of time steps in `dt_bunch` ({n_dt}) "
+                    f"does not match the number of bunches ({n_bunches})."
                 )
             dt_bunch = self.dt_bunch
 
@@ -131,7 +131,7 @@ class FieldElement():
 
         # Create tracker.
         tracker = Tracker(
-            t_final=self.length/ct.c,
+            t_final=self.length / ct.c,
             bunches=bunches,
             dt_bunches=dt_bunch,
             fields=self.fields,
@@ -141,7 +141,7 @@ class FieldElement():
             auto_dt_bunch_f=self.auto_dt_bunch,
             push_bunches_before_diags=self.push_bunches_before_diags,
             show_progress_bar=show_progress_bar,
-            section_name=self.name
+            section_name=self.name,
         )
 
         # Do tracking.

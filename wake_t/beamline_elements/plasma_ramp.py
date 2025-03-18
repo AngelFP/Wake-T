@@ -16,32 +16,34 @@ from .plasma_stage import PlasmaStage, DtBunchType
 Profile = Callable[[float, float, float, float, float], float]
 
 
-def inverse_square_profile(z, decay_length=None, density_top=None,
-                           density_down=None, position_down=None):
+def inverse_square_profile(
+    z, decay_length=None, density_top=None, density_down=None, position_down=None
+):
     if decay_length is None:
-        decay_length = position_down / (np.sqrt(density_top/density_down) - 1)
-    return density_top / np.square(1 + z/decay_length)
+        decay_length = position_down / (np.sqrt(density_top / density_down) - 1)
+    return density_top / np.square(1 + z / decay_length)
 
 
-def exponential_profile(z, decay_length=None, density_top=None,
-                        density_down=None, position_down=None):
+def exponential_profile(
+    z, decay_length=None, density_top=None, density_down=None, position_down=None
+):
     if decay_length is None:
         decay_length = position_down / np.log(density_top / density_down)
     return density_top * np.exp(-z / decay_length)
 
 
-def gaussian_profile(z, decay_length=None, density_top=None,
-                     density_down=None, position_down=None):
+def gaussian_profile(
+    z, decay_length=None, density_top=None, density_down=None, position_down=None
+):
     if decay_length is None:
-        decay_length = (position_down /
-                        np.sqrt(2*np.log(density_top / density_down)))
-    return density_top * np.exp(-z**2/(2*decay_length**2))
+        decay_length = position_down / np.sqrt(2 * np.log(density_top / density_down))
+    return density_top * np.exp(-(z**2) / (2 * decay_length**2))
 
 
 ramp_profiles = {
-    'inverse_square': inverse_square_profile,
-    'exponential': exponential_profile,
-    'gaussian': gaussian_profile
+    "inverse_square": inverse_square_profile,
+    "exponential": exponential_profile,
+    "gaussian": gaussian_profile,
 }
 
 
@@ -131,19 +133,19 @@ class PlasmaRamp(PlasmaStage):
     def __init__(
         self,
         length: float,
-        profile: Optional[Union[str, Profile]] = 'inverse_square',
-        ramp_type: Optional[str] = 'upramp',
-        wakefield_model: Optional[str] = 'focusing_blowout',
+        profile: Optional[Union[str, Profile]] = "inverse_square",
+        ramp_type: Optional[str] = "upramp",
+        wakefield_model: Optional[str] = "focusing_blowout",
         decay_length: Optional[float] = None,
         plasma_dens_top: Optional[float] = None,
         plasma_dens_down: Optional[float] = None,
         position_down: Optional[float] = None,
-        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
-        dt_bunch: Optional[DtBunchType] = 'auto',
+        bunch_pusher: Optional[Literal["boris", "rk4"]] = "boris",
+        dt_bunch: Optional[DtBunchType] = "auto",
         push_bunches_before_diags: Optional[bool] = True,
         n_out: Optional[int] = 1,
-        name: Optional[str] = 'Plasma ramp',
-        **model_params
+        name: Optional[str] = "Plasma ramp",
+        **model_params,
     ) -> None:
         self.ramp_type = ramp_type
         if position_down is None:
@@ -153,12 +155,14 @@ class PlasmaRamp(PlasmaStage):
             if profile in ramp_profiles:
                 profile = ramp_profiles[profile]
             else:
-                raise ValueError(
-                    'Ramp profile "{}" not recognized'.format(profile))
+                raise ValueError('Ramp profile "{}" not recognized'.format(profile))
         profile = partial(
-            profile, decay_length=decay_length,
-            density_top=plasma_dens_top, density_down=plasma_dens_down,
-            position_down=position_down)
+            profile,
+            decay_length=decay_length,
+            density_top=plasma_dens_top,
+            density_down=plasma_dens_down,
+            position_down=position_down,
+        )
         self.profile = profile
         super().__init__(
             length=length,
@@ -169,12 +173,12 @@ class PlasmaRamp(PlasmaStage):
             push_bunches_before_diags=push_bunches_before_diags,
             n_out=n_out,
             name=name,
-            **model_params
+            **model_params,
         )
 
     def ramp_profile(self, z):
-        """ Return the density value at a certain z location. """
+        """Return the density value at a certain z location."""
         # For an upramp, invert z coordinate.
-        if self.ramp_type == 'upramp':
+        if self.ramp_type == "upramp":
             z = self.length - z
         return self.profile(z)

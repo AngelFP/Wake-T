@@ -1,9 +1,8 @@
-""" This module contains methods for saving particle distributions to files"""
+"""This module contains methods for saving particle distributions to files"""
 
 from typing import Optional
 
-from aptools.particle_distributions import (
-    save_distribution, ParticleDistribution)
+from aptools.particle_distributions import save_distribution, ParticleDistribution
 
 from wake_t.particles.particle_bunch import ParticleBunch
 
@@ -12,7 +11,7 @@ def save_bunch_to_file(
     bunch: ParticleBunch,
     data_format: str,
     file_path: str,
-    species_name: Optional[str] = None
+    species_name: Optional[str] = None,
 ):
     """Save a particle bunch to file.
 
@@ -34,10 +33,10 @@ def save_bunch_to_file(
     kwargs = {}
 
     # For openpmd output, save with species name.
-    if data_format == 'openpmd':
+    if data_format == "openpmd":
         if species_name is None:
             species_name = bunch.name
-        kwargs['species_name'] = species_name
+        kwargs["species_name"] = species_name
     # Create APtools distribution and save it.
     distribution = ParticleDistribution(
         x=bunch.x,
@@ -48,6 +47,6 @@ def save_bunch_to_file(
         pz=bunch.pz,
         w=bunch.w,
         q_species=bunch.q_species,
-        m_species=bunch.m_species
+        m_species=bunch.m_species,
     )
     save_distribution(distribution, file_path, data_format, **kwargs)

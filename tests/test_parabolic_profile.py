@@ -32,8 +32,8 @@ def test_variable_parabolic_coefficient():
     l0 = 0.8e-6
 
     # Guiding plasma channel
-    r_e = ct.e**2 / (4. * np.pi * ct.epsilon_0 * ct.m_e * ct.c**2)
-    rel_delta_n_over_w2 = 1. / (np.pi * r_e * w0**4 * n_p)
+    r_e = ct.e**2 / (4.0 * np.pi * ct.epsilon_0 * ct.m_e * ct.c**2)
+    rel_delta_n_over_w2 = 1.0 / (np.pi * r_e * w0**4 * n_p)
 
     # Length and parabolic coefficient of each section (stretch).
     L_stretches = [1e-2, 1e-2, 1e-2, 1e-2, 1e-2]
@@ -48,22 +48,35 @@ def test_variable_parabolic_coefficient():
         return pc_stretches[i]
 
     # Create identical laser pulses for each case.
-    laser = GaussianPulse(-50e-6, a0, w0, tau, z_foc=0., l_0=l0)
+    laser = GaussianPulse(-50e-6, a0, w0, tau, z_foc=0.0, l_0=l0)
     laser_1 = deepcopy(laser)
     laser_2 = deepcopy(laser)
 
     # Create identical bunches for each case.
     bunch = get_matched_bunch(
-        1e-6, 1e-6, 200, 1, 3, laser.xi_c - 30e-6, 1e-6, 1e4, n_p=n_p)
+        1e-6, 1e-6, 200, 1, 3, laser.xi_c - 30e-6, 1e-6, 1e4, n_p=n_p
+    )
     bunch_1 = bunch.copy()
     bunch_2 = bunch.copy()
 
     # Create single plasma stage (containing all sections).
     plasma_single = PlasmaStage(
-        np.sum(L_stretches), n_p, wakefield_model='quasistatic_2d', n_out=10,
-        xi_min=xi_min, xi_max=xi_max, r_max=r_max, r_max_plasma=r_max,
-        laser=laser_1, laser_evolution=True, n_r=Nr, n_xi=Nxi, ppc=2,
-        dz_fields=dz_fields, parabolic_coefficient=parabolic_coefficient)
+        np.sum(L_stretches),
+        n_p,
+        wakefield_model="quasistatic_2d",
+        n_out=10,
+        xi_min=xi_min,
+        xi_max=xi_max,
+        r_max=r_max,
+        r_max_plasma=r_max,
+        laser=laser_1,
+        laser_evolution=True,
+        n_r=Nr,
+        n_xi=Nxi,
+        ppc=2,
+        dz_fields=dz_fields,
+        parabolic_coefficient=parabolic_coefficient,
+    )
 
     # Track single plasma.
     plasma_single.track(bunch_1)
@@ -72,10 +85,22 @@ def test_variable_parabolic_coefficient():
     sub_stages = []
     for i, (l, pc) in enumerate(zip(L_stretches, pc_stretches)):
         stage = PlasmaStage(
-            l, n_p, wakefield_model='quasistatic_2d', n_out=3,
-            xi_min=xi_min, xi_max=xi_max, r_max=r_max, r_max_plasma=r_max,
-            laser=laser_2, laser_evolution=True, n_r=Nr, n_xi=Nxi, ppc=2,
-            dz_fields=dz_fields, parabolic_coefficient=pc)
+            l,
+            n_p,
+            wakefield_model="quasistatic_2d",
+            n_out=3,
+            xi_min=xi_min,
+            xi_max=xi_max,
+            r_max=r_max,
+            r_max_plasma=r_max,
+            laser=laser_2,
+            laser_evolution=True,
+            n_r=Nr,
+            n_xi=Nxi,
+            ppc=2,
+            dz_fields=dz_fields,
+            parabolic_coefficient=pc,
+        )
         sub_stages.append(stage)
     plasma_multi = Beamline(sub_stages)
 
@@ -123,13 +148,12 @@ def calculate_spot_size(a_env, dr):
     # that is, do x = (y - a) / b, where y = a_max/e
     y_1 = a_proj[i_first - 1]
     y_2 = a_proj[i_first]
-    x_1 = (i_first-1) * dr + dr/2
-    x_2 = i_first * dr + dr/2
+    x_1 = (i_first - 1) * dr + dr / 2
+    x_2 = i_first * dr + dr / 2
     b = (y_2 - y_1) / (x_2 - x_1)
-    a = y_1 - b*x_1
-    w = (a_max/np.e - a) / b
+    a = y_1 - b * x_1
+    w = (a_max / np.e - a) / b
     return w
-
 
 
 if __name__ == "__main__":

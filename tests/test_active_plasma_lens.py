@@ -17,18 +17,29 @@ def test_active_plasma_lens():
     # generate bunch
     en = 1e-6
     alpha = 0
-    beta = 1.
+    beta = 1.0
     s_t = 10
     ene = 600
     ene_sp = 2
     bunch = get_gaussian_bunch_from_twiss(
-        en_x=en, en_y=en, a_x=alpha, a_y=alpha, b_x=beta, b_y=beta, ene=ene,
-        ene_sp=ene_sp, s_t=s_t, xi_c=0e-6, q_tot=10, n_part=1e5)
+        en_x=en,
+        en_y=en,
+        a_x=alpha,
+        a_y=alpha,
+        b_x=beta,
+        b_y=beta,
+        ene=ene,
+        ene_sp=ene_sp,
+        s_t=s_t,
+        xi_c=0e-6,
+        q_tot=10,
+        n_part=1e5,
+    )
     apl = ActivePlasmaLens(1e-2, 1000, wakefields=False, n_out=3)
 
     apl.track(bunch)
     bunch_params = analyze_bunch(bunch)
-    gamma_x = bunch_params['gamma_x']
+    gamma_x = bunch_params["gamma_x"]
     assert approx(gamma_x, rel=1e-10) == 92.38407651552583
 
 
@@ -43,19 +54,40 @@ def test_active_plasma_lens_with_wakefields():
     # Generate bunch.
     en = 1e-6
     alpha = 0
-    beta = 1.
+    beta = 1.0
     s_t = 10
     ene = 600
     ene_sp = 2
     bunch = get_gaussian_bunch_from_twiss(
-        en_x=en, en_y=en, a_x=alpha, a_y=alpha, b_x=beta, b_y=beta, ene=ene,
-        ene_sp=ene_sp, s_t=s_t, xi_c=0e-6, q_tot=10, n_part=1e5)
+        en_x=en,
+        en_y=en,
+        a_x=alpha,
+        a_y=alpha,
+        b_x=beta,
+        b_y=beta,
+        ene=ene,
+        ene_sp=ene_sp,
+        s_t=s_t,
+        xi_c=0e-6,
+        q_tot=10,
+        n_part=1e5,
+    )
 
     # Define APL.
     apl = ActivePlasmaLens(
-        1e-2, 1000, wakefields=True, n_out=3, density=1e23,
-        wakefield_model='quasistatic_2d', r_max=200e-6, xi_min=-30e-6,
-        xi_max=30e-6, n_r=200, n_xi=120, dz_fields=0.2e-3, ppc=4
+        1e-2,
+        1000,
+        wakefields=True,
+        n_out=3,
+        density=1e23,
+        wakefield_model="quasistatic_2d",
+        r_max=200e-6,
+        xi_min=-30e-6,
+        xi_max=30e-6,
+        n_r=200,
+        n_xi=120,
+        dz_fields=0.2e-3,
+        ppc=4,
     )
 
     # Do tracking.
@@ -63,10 +95,10 @@ def test_active_plasma_lens_with_wakefields():
 
     # Analyze and check results.
     bunch_params = analyze_bunch(bunch)
-    gamma_x = bunch_params['gamma_x']
+    gamma_x = bunch_params["gamma_x"]
     assert approx(gamma_x, rel=1e-10) == 77.32021166792376
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_active_plasma_lens()
     test_active_plasma_lens_with_wakefields()

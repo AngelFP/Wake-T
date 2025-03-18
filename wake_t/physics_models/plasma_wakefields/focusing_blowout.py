@@ -20,8 +20,8 @@ class FocusingBlowoutField(AnalyticalField):
         super().__init__(e_x=e_x, e_y=e_y)
 
     def _pre_gather(self, x, y, xi, t):
-        z = t*ct.c + xi
-        n_p = self.density(z, 0.)
-        w_p = np.sqrt(n_p*ct.e**2/(ct.m_e*ct.epsilon_0))
-        k = (ct.m_e/(2*ct.e*ct.c))*w_p**2
+        z = t * ct.c + xi
+        n_p = self.density(z, 0.0)
+        w_p = np.sqrt(n_p * ct.e**2 / (ct.m_e * ct.epsilon_0))
+        k = (ct.m_e / (2 * ct.e * ct.c)) * w_p**2
         self.constants = k

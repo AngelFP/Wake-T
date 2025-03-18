@@ -1,4 +1,4 @@
-""" Contains the 5th order Adams–Bashforth pusher for the plasma particles. """
+"""Contains the 5th order Adams–Bashforth pusher for the plasma particles."""
 
 from wake_t.utilities.numba import njit_serial
 

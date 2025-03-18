@@ -1,4 +1,4 @@
-""" Defines a linearly-varying (in radius) azimuthal magnetic field """
+"""Defines a linearly-varying (in radius) azimuthal magnetic field"""
 
 from wake_t.fields.analytical_field import AnalyticalField
 from wake_t.utilities.numba import prange

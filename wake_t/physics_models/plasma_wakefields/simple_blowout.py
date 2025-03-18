@@ -33,19 +33,18 @@ class SimpleBlowoutWakefield(AnalyticalField):
             b_w = constants[5]
 
             # Precalculate offset.
-            xi_off = l_p/2 - l_c - field_off + (1-b_w)*ct.c*t
+            xi_off = l_p / 2 - l_c - field_off + (1 - b_w) * ct.c * t
             for i in prange(x.shape[0]):
                 ez[i] = e_z_p * (xi[i] + xi_off)
 
         super().__init__(e_x=e_x, e_y=e_y, e_z=e_z)
 
     def _pre_gather(self, x, y, xi, t):
-        n_p = self.density(t*ct.c, 0)
-        w_p = ge.plasma_frequency(n_p*1e-6)
-        l_p = 2*np.pi*ct.c / w_p
-        g_x = w_p**2/2 * ct.m_e / (ct.e * ct.c)
-        e_z_p = w_p**2/2 * ct.m_e / ct.e
+        n_p = self.density(t * ct.c, 0)
+        w_p = ge.plasma_frequency(n_p * 1e-6)
+        l_p = 2 * np.pi * ct.c / w_p
+        g_x = w_p**2 / 2 * ct.m_e / (ct.e * ct.c)
+        e_z_p = w_p**2 / 2 * ct.m_e / ct.e
         l_c = self.laser.xi_c
         b_w = self.laser.get_group_velocity(n_p)
-        self.constants = np.array(
-            [g_x, e_z_p, l_p, l_c, self.field_offset, b_w])
+        self.constants = np.array([g_x, e_z_p, l_p, l_c, self.field_offset, b_w])

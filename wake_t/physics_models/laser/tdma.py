@@ -38,7 +38,7 @@ def TDMA(a, b, c, d, p):
 
     for i in range(1, n - 1):
         a_im1 = a[i - 1]
-        inv_coef = 1. / (b[i] - a_im1 * w[i - 1])
+        inv_coef = 1.0 / (b[i] - a_im1 * w[i - 1])
         g[i] = (d[i] - a_im1 * g[i - 1]) * inv_coef
         w[i] = c[i] * inv_coef
 

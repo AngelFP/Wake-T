@@ -4,16 +4,13 @@ from wake_t.diagnostics import OpenPMDDiagnostics
 from wake_t.particles.particle_bunch import ParticleBunch
 
 
-class Beamline():
+class Beamline:
     """
     Class for grouping beamline elements and allowing easier tracking.
 
     """
 
-    def __init__(
-        self,
-        elements: List
-    ) -> None:
+    def __init__(self, elements: List) -> None:
         self.elements = elements
 
     def track(

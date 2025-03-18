@@ -8,7 +8,6 @@ shapes.
 
 """
 
-
 import math
 import numpy as np
 
@@ -55,8 +54,8 @@ def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
         # Gather field only if particle is within field boundaries.
         if z_i >= z_min and z_i <= z_max and r_i <= r_max:
             # Position in cell units.
-            r_i_cell = (r_i - r_min)/dr + 2.
-            z_i_cell = (z_i - z_min)/dz + 2.
+            r_i_cell = (r_i - r_min) / dr + 2.0
+            z_i_cell = (z_i - z_min) / dz + 2.0
 
             # Indices of upper and lower cells in r and z.
             ir_lower = int(math.floor(r_i_cell))
@@ -77,20 +76,38 @@ def gather_field_cyl_linear(fld, z_min, z_max, r_min, r_max, dz, dr, x, y, z):
             # Interpolate in z.
             dz_u = iz_upper - z_i_cell
             dz_l = z_i_cell - iz_lower
-            fld_z_1 = dz_u*fld_ll + dz_l*fld_ul
-            fld_z_2 = dz_u*fld_lu + dz_l*fld_uu
+            fld_z_1 = dz_u * fld_ll + dz_l * fld_ul
+            fld_z_2 = dz_u * fld_lu + dz_l * fld_uu
 
             # Interpolate in r.
             dr_u = ir_upper - r_i_cell
             dr_l = 1 - dr_u
-            fld_part[i] = dr_u*fld_z_1 + dr_l*fld_z_2
+            fld_part[i] = dr_u * fld_z_1 + dr_l * fld_z_2
     return fld_part
 
 
 @njit_parallel()
 def gather_main_fields_cyl_linear(
-        er, ez, bt, z_min, z_max, r_min, r_max, dz, dr, x, y, z,
-        ex_part, ey_part, ez_part, bx_part, by_part, bz_part, r_min_gather=0.):
+    er,
+    ez,
+    bt,
+    z_min,
+    z_max,
+    r_min,
+    r_max,
+    dz,
+    dr,
+    x,
+    y,
+    z,
+    ex_part,
+    ey_part,
+    ez_part,
+    bx_part,
+    by_part,
+    bz_part,
+    r_min_gather=0.0,
+):
     """
     Convenient method for interpolating at once (more efficient) the transverse
     and longitudinal wakefields.
@@ -127,24 +144,18 @@ def gather_main_fields_cyl_linear(
 
     # Iterate over all particles.
     for i in prange(n_part):
-
         # Get particle position.
         x_i = x[i]
         y_i = y[i]
         z_i = z[i]
         r_i = math.sqrt(x_i**2 + y_i**2)
-        inv_r_i = 1./r_i
+        inv_r_i = 1.0 / r_i
 
         # Gather field only if particle is within field boundaries.
-        if (
-            z_i >= z_min
-            and z_i <= z_max
-            and r_i >= r_min_gather
-            and r_i <= r_max
-        ):
+        if z_i >= z_min and z_i <= z_max and r_i >= r_min_gather and r_i <= r_max:
             # Position in cell units.
-            r_i_cell = (r_i - r_min)/dr + 2
-            z_i_cell = (z_i - z_min)/dz + 2
+            r_i_cell = (r_i - r_min) / dr + 2
+            z_i_cell = (z_i - z_min) / dz + 2
 
             # Indices of upper and lower cells in r and z.
             ir_lower = int(math.floor(r_i_cell))
@@ -185,26 +196,26 @@ def gather_main_fields_cyl_linear(
             dz_u = iz_upper - z_i_cell
             dz_l = z_i_cell - iz_lower
 
-            er_z_1 = dz_u*er_ll + dz_l*er_ul
-            er_z_2 = dz_u*er_lu + dz_l*er_uu
+            er_z_1 = dz_u * er_ll + dz_l * er_ul
+            er_z_2 = dz_u * er_lu + dz_l * er_uu
 
-            bt_z_1 = dz_u*bt_ll + dz_l*bt_ul
-            bt_z_2 = dz_u*bt_lu + dz_l*bt_uu
+            bt_z_1 = dz_u * bt_ll + dz_l * bt_ul
+            bt_z_2 = dz_u * bt_lu + dz_l * bt_uu
 
-            ez_z_1 = dz_u*ez_ll + dz_l*ez_ul
-            ez_z_2 = dz_u*ez_lu + dz_l*ez_uu
+            ez_z_1 = dz_u * ez_ll + dz_l * ez_ul
+            ez_z_2 = dz_u * ez_lu + dz_l * ez_uu
 
             # Interpolate in r
             dr_u = ir_upper - r_i_cell
-            dr_l = 1. - dr_u
+            dr_l = 1.0 - dr_u
 
-            er_i = dr_u*er_z_1 + dr_l*er_z_2
-            bt_i = dr_u*bt_z_1 + dr_l*bt_z_2
+            er_i = dr_u * er_z_1 + dr_l * er_z_2
+            bt_i = dr_u * bt_z_1 + dr_l * bt_z_2
 
             ex_part[i] += er_i * x_i * inv_r_i
             ey_part[i] += er_i * y_i * inv_r_i
-            ez_part[i] += dr_u*ez_z_1 + dr_l*ez_z_2
-            bx_part[i] += - bt_i * y_i * inv_r_i
+            ez_part[i] += dr_u * ez_z_1 + dr_l * ez_z_2
+            bx_part[i] += -bt_i * y_i * inv_r_i
             by_part[i] += bt_i * x_i * inv_r_i
         else:
             gathered[i] = False
@@ -212,9 +223,22 @@ def gather_main_fields_cyl_linear(
 
 
 @njit_serial()
-def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
-                                r_max, dz, dr, r, z, fld_1_pp, fld_2_pp,
-                                fld_3_pp):
+def gather_sources_qs_baxevanis(
+    fld_1,
+    fld_2,
+    fld_3,
+    z_min,
+    z_max,
+    r_min,
+    r_max,
+    dz,
+    dr,
+    r,
+    z,
+    fld_1_pp,
+    fld_2_pp,
+    fld_3_pp,
+):
     """
     Convenient method for gathering at once the three source fields needed
     by the Baxevanis wakefield model (a2 and nabla_a from the laser, and
@@ -249,7 +273,6 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
 
     # Iterate over all particles.
     for i in range(r.shape[0]):
-
         # Get particle position.
         z_i = z
         r_i = r[i]
@@ -257,8 +280,8 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
         # Gather field only if particle is within field boundaries.
         if z_i >= z_min and z_i <= z_max and r_i <= r_max:
             # Position in cell units.
-            r_i_cell = (r_i - r_min)/dr + 2
-            z_i_cell = (z_i - z_min)/dz + 2
+            r_i_cell = (r_i - r_min) / dr + 2
+            z_i_cell = (z_i - z_min) / dz + 2
 
             # Indices of upper and lower cells in r and z.
             ir_lower = int(math.floor(r_i_cell))
@@ -291,16 +314,16 @@ def gather_sources_qs_baxevanis(fld_1, fld_2, fld_3, z_min, z_max, r_min,
             # Interpolate in z
             dz_u = iz_upper - z_i_cell
             dz_l = z_i_cell - iz_lower
-            fld_1_z_1 = dz_u*fld_1_ll + dz_l*fld_1_ul
-            fld_1_z_2 = dz_u*fld_1_lu + dz_l*fld_1_uu
-            fld_2_z_1 = dz_u*fld_2_ll + dz_l*fld_2_ul
-            fld_2_z_2 = dz_u*fld_2_lu + dz_l*fld_2_uu
-            fld_3_z_1 = dz_u*fld_3_ll + dz_l*fld_3_ul
-            fld_3_z_2 = dz_u*fld_3_lu + dz_l*fld_3_uu
+            fld_1_z_1 = dz_u * fld_1_ll + dz_l * fld_1_ul
+            fld_1_z_2 = dz_u * fld_1_lu + dz_l * fld_1_uu
+            fld_2_z_1 = dz_u * fld_2_ll + dz_l * fld_2_ul
+            fld_2_z_2 = dz_u * fld_2_lu + dz_l * fld_2_uu
+            fld_3_z_1 = dz_u * fld_3_ll + dz_l * fld_3_ul
+            fld_3_z_2 = dz_u * fld_3_lu + dz_l * fld_3_uu
 
             # Interpolate in r
             dr_u = ir_upper - r_i_cell
             dr_l = 1 - dr_u
-            fld_1_pp[i] = dr_u*fld_1_z_1 + dr_l*fld_1_z_2
-            fld_2_pp[i] = dr_u*fld_2_z_1 + dr_l*fld_2_z_2
-            fld_3_pp[i] = dr_u*fld_3_z_1 + dr_l*fld_3_z_2
+            fld_1_pp[i] = dr_u * fld_1_z_1 + dr_l * fld_1_z_2
+            fld_2_pp[i] = dr_u * fld_2_z_1 + dr_l * fld_2_z_2
+            fld_3_pp[i] = dr_u * fld_3_z_1 + dr_l * fld_3_z_2

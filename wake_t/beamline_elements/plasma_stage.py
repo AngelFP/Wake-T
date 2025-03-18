@@ -1,4 +1,4 @@
-""" This module contains the definition of the PlasmaStage class """
+"""This module contains the definition of the PlasmaStage class"""
 
 from inspect import signature
 from typing import Optional, Union, Callable, List, Literal
@@ -16,12 +16,12 @@ DtBunchType = Union[float, str, List[Union[float, str]]]
 
 
 wakefield_models = {
-    'simple_blowout': wf.SimpleBlowoutWakefield,
-    'custom_blowout': wf.CustomBlowoutWakefield,
-    'focusing_blowout': wf.FocusingBlowoutField,
-    'cold_fluid_1d': wf.NonLinearColdFluidWakefield,
-    'quasistatic_2d': wf.Quasistatic2DWakefield,
-    'quasistatic_2d_ion': wf.Quasistatic2DWakefieldIon,
+    "simple_blowout": wf.SimpleBlowoutWakefield,
+    "custom_blowout": wf.CustomBlowoutWakefield,
+    "focusing_blowout": wf.FocusingBlowoutField,
+    "cold_fluid_1d": wf.NonLinearColdFluidWakefield,
+    "quasistatic_2d": wf.Quasistatic2DWakefield,
+    "quasistatic_2d_ion": wf.Quasistatic2DWakefieldIon,
 }
 
 
@@ -95,15 +95,15 @@ class PlasmaStage(FieldElement):
         self,
         length: float,
         density: Union[float, Callable[[float], float]],
-        wakefield_model: Optional[str] = 'simple_blowout',
-        bunch_pusher: Optional[Literal['boris', 'rk4']] = 'boris',
-        dt_bunch: Optional[DtBunchType] = 'auto',
+        wakefield_model: Optional[str] = "simple_blowout",
+        bunch_pusher: Optional[Literal["boris", "rk4"]] = "boris",
+        dt_bunch: Optional[DtBunchType] = "auto",
         auto_dt_bunch: Optional[Callable[[ParticleBunch], float]] = None,
         push_bunches_before_diags: Optional[bool] = True,
         n_out: Optional[int] = 1,
-        name: Optional[str] = 'Plasma stage',
+        name: Optional[str] = "Plasma stage",
         external_fields: Optional[List[Field]] = [],
-        **model_params
+        **model_params,
     ) -> None:
         self.density = self._get_density_profile(density)
         self.wakefield = self._get_wakefield(wakefield_model, model_params)
@@ -128,10 +128,12 @@ class PlasmaStage(FieldElement):
         )
 
     def _get_density_profile(self, density):
-        """ Get density profile function """
+        """Get density profile function"""
         if isinstance(density, float):
+
             def uniform_density(z, r):
                 return np.ones_like(z) * np.ones_like(r) * density
+
             return uniform_density
         elif callable(density):
             sig = signature(density)
@@ -142,17 +144,18 @@ class PlasmaStage(FieldElement):
                 # For backward compatibility when only z was supported.
                 def density_2d(z, r):
                     return density(z)
+
                 return density_2d
             else:
                 raise ValueError(
-                    'The density function must take 2 arguments. '
-                    'The provided function has {} arguments.'.format(n_inputs))
+                    "The density function must take 2 arguments. "
+                    "The provided function has {} arguments.".format(n_inputs)
+                )
         else:
-            raise ValueError(
-                'Type {} not supported for density.'.format(type(density)))
+            raise ValueError("Type {} not supported for density.".format(type(density)))
 
     def _get_wakefield(self, model, model_params):
-        """ Initialize and return corresponding wakefield model. """
+        """Initialize and return corresponding wakefield model."""
         if model is None:
             return None
         elif isinstance(model, Field):
@@ -160,20 +163,19 @@ class PlasmaStage(FieldElement):
         elif model in wakefield_models:
             return wakefield_models[model](self.density, **model_params)
         else:
-            raise ValueError(
-                'Wakefield model "{}" not recognized.'.format(model))
+            raise ValueError('Wakefield model "{}" not recognized.'.format(model))
 
     def _get_optimized_dt(self, beam):
-        """ Get tracking time step. """
+        """Get tracking time step."""
         # Get minimum gamma in the bunch (assumes px,py << pz).
-        min_gamma = np.sqrt(np.min(beam.pz)**2 + 1)
+        min_gamma = np.sqrt(np.min(beam.pz) ** 2 + 1)
         # calculate maximum focusing along stage.
         z = np.linspace(0, self.length, 100)
-        n_p = self.density(z, 0.)
+        n_p = self.density(z, 0.0)
         q_over_m = beam.q_species / beam.m_species
-        w_p = np.sqrt(max(n_p)*ct.e**2/(ct.m_e*ct.epsilon_0))
-        max_kx = (ct.m_e/(2*ct.e*ct.c))*w_p**2
-        w_x = np.sqrt(np.abs(q_over_m*ct.c * max_kx/min_gamma))
-        period_x = 1/w_x
-        dt = 0.1*period_x
+        w_p = np.sqrt(max(n_p) * ct.e**2 / (ct.m_e * ct.epsilon_0))
+        max_kx = (ct.m_e / (2 * ct.e * ct.c)) * w_p**2
+        w_x = np.sqrt(np.abs(q_over_m * ct.c * max_kx / min_gamma))
+        period_x = 1 / w_x
+        dt = 0.1 * period_x
         return dt

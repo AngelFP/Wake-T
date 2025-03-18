@@ -13,7 +13,8 @@
 import os
 import sys
 from datetime import date
-sys.path.insert(0, os.path.abspath('../..'))
+
+sys.path.insert(0, os.path.abspath("../.."))
 
 
 # -- Import Wake-T version ---------------------------------------------------
@@ -21,9 +22,9 @@ from wake_t import __version__  # noqa: E402
 
 
 # -- Project information -----------------------------------------------------
-project = 'Wake-T'
-project_copyright = '2019-%s, Ángel Ferran Pousa' % date.today().year
-author = 'Ángel Ferran Pousa'
+project = "Wake-T"
+project_copyright = "2019-%s, Ángel Ferran Pousa" % date.today().year
+author = "Ángel Ferran Pousa"
 
 # The full version, including alpha/beta/rc tags
 release = __version__
@@ -35,17 +36,17 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.coverage',
-    'sphinx.ext.viewcode',
-    'sphinx_design',
-    'sphinx_gallery.gen_gallery',
-    'numpydoc'
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.coverage",
+    "sphinx.ext.viewcode",
+    "sphinx_design",
+    "sphinx_gallery.gen_gallery",
+    "numpydoc",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -58,12 +59,12 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'pydata_sphinx_theme'  # "sphinx_rtd_theme"
+html_theme = "pydata_sphinx_theme"  # "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # Logo
 html_logo = "_static/logo.png"
@@ -83,7 +84,7 @@ html_theme_options = {
             "icon": "fa-brands fa-slack",
         },
     ],
-    "use_edit_page_button": True,    
+    "use_edit_page_button": True,
     "pygment_light_style": "default",
     "pygment_dark_style": "monokai",
 }
@@ -96,7 +97,7 @@ html_context = {
 }
 
 # Do not show type hints.
-autodoc_typehints = 'none'
+autodoc_typehints = "none"
 
 # Do  not use numpydoc to generate autosummary.
 numpydoc_show_class_members = False
@@ -114,10 +115,10 @@ autosummary_context = {
 from sphinx_gallery.sorting import FileNameSortKey  # noqa: E402
 
 sphinx_gallery_conf = {
-     'examples_dirs': '../../tutorials',
-     'gallery_dirs': 'tutorials',
-     'filename_pattern': '.',
-     'within_subsection_order': FileNameSortKey,
+    "examples_dirs": "../../tutorials",
+    "gallery_dirs": "tutorials",
+    "filename_pattern": ".",
+    "within_subsection_order": FileNameSortKey,
 }
 
 # intersphinx_mapping = {

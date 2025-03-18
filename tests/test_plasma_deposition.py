@@ -19,7 +19,7 @@ def test_uniform_plasma_deposition():
     dz = (z_max - z_min) / (n_z - 1)
     r_fld = np.linspace(dr / 2, r_max - dr / 2, n_r)
     z_fld = np.linspace(z_min, z_max, n_z)
-    parabolic_coefficient = 0.
+    parabolic_coefficient = 0.0
     ppc = 5
     r_max_plasma = r_max
 
@@ -33,32 +33,43 @@ def test_uniform_plasma_deposition():
     q = dr_p * r + dr_p * parabolic_coefficient * r**3
 
     # Possible particle shapes.
-    p_shapes = ['linear', 'cubic']
+    p_shapes = ["linear", "cubic"]
 
     # Test all shapes.
     for p_shape in p_shapes:
-
         # Allocate density array.
-        rho_fld = np.zeros((n_z+4, n_r+4))
+        rho_fld = np.zeros((n_z + 4, n_r + 4))
 
         # Deposit plasma column along the whole grid.
         for step in np.arange(n_z):
             i = -1 - step
             z_i = z_fld[i]
-            w_rho = q / (dr * r * (1 - pz/gamma))
+            w_rho = q / (dr * r * (1 - pz / gamma))
             z = np.full_like(r, z_i)
             x = r
             y = np.zeros_like(r)
-            deposit_3d_distribution(z, x, y, w_rho, z_min, r_fld[0], n_z, n_r,
-                                    dz, dr, rho_fld, p_shape=p_shape)
+            deposit_3d_distribution(
+                z,
+                x,
+                y,
+                w_rho,
+                z_min,
+                r_fld[0],
+                n_z,
+                n_r,
+                dz,
+                dr,
+                rho_fld,
+                p_shape=p_shape,
+            )
 
         # Check array is uniform. Ignore last cells along r, as the edge of
         # plasma in the deposition array looks more smooth due to the
         # particle shape.
         if p_shape == "linear":
-            assert np.sum(np.abs(rho_fld[2:-2, 2:-3] - 1.)) < 1e-12
+            assert np.sum(np.abs(rho_fld[2:-2, 2:-3] - 1.0)) < 1e-12
         elif p_shape == "cubic":
-            assert np.sum(np.abs(rho_fld[2:-2, 2:-4] - 1.)) < 1e-12
+            assert np.sum(np.abs(rho_fld[2:-2, 2:-4] - 1.0)) < 1e-12
 
 
 if __name__ == "__main__":

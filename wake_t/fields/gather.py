@@ -1,4 +1,4 @@
-""" Methods for gathering fields """
+"""Methods for gathering fields"""
 
 from typing import List
 
@@ -20,7 +20,7 @@ def gather_fields(
     bx: np.ndarray,
     by: np.ndarray,
     bz: np.ndarray,
-    bunch_name: str
+    bunch_name: str,
 ) -> None:
     """Gather all fields at the specified locations and time.
 
@@ -63,9 +63,9 @@ def gather_fields(
 def reset_particle_fields(ex, ey, ez, bx, by, bz):
     """Set bunch field arrays to zero."""
     for i in prange(ex.size):
-        ex[i] = 0.
-        ey[i] = 0.
-        ez[i] = 0.
-        bx[i] = 0.
-        by[i] = 0.
-        bz[i] = 0.
+        ex[i] = 0.0
+        ey[i] = 0.0
+        ez[i] = 0.0
+        bx[i] = 0.0
+        by[i] = 0.0
+        bz[i] = 0.0

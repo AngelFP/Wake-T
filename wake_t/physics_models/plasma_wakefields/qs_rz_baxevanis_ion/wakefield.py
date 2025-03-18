@@ -359,9 +359,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
             for r_lim, r_max in zip(r_lim_grids, r_max_grids):
                 if r_lim is not None and r_max is not None:
                     if r_max > r_lim:
-                        raise ValueError(
-                            "`r_max` cannot be larger than `r_lim`"
-                        )
+                        raise ValueError("`r_max` cannot be larger than `r_lim`")
             # Create adaptive grids for each bunch.
             bunches_with_grid: List[ParticleBunch] = []
             bunches_without_grid: List[ParticleBunch] = []
@@ -391,8 +389,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                 bunch_source_arrays.append(grid.b_t_bunch)
                 bunch_source_xi_indices.append(grid.i_grid)
                 bunch_source_metadata.append(
-                    np.array([grid.r_min_cell, grid.r_max_cell_guard, grid.dr])
-                    / s_d
+                    np.array([grid.r_min_cell, grid.r_max_cell_guard, grid.dr]) / s_d
                 )
                 if not all_deposited:
                     self._reset_bunch_arrays()
@@ -435,9 +432,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
                     self.p_shape,
                     self.q_bunch,
                 )
-            calculate_bunch_source(
-                self.q_bunch, self.n_r, self.n_xi, self.b_t_bunch
-            )
+            calculate_bunch_source(self.q_bunch, self.n_r, self.n_xi, self.b_t_bunch)
             bunch_source_arrays.append(self.b_t_bunch)
             bunch_source_xi_indices.append(np.arange(self.n_xi))
             bunch_source_metadata.append(
@@ -568,9 +563,7 @@ class Quasistatic2DWakefieldIon(RZWakefield):
         # Add fields from adaptive grids to openpmd diagnostics.
         if self.use_adaptive_grids:
             for _, grid in self.bunch_grids.items():
-                grid_data = grid.get_openpmd_data(
-                    global_time, self.adaptive_grid_diags
-                )
+                grid_data = grid.get_openpmd_data(global_time, self.adaptive_grid_diags)
                 diag_data["fields"] += grid_data["fields"]
                 for field in grid_data["fields"]:
                     diag_data[field] = grid_data[field]

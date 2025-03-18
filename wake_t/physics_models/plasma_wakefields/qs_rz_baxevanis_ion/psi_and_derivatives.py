@@ -109,9 +109,7 @@ def calculate_psi_and_derivatives_at_particles(
     # Calculate cumulative sum 3 (Eq. (32)).
     calculate_cumulative_sum_3(q_e, r_e, pr_e, w_e, w_center_e, psi_e, sum_3_e)
     if ion_motion or not calculate_ion_sums:
-        calculate_cumulative_sum_3(
-            q_i, r_i, pr_i, w_i, w_center_i, psi_i, sum_3_i
-        )
+        calculate_cumulative_sum_3(q_i, r_i, pr_i, w_i, w_center_i, psi_i, sum_3_i)
 
     # Calculate the dxi_psi background at the neighboring points.
     # For the electrons, compute the psi and dr_psi due to the ions at
@@ -119,13 +117,9 @@ def calculate_psi_and_derivatives_at_particles(
     # electrons at r_neighbor_i.
     calculate_dxi_psi_at_particle_centers(r_e, sum_3_e, dxi_psi_e)
     if ion_motion:
-        calculate_dxi_psi_with_interpolation(
-            r_e, r_i, sum_3_i, dxi_psi_e, add=True
-        )
+        calculate_dxi_psi_with_interpolation(r_e, r_i, sum_3_i, dxi_psi_e, add=True)
         calculate_dxi_psi_at_particle_centers(r_i, sum_3_i, dxi_psi_i)
-        calculate_dxi_psi_with_interpolation(
-            r_i, r_e, sum_3_e, dxi_psi_i, add=True
-        )
+        calculate_dxi_psi_with_interpolation(r_i, r_e, sum_3_e, dxi_psi_i, add=True)
 
     # Check that the values of dxi_psi are within a reasonable range (prevents
     # issues at the peak of a blowout wake, for example).
@@ -335,9 +329,7 @@ def calculate_psi_and_dr_psi_at_particle_centers(
 
 
 @njit_serial()
-def calculate_dxi_psi_with_interpolation(
-    r_eval, r, sum_3_arr, dxi_psi, add=False
-):
+def calculate_dxi_psi_with_interpolation(r_eval, r, sum_3_arr, dxi_psi, add=False):
     """Calculate dxi_psi at the radial position given in `r_eval`."""
     # Get number of plasma particles.
     n_part = r.shape[0]

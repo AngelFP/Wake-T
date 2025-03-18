@@ -9,9 +9,7 @@ from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial()
-def deposit_plasma_particles(
-    r, w, r_min, nr, dr, deposition_array, p_shape="cubic"
-):
+def deposit_plasma_particles(r, w, r_min, nr, dr, deposition_array, p_shape="cubic"):
     """
     Deposit the the weight of a 1D slice of plasma particles into a 2D
     r-z grid.
@@ -39,13 +37,9 @@ def deposit_plasma_particles(
 
     """
     if p_shape == "linear":
-        return deposit_plasma_particles_linear(
-            r, w, r_min, nr, dr, deposition_array
-        )
+        return deposit_plasma_particles_linear(r, w, r_min, nr, dr, deposition_array)
     elif p_shape == "cubic":
-        return deposit_plasma_particles_cubic(
-            r, w, r_min, nr, dr, deposition_array
-        )
+        return deposit_plasma_particles_cubic(r, w, r_min, nr, dr, deposition_array)
 
 
 @njit_serial(fastmath=True, error_model="numpy")

@@ -7,7 +7,10 @@ from .qs_rz_baxevanis_ion import Quasistatic2DWakefieldIon
 
 
 __all__ = [
-    'SimpleBlowoutWakefield', 'CustomBlowoutWakefield',
-    'NonLinearColdFluidWakefield', 'Quasistatic2DWakefield',
-    'FocusingBlowoutField', 'Quasistatic2DWakefieldIon'
-    ]
+    "SimpleBlowoutWakefield",
+    "CustomBlowoutWakefield",
+    "NonLinearColdFluidWakefield",
+    "Quasistatic2DWakefield",
+    "FocusingBlowoutField",
+    "Quasistatic2DWakefieldIon",
+]

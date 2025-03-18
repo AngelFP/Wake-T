@@ -1,10 +1,10 @@
-""" Contains the base class for all EM fields. """
+"""Contains the base class for all EM fields."""
 
 from typing import Union, Dict
 import numpy as np
 
 
-class Field():
+class Field:
     """
     Base class for all EM fields.
 
@@ -28,7 +28,7 @@ class Field():
         bx: np.ndarray,
         by: np.ndarray,
         bz: np.ndarray,
-        bunch_name: str
+        bunch_name: str,
     ) -> None:
         """Gather all field components at the specified locations.
 
@@ -59,10 +59,7 @@ class Field():
         """
         self._gather(x, y, z, t, ex, ey, ez, bx, by, bz, bunch_name)
 
-    def get_openpmd_diagnostics_data(
-        self,
-        global_time: float
-    ) -> Union[Dict, None]:
+    def get_openpmd_diagnostics_data(self, global_time: float) -> Union[Dict, None]:
         """Get the data for including the field in the openPMD diagnostics.
 
         Parameters

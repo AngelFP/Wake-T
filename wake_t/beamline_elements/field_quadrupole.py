@@ -44,10 +44,10 @@ class FieldQuadrupole(FieldElement):
         self,
         length: float,
         foc_strength: float,
-        dt_bunch: Optional[DtBunchType] = 'auto',
-        bunch_pusher: Literal['boris', 'rk4'] = 'boris',
+        dt_bunch: Optional[DtBunchType] = "auto",
+        bunch_pusher: Literal["boris", "rk4"] = "boris",
         n_out: Optional[int] = 1,
-        name: Optional[str] = 'quadrupole',
+        name: Optional[str] = "quadrupole",
     ) -> None:
         self.foc_strength = foc_strength
         super().__init__(
@@ -61,11 +61,11 @@ class FieldQuadrupole(FieldElement):
         )
 
     def _get_optimized_dt(self, beam):
-        """ Get tracking time step. """
+        """Get tracking time step."""
         # Get minimum gamma in the bunch (assumes px,py << pz).
         q_over_m = beam.q_species / beam.m_species
-        min_gamma = np.sqrt(np.min(beam.pz)**2 + 1)
-        w_x = np.sqrt(np.abs(q_over_m*ct.c * self.foc_strength/min_gamma))
-        T_x = 1/w_x
-        dt = 0.1*T_x
+        min_gamma = np.sqrt(np.min(beam.pz) ** 2 + 1)
+        w_x = np.sqrt(np.abs(q_over_m * ct.c * self.foc_strength / min_gamma))
+        T_x = 1 / w_x
+        dt = 0.1 * T_x
         return dt

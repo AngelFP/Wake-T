@@ -16,8 +16,8 @@ from .utils import unwrap
 
 @njit_serial(fastmath=True)
 def evolve_envelope_non_centered(
-        a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt,
-        use_phase=True):
+    a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase=True
+):
     """
     Solve the 2D envelope equation using a non-centered time discretization.
     (\nabla_tr^2+2i*k0/kp*d/dt+2*d^2/(dzdt)-d^2/dt^2)â = chi*â
@@ -69,20 +69,18 @@ def evolve_envelope_non_centered(
     k0_over_kp = k0 / kp
 
     # Initialize phase difference
-    d_theta1 = 0.
-    d_theta2 = 0.
+    d_theta1 = 0.0
+    d_theta2 = 0.0
 
     # Calculate C^+ and C^- [Eq. (8)].
-    C_minus = (-2. * inv_dr ** 2. * 0.5 - 2j * k0_over_kp * inv_dt
-               + 3 * inv_dzdt)
-    C_plus = (-2. * inv_dr ** 2. * 0.5 + 2j * k0_over_kp * inv_dt
-              - 3 * inv_dzdt)
+    C_minus = -2.0 * inv_dr**2.0 * 0.5 - 2j * k0_over_kp * inv_dt + 3 * inv_dzdt
+    C_plus = -2.0 * inv_dr**2.0 * 0.5 + 2j * k0_over_kp * inv_dt - 3 * inv_dzdt
 
     # Calculate L^+ and L^-. Change wrt Benedetti - 2018: in Wake-T we use
     # cell-centered nodes in the radial direction.
-    L_base = 1. / (2. * (np.arange(nr) + 0.5))
-    L_minus_over_2 = (1. - L_base) * inv_dr ** 2. * 0.5
-    L_plus_over_2 = (1. + L_base) * inv_dr ** 2. * 0.5
+    L_base = 1.0 / (2.0 * (np.arange(nr) + 0.5))
+    L_minus_over_2 = (1.0 - L_base) * inv_dr**2.0 * 0.5
+    L_plus_over_2 = (1.0 + L_base) * inv_dr**2.0 * 0.5
 
     # Loop over time iterations.
     for n in range(nt):
@@ -96,7 +94,6 @@ def evolve_envelope_non_centered(
 
         # Loop over z.
         for j in range(nz - 1, -1, -1):
-
             # Calculate phase differences between adjacent points.
             if use_phase:
                 d_theta1 = phases[j + 1] - phases[j]
@@ -108,12 +105,19 @@ def evolve_envelope_non_centered(
             # Calculate right-hand side of Eq (7).
             for k in range(nr):
                 rhs_k = (
-                    - (C_minus - chi[j, k] * 0.5 - 2j * inv_dt * D_jkn)
-                    * a[j, k]
-                    - (4 * np.exp(-1j * d_theta1) * inv_dzdt
-                       * (a_new_jp1[k] - a[j + 1, k]))
-                    + (1 * np.exp(-1j * (d_theta2 + d_theta1)) * inv_dzdt
-                       * (a_new_jp2[k] - a[j + 2, k]))
+                    -(C_minus - chi[j, k] * 0.5 - 2j * inv_dt * D_jkn) * a[j, k]
+                    - (
+                        4
+                        * np.exp(-1j * d_theta1)
+                        * inv_dzdt
+                        * (a_new_jp1[k] - a[j + 1, k])
+                    )
+                    + (
+                        1
+                        * np.exp(-1j * (d_theta2 + d_theta1))
+                        * inv_dzdt
+                        * (a_new_jp2[k] - a[j + 2, k])
+                    )
                 )
                 if k > 0:
                     rhs_k -= L_minus_over_2[k] * a[j, k - 1]
@@ -123,7 +127,7 @@ def evolve_envelope_non_centered(
 
             # Calculate diagonals.
             d_main = C_plus - chi[j] * 0.5 + 2j * inv_dt * D_jkn
-            d_upper = L_plus_over_2[:nr - 1]
+            d_upper = L_plus_over_2[: nr - 1]
             d_lower = L_minus_over_2[1:nr]
 
             # Update a_old and a at j+2 with the current values of a a_new.

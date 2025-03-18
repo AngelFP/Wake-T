@@ -28,14 +28,13 @@ This tutorial illustrates some of the basic capabilities of Wake-T:
 # :math:`10^4` particles with a charge of 30 pC and an average longitudinal
 # momentum of 100 MeV/c.
 
-
 import numpy as np
 import scipy.constants as ct
 from wake_t import ParticleBunch
 
 # Create particle arrays for an electron bunch with 30pC of charge.
 n_part = int(1e4)
-q = - np.ones(n_part) * 30e-12 / n_part  # C
+q = -np.ones(n_part) * 30e-12 / n_part  # C
 w = q / (-ct.e)
 x = np.random.rand(n_part) * 1e-6  # m
 y = np.random.rand(n_part) * 1e-6  # m
@@ -45,7 +44,7 @@ py = np.random.rand(n_part)  # m_e c
 pz = np.random.rand(n_part) + 100 / 0.511  # m_e c
 
 # Create particle bunch.
-bunch = ParticleBunch(w, x, y, z, px, py, pz, name='random_bunch')
+bunch = ParticleBunch(w, x, y, z, px, py, pz, name="random_bunch")
 
 # Show phase space.
 bunch.show()
@@ -68,17 +67,27 @@ from wake_t.utilities.bunch_generation import get_gaussian_bunch_from_size
 # Beam parameters.
 emitt_nx = emitt_ny = 1e-6  # m
 s_x = s_y = 3e-6  # m
-s_t = 3.  # fs
+s_t = 3.0  # fs
 gamma_avg = 100 / 0.511
-gamma_spread = 1.  # %
+gamma_spread = 1.0  # %
 q_bunch = 30  # pC
-xi_avg = 0.  # m
+xi_avg = 0.0  # m
 n_part = 1e4
 
 # Create particle bunch.
 bunch = get_gaussian_bunch_from_size(
-    emitt_nx, emitt_ny, s_x, s_y, gamma_avg, gamma_spread, s_t, xi_avg,
-    q_bunch, n_part, name='elec_bunch')
+    emitt_nx,
+    emitt_ny,
+    s_x,
+    s_y,
+    gamma_avg,
+    gamma_spread,
+    s_t,
+    xi_avg,
+    q_bunch,
+    n_part,
+    name="elec_bunch",
+)
 
 # Store bunch copy (will be needed later).
 bunch_bkp = bunch.copy()
@@ -99,10 +108,10 @@ bunch.show()
 import matplotlib.pyplot as plt
 
 plot = plt.hist2d(bunch.x, bunch.px, weights=bunch.q, bins=100)
-plt.xlabel('x [m]')
-plt.ylabel('px [m_e c]')
+plt.xlabel("x [m]")
+plt.ylabel("px [m_e c]")
 cbar = plt.colorbar()
-cbar.set_label('Q [C]')
+cbar.set_label("Q [C]")
 
 # %%
 # Tracking the beam though a drift
@@ -171,14 +180,14 @@ from wake_t.diagnostics import analyze_bunch_list
 
 bunch_params = analyze_bunch_list(bunch_list_out)
 
-z = bunch_params['prop_dist']*1e2  # cm
-b_x = bunch_params['beta_x']  # m
-e_nx = bunch_params['emitt_x'] * 1e6  # µm
+z = bunch_params["prop_dist"] * 1e2  # cm
+b_x = bunch_params["beta_x"]  # m
+e_nx = bunch_params["emitt_x"] * 1e6  # µm
 fig, axes = plt.subplots(2, 1, sharex=True)
 axes[0].plot(z, b_x)
 axes[1].plot(z, e_nx)
-axes[0].set(ylabel='$\\beta_{x}$ [m]')
-axes[1].set(xlabel='z [m]', ylabel='$\\epsilon_{n,x}$ [µm]')
+axes[0].set(ylabel="$\\beta_{x}$ [m]")
+axes[1].set(xlabel="z [m]", ylabel="$\\epsilon_{n,x}$ [µm]")
 plt.show()
 
 # %%
@@ -200,8 +209,7 @@ bunch = bunch_bkp.copy()
 drift = Drift(length=1e-2, n_out=5)
 
 # Perform tracking and store outputs in a list.
-bunch_list_out = drift.track(
-    bunch, opmd_diag=True, diag_dir='tutorial_00_diags')
+bunch_list_out = drift.track(bunch, opmd_diag=True, diag_dir="tutorial_00_diags")
 
 # %%
 # By default, if ``diag_dir`` is not specified, the output files are stored
@@ -210,5 +218,5 @@ bunch_list_out = drift.track(
 import os
 
 # List output files.
-for file in os.listdir('tutorial_00_diags/hdf5/'):
+for file in os.listdir("tutorial_00_diags/hdf5/"):
     print(file)

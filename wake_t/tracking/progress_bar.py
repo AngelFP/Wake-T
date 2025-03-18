@@ -7,7 +7,10 @@ from tqdm import tqdm
 
 
 # Avoid showing clamping warnings from the progress bar.
-warnings.filterwarnings('ignore', '.*clamping.*', )
+warnings.filterwarnings(
+    "ignore",
+    ".*clamping.*",
+)
 
 
 def get_progress_bar(description, total_length, disable):
@@ -31,9 +34,9 @@ def get_progress_bar(description, total_length, disable):
     progress_bar = tqdm(
         desc=description,
         total=total_length,
-        unit='m',
+        unit="m",
         bar_format=l_bar + "{bar}" + r_bar,
         file=sys.stdout,
-        disable=disable
+        disable=disable,
     )
     return progress_bar

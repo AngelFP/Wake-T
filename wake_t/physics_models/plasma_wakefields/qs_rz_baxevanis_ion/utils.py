@@ -159,9 +159,7 @@ def check_gamma(gamma, pz, pr, max_gamma):
 
 
 @njit_serial()
-def sort_particle_arrays(
-    a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices
-):
+def sort_particle_arrays(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
     """Sort all the particle arrays with a given sorting order.
 
     Implementing it like this looks very ugly, but it is much faster than
