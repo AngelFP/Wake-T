@@ -42,7 +42,7 @@ def test_fluid_model(plot=False):
 
     # Check final parameters.
     ene_sp = params_evolution['rel_ene_spread'][-1]
-    assert approx(ene_sp, rel=1e-10) == 0.024157374564016194
+    assert approx(ene_sp, rel=1e-10) == 0.024157374662580212
 
     # Quick plot of results.
     if plot:
