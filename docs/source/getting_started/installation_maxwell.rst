@@ -19,7 +19,7 @@ installation provided by IT:
 .. code::
 
     module load anaconda
-    conda create -n wake_t_env python=3.8
+    conda create -n wake_t_env python=3.11
     source activate wake_t_env
 
 Installing your own Miniconda
@@ -49,7 +49,7 @@ Now you can create and activate the environment
 
 .. code::
 
-    conda create -n wake_t_env python=3.8
+    conda create -n wake_t_env python=3.11
     conda activate wake_t_env
     
 .. note::
