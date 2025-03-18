@@ -34,7 +34,6 @@ content-type = "text/markdown; charset=UTF-8"
 [project.optional-dependencies]
 test = [
     "pytest",
-    "flake8",
     "matplotlib",
     "openpmd-viewer",
 ]
