@@ -34,8 +34,15 @@ content-type = "text/markdown; charset=UTF-8"
 [project.optional-dependencies]
 test = [
     "pytest",
+    "pytest-cov",
     "matplotlib",
     "openpmd-viewer",
+]
+
+[tool.pytest.ini_options]
+addopts = "--cov=wake_t --cov-report xml"
+testpaths = [
+    "tests",
 ]
 
 [tool.setuptools]
