@@ -25,7 +25,7 @@ jobs:
         pip install -e ".[test]"
     - name: Run unit tests
       run: |
-        python -m pytest
+        python -m pytest --cov=wake_t --cov-report xml
     - name: Archive code coverage results
       uses: actions/upload-artifact@v4
       with:

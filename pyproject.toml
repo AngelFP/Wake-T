@@ -40,7 +40,6 @@ test = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov=wake_t --cov-report xml"
 testpaths = [
     "tests",
 ]
