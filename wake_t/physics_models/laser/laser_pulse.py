@@ -615,6 +615,12 @@ class OpenPMDPulse(LaserPulse):
         Only used if the openPMD input is in thetaMode geometry.
         The angle of the plane of observation, with respect to the x axis.
         By default `0`.
+    t_start : float, optional
+        The initialization of this class aligns the right (spatial) edge 
+        of the Wake-T grid with the left (temporal) edge of the Lasy grid, 
+        regardless of the actual time values in the lasy file. The `t_start` 
+        parameter introduces a time delay to the initialized laser, allowing 
+        for precise adjustment of the pulse position in the Wake-T grid.
     smooth_edges : bool, optional
         Whether to smooth the edges of the laser profile along `r` using a
         super-Gaussian function of power 8. This is useful when the laser
@@ -653,6 +659,7 @@ class OpenPMDPulse(LaserPulse):
         coord: Optional[str] = "x",
         prefix: Optional[str] = None,
         theta: Optional[float] = 0.0,
+        t_start: Optional[float] = 0.0,
         smooth_edges: Optional[bool] = False,
         apply_gaussian_filter: Optional[bool] = False,
         gaussian_filter_sigma: Optional[Union[int, float, Iterable]] = (5, 0),
@@ -671,19 +678,24 @@ class OpenPMDPulse(LaserPulse):
             theta=theta,
         )
         super().__init__(self.lasy_profile.lambda0, "linear")
+        self._t_start = t_start
         self._smooth_edges = smooth_edges
         self._apply_gaussian_filter = apply_gaussian_filter
         self._gaussian_filter_sigma = gaussian_filter_sigma
 
     def _envelope_function(self, xi, r, z_pos):
-        # Create laser
-        t = -xi / ct.c
+        # Change from Wake-T to Lasy coordinates:
+        # The right edge of the Wake-T grid corresponds 
+        # to the left edge of the Lasy grid.
+        xi_max = self.solver_params['zmax']
+        t_min_0 = self.lasy_profile.axes['t'][0]
+        t = (xi_max - xi) / ct.c + t_min_0 - self._t_start
         t_min = np.min(t)
         t_max = np.max(t)
-        t_max -= t_min
-        t_min = 0
         r_min = np.min(r)
         r_max = np.max(r)
+
+        # Create Lasy laser
         laser = Laser(
             dim="rt",
             lo=(r_min, t_min),
@@ -692,6 +704,8 @@ class OpenPMDPulse(LaserPulse):
             profile=self.lasy_profile,
             n_azimuthal_modes=1,
         )
+
+        # Get vector potential from the electric field envelope.
         a_env = field_to_vector_potential(laser.grid, laser.profile.omega0)
 
         # Get 2D slice and change to Wake-T ordering.
