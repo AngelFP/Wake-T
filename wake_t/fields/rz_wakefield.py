@@ -279,7 +279,8 @@ class RZWakefield(NumericalField):
                 a = self.laser.get_envelope().T
                 fld_names += ["a"]
                 fld_comps += [None]
-                fld_attrs += [{"angularFrequency": 2 * np.pi * ct.c / self.laser.l_0}]
+                fld_attrs += [{"angularFrequency": 2 * np.pi * ct.c / self.laser.l_0,
+                               "envelopeField": "normalized_vector_potential"}]
                 fld_arrays += [[np.ascontiguousarray(a)]]
 
         fld_comp_pos = [fld_position] * len(fld_names)
