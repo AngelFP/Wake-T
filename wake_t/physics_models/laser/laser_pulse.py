@@ -599,14 +599,11 @@ class OpenPMDPulse(LaserPulse):
 
     Parameters
     ----------
-    filename : str
+    file_name : string
         Path to the openPMD file containing the laser data.
-    is_envelope : bool
-        Whether the openPMD file represents a laser envelope.
-        Otherwise, electric field is assumed, and its envelope is extracted.
-    field_name : string (optional)
-        Required if is_envelope is True.
+    envelope_name : string (optional)
         The name of the envelope field (this is not prescribed by the openPMD standard for the envelope).
+        If specified, an envelope field is expected from the openPMD file. Otherwise, a full electric field is assumed.
     t_start : float, optional
         The initialization of this class aligns the right (spatial) edge
         of the Wake-T grid with the left (temporal) edge of the Lasy grid,
@@ -645,9 +642,8 @@ class OpenPMDPulse(LaserPulse):
 
     def __init__(
         self,
-        filename: str,
-        is_envelope: Optional[bool] = False,
-        field_name: Optional[str] = None,
+        file_name: str,
+        envelope_name: Optional[str] = None,
         t_start: Optional[float] = 0.0,
         smooth_edges: Optional[bool] = False,
         apply_gaussian_filter: Optional[bool] = False,
@@ -658,9 +654,8 @@ class OpenPMDPulse(LaserPulse):
             "You can do so with `pip install lasy`."
         )
         self.lasy_profile = FromOpenPMDProfile(
-            filename=filename,
-            is_envelope=is_envelope,
-            field_name=field_name,
+            file_name=file_name,
+            envelope_name=envelope_name,
         )
         super().__init__(self.lasy_profile.lambda0, "linear")
         self._t_start = t_start
