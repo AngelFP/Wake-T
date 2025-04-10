@@ -599,22 +599,14 @@ class OpenPMDPulse(LaserPulse):
 
     Parameters
     ----------
-    path : str
-        Path to the openPMD file or folder containing the laser data.
-    iteration : int
-        Iteration at which to read the laser pulse.
-    field : str, optional
-        Name of the field containing the laser pulse. By default `'E'`.
-    coord : string, optional
-        Coordinate of the field containing the laser pulse.. By default `'x'`.
-    prefix : string, optional
-        Prefix of the openPMD file from which the envelope is read.
-        Only used when envelope=True.
-        The provided iteration is read from <path>/<prefix>_%T.h5.
-    theta : float or None, optional
-        Only used if the openPMD input is in thetaMode geometry.
-        The angle of the plane of observation, with respect to the x axis.
-        By default `0`.
+    filename : str
+        Path to the openPMD file containing the laser data.
+    is_envelope : bool
+        Whether the openPMD file represents a laser envelope.
+        Otherwise, electric field is assumed, and its envelope is extracted.
+    field_name : string (optional)
+        Required if is_envelope is True.
+        The name of the envelope field (this is not prescribed by the openPMD standard for the envelope).
     t_start : float, optional
         The initialization of this class aligns the right (spatial) edge
         of the Wake-T grid with the left (temporal) edge of the Lasy grid,
@@ -653,12 +645,9 @@ class OpenPMDPulse(LaserPulse):
 
     def __init__(
         self,
-        path: str,
-        iteration: int,
-        field: Optional[str] = "E",
-        coord: Optional[str] = "x",
-        prefix: Optional[str] = None,
-        theta: Optional[float] = 0.0,
+        filename: str,
+        is_envelope: Optional[bool] = False,
+        field_name: Optional[str] = None,
         t_start: Optional[float] = 0.0,
         smooth_edges: Optional[bool] = False,
         apply_gaussian_filter: Optional[bool] = False,
@@ -669,13 +658,9 @@ class OpenPMDPulse(LaserPulse):
             "You can do so with `pip install lasy`."
         )
         self.lasy_profile = FromOpenPMDProfile(
-            path=path,
-            iteration=iteration,
-            pol=(1, 0),  # dummy value, currently not needed
-            field=field,
-            coord=coord,
-            prefix=prefix,
-            theta=theta,
+            filename=filename,
+            is_envelope=is_envelope,
+            field_name=field_name,
         )
         super().__init__(self.lasy_profile.lambda0, "linear")
         self._t_start = t_start
