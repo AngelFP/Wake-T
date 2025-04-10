@@ -283,7 +283,7 @@ class RZWakefield(NumericalField):
                     {
                         "envelopeField": "normalized_vector_potential",
                         "angularFrequency": 2 * np.pi * ct.c / self.laser.l_0,
-                        "polarization": self.laser.polarization,
+                        "polarization": (1, 0),
                     }
                 ]
                 fld_arrays += [[np.ascontiguousarray(a)]]
