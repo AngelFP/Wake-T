@@ -279,7 +279,11 @@ class RZWakefield(NumericalField):
                 a = self.laser.get_envelope().T
                 fld_names += ["a"]
                 fld_comps += [None]
-                pol = (1, 0) if self.laser.polarization == "linear" else (np.sqrt(1/2), np.sqrt(1/2) * 1j)
+                pol = (
+                    (1, 0)
+                    if self.laser.polarization == "linear"
+                    else (np.sqrt(1 / 2), np.sqrt(1 / 2) * 1j)
+                )
                 fld_attrs += [
                     {
                         "envelopeField": "normalized_vector_potential",
