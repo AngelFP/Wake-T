@@ -657,7 +657,18 @@ class OpenPMDPulse(LaserPulse):
             file_name=file_name,
             envelope_name=envelope_name,
         )
-        super().__init__(self.lasy_profile.lambda0, "linear")
+        pol = self.lasy_profile.pol
+        assert np.isclose(np.abs(pol[0]) ** 2 + np.abs(pol[1]) ** 2, 1)
+        phase_diff = np.abs(np.angle(pol[0]) - np.angle(pol[1]))
+        if np.isclose(phase_diff, 0) or np.isclose(phase_diff, np.pi):
+            polarization = "linear"
+        elif np.isclose(phase_diff, np.pi / 2):
+            polarization = "circular"
+        else:
+            raise ValueError(
+                "Polarization of the laser pulse is neither linear nor circular."
+            )
+        super().__init__(self.lasy_profile.lambda0, polarization)
         self._t_start = t_start
         self._smooth_edges = smooth_edges
         self._apply_gaussian_filter = apply_gaussian_filter
