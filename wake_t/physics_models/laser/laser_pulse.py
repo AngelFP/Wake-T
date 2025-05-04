@@ -600,10 +600,14 @@ class OpenPMDPulse(LaserPulse):
     Parameters
     ----------
     file_name : string
-        Path to the openPMD file containing the laser data.
+        Name of openPMD file, including path, to read the laser field or envelope from.
+        Either specify the exact file name (e.g. ``file_name="/path/data_00001.h5"``)
+        or a file pattern + iteration (e.g. ``file_name="/path/data%T.h5", iteration=1``).
     envelope_name : string (optional)
         The name of the envelope field (this is not prescribed by the openPMD standard for the envelope).
         If specified, an envelope field is expected from the openPMD file. Otherwise, a full electric field is assumed.
+    iteration : int (optional)
+        The iteration to read from the openPMD file. If not specified, the last iteration is read.
     t_start : float, optional
         The initialization of this class aligns the right (spatial) edge
         of the Wake-T grid with the left (temporal) edge of the Lasy grid,
@@ -644,6 +648,7 @@ class OpenPMDPulse(LaserPulse):
         self,
         file_name: str,
         envelope_name: Optional[str] = None,
+        iteration: Optional[int] = None,
         t_start: Optional[float] = 0.0,
         smooth_edges: Optional[bool] = False,
         apply_gaussian_filter: Optional[bool] = False,
@@ -656,18 +661,15 @@ class OpenPMDPulse(LaserPulse):
         self.lasy_profile = FromOpenPMDProfile(
             file_name=file_name,
             envelope_name=envelope_name,
+            iteration=iteration,
         )
         pol = self.lasy_profile.pol
         assert np.isclose(np.abs(pol[0]) ** 2 + np.abs(pol[1]) ** 2, 1)
         phase_diff = np.abs(np.angle(pol[0]) - np.angle(pol[1]))
-        if np.isclose(phase_diff, 0) or np.isclose(phase_diff, np.pi):
-            polarization = "linear"
-        elif np.isclose(phase_diff, np.pi / 2):
+        if np.isclose(phase_diff, np.pi / 2):
             polarization = "circular"
         else:
-            raise ValueError(
-                "Polarization of the laser pulse is neither linear nor circular."
-            )
+            polarization = "linear"
         super().__init__(self.lasy_profile.lambda0, polarization)
         self._t_start = t_start
         self._smooth_edges = smooth_edges
