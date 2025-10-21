@@ -8,8 +8,8 @@ import aptools.plasma_accel.general_equations as ge
 
 from wake_t.utilities.numba import njit_serial
 from wake_t.particles.interpolation import gather_main_fields_cyl_linear
-from .psi_and_derivatives import calculate_psi_with_interpolation
-from .b_theta import calculate_b_theta_with_interpolation
+from .psi_and_derivatives import calculate_psi
+from .b_theta import calculate_b_theta
 from .b_theta_bunch import calculate_bunch_source, deposit_bunch_charge
 from .utils import longitudinal_gradient, radial_gradient
 
@@ -156,7 +156,7 @@ class AdaptiveGrid:
             s_d,
             self.psi_grid,
             self.b_t,
-            pp_hist["r_hist"],
+            pp_hist['r_hist'],
             pp_hist["log_r_hist"],
             pp_hist["sum_1_hist"],
             pp_hist["sum_2_hist"],
@@ -375,7 +375,7 @@ def calculate_fields_on_grid(
         j = i_grid[i]
         psi = psi_grid[i + 2, 2:-2]
         b_theta = bt_grid[i + 2, 2:-2]
-        calculate_psi_with_interpolation(
+        calculate_psi(
             r_eval=r_grid / s_d,
             r=r_hist[j, :n_elec],
             log_r=log_r_hist[j, :n_elec],
@@ -383,7 +383,7 @@ def calculate_fields_on_grid(
             sum_2_arr=sum_2_hist[j, : n_elec + 1],
             psi=psi,
         )
-        calculate_psi_with_interpolation(
+        calculate_psi(
             r_eval=r_grid / s_d,
             r=r_hist[j, n_elec:],
             log_r=log_r_hist[j, n_elec:],
