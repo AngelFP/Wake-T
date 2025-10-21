@@ -1,7 +1,10 @@
 """
 This module contains the class defining a particle bunch.
 """
+
 # TODO: clean methods to set and get bunch matrix
+from __future__ import annotations
+from copy import deepcopy
 from typing import Optional
 
 import numpy as np
@@ -12,8 +15,8 @@ from .push.runge_kutta_4 import apply_rk4_pusher
 from .push.boris_pusher import apply_boris_pusher
 
 
-class ParticleBunch():
-    """ Defines a particle bunch.
+class ParticleBunch:
+    """Defines a particle bunch.
 
     Parameters
     ----------
@@ -71,7 +74,7 @@ class ParticleBunch():
         py: Optional[np.ndarray] = None,
         pz: Optional[np.ndarray] = None,
         bunch_matrix: Optional[np.ndarray] = None,
-        matrix_type: Optional[str] = 'standard',
+        matrix_type: Optional[str] = "standard",
         gamma_ref: Optional[float] = None,
         tags: Optional[np.ndarray] = None,
         prop_distance: Optional[float] = 0,
@@ -79,14 +82,13 @@ class ParticleBunch():
         z_injection: Optional[float] = None,
         name: Optional[str] = None,
         q_species: Optional[float] = -ct.e,
-        m_species: Optional[float] = ct.m_e
+        m_species: Optional[float] = ct.m_e,
     ) -> None:
         if bunch_matrix is not None:
-            if matrix_type == 'standard':
+            if matrix_type == "standard":
                 self.set_phase_space_from_matrix(bunch_matrix)
-            elif matrix_type == 'alternative':
-                self.set_phase_space_from_alternative_matrix(bunch_matrix,
-                                                             gamma_ref)
+            elif matrix_type == "alternative":
+                self.set_phase_space_from_alternative_matrix(bunch_matrix, gamma_ref)
         else:
             self.x = x
             self.y = y
@@ -127,9 +129,9 @@ class ParticleBunch():
         self.w = np.abs(q_new / self.q_species)
 
     def set_name(self, name):
-        """ Set the particle bunch name """
+        """Set the particle bunch name"""
         if name is None:
-            name = 'elec_bunch_{}'.format(ParticleBunch._n_unnamed)
+            name = "elec_bunch_{}".format(ParticleBunch._n_unnamed)
             ParticleBunch._n_unnamed += 1
         self.name = name
 
@@ -175,7 +177,7 @@ class ParticleBunch():
 
         """
         dp = beam_matrix[5]
-        gamma = (dp + 1)*gamma_ref
+        gamma = (dp + 1) * gamma_ref
         p_kin = np.sqrt(gamma**2 - 1)
         self.x = beam_matrix[0]
         self.px = beam_matrix[1] * p_kin
@@ -196,8 +198,17 @@ class ParticleBunch():
 
     def get_bunch_matrix(self):
         """Returns a matrix with the 6D phase space and charge of the bunch"""
-        return np.array([self.x, self.y, self.xi, self.px, self.py, self.pz,
-                         self.w * self.q_species])
+        return np.array(
+            [
+                self.x,
+                self.y,
+                self.xi,
+                self.px,
+                self.py,
+                self.pz,
+                self.w * self.q_species,
+            ]
+        )
 
     def get_6D_matrix(self):
         """
@@ -211,8 +222,17 @@ class ParticleBunch():
         Returns the 6D phase space matrix of the bunch containing
         (x, px, y, py, xi, pz)
         """
-        return np.array([self.x, self.px, self.y, self.py, self.xi, self.pz,
-                         self.w * self.q_species])
+        return np.array(
+            [
+                self.x,
+                self.px,
+                self.y,
+                self.py,
+                self.xi,
+                self.pz,
+                self.w * self.q_species,
+            ]
+        )
 
     def get_alternative_6D_matrix(self):
         """
@@ -221,11 +241,12 @@ class ParticleBunch():
         """
         g = np.sqrt(1 + self.px**2 + self.py**2 + self.pz**2)
         g_avg = np.average(g, weights=self.w)
-        b_avg = np.sqrt(1 - g_avg**(-2))
-        dp = (g-g_avg)/(g_avg*b_avg)
+        b_avg = np.sqrt(1 - g_avg ** (-2))
+        dp = (g - g_avg) / (g_avg * b_avg)
         p_kin = np.sqrt(g**2 - 1)
-        return np.array([self.x, self.px/p_kin, self.y, self.py/p_kin,
-                         self.xi, dp]), g_avg
+        return np.array(
+            [self.x, self.px / p_kin, self.y, self.py / p_kin, self.xi, dp]
+        ), g_avg
 
     def increase_prop_distance(self, dist):
         """Increases the propagation distance"""
@@ -244,28 +265,38 @@ class ParticleBunch():
 
         """
         diag_dict = {
-            'x': self.x,
-            'y': self.y,
-            'z': self.xi,
-            'px': self.px * self.m_species * ct.c,
-            'py': self.py * self.m_species * ct.c,
-            'pz': self.pz * self.m_species * ct.c,
-            'w': self.w,
-            'q': self.q_species,
-            'm': self.m_species,
-            'name': self.name,
-            'z_off': global_time * ct.c,
-            'geometry': '3d_cartesian'
+            "x": self.x,
+            "y": self.y,
+            "z": self.xi,
+            "px": self.px * self.m_species * ct.c,
+            "py": self.py * self.m_species * ct.c,
+            "pz": self.pz * self.m_species * ct.c,
+            "w": self.w,
+            "q": self.q_species,
+            "m": self.m_species,
+            "name": self.name,
+            "z_off": global_time * ct.c,
+            "geometry": "3d_cartesian",
         }
+        if self.tags is not None:
+            diag_dict["id"] = self.tags
         return diag_dict
 
     def show(self, **kwargs):
-        """ Show the phase space of the bunch in all dimensions. """
+        """Show the phase space of the bunch in all dimensions."""
         full_phase_space(
-            self.x, self.y, self.xi, self.px, self.py, self.pz,
-            self.w * self.q_species, show=True, **kwargs)
+            self.x,
+            self.y,
+            self.xi,
+            self.px,
+            self.py,
+            self.pz,
+            self.w * self.q_species,
+            show=True,
+            **kwargs,
+        )
 
-    def evolve(self, fields, t, dt, pusher='rk4'):
+    def evolve(self, fields, t, dt, pusher="rk4"):
         """Evolve particle bunch to the next time step.
 
         Parameters
@@ -285,32 +316,70 @@ class ParticleBunch():
             if (np.amax(self.xi) + self.prop_distance) < self.z_injection:
                 fields = []
 
-        if pusher == 'rk4':
+        if pusher == "rk4":
             apply_rk4_pusher(self, fields, t, dt)
-        elif pusher == 'boris':
+        elif pusher == "boris":
             apply_boris_pusher(self, fields, t, dt)
+        else:
+            raise ValueError(
+                f"Bunch pusher '{pusher}' not recognized. "
+                "Possible values are 'boris' and 'rk4'"
+            )
         self.prop_distance += dt * ct.c
+
+    def copy(self) -> ParticleBunch:
+        """Return a copy of the bunch.
+
+        To improve performance, this copy won't contain copies of auxiliary
+        arrays, only of the particle coordinates and properties.
+        """
+        bunch_copy = ParticleBunch(
+            w=deepcopy(self.w),
+            x=deepcopy(self.x),
+            y=deepcopy(self.y),
+            xi=deepcopy(self.xi),
+            px=deepcopy(self.px),
+            py=deepcopy(self.py),
+            pz=deepcopy(self.pz),
+            prop_distance=deepcopy(self.prop_distance),
+            name=deepcopy(self.name),
+            q_species=deepcopy(self.q_species),
+            m_species=deepcopy(self.m_species),
+            tags=deepcopy(self.tags),
+        )
+        bunch_copy.x_ref = self.x_ref
+        bunch_copy.theta_ref = self.theta_ref
+        return bunch_copy
 
     def get_field_arrays(self):
         """Get the arrays where the gathered fields will be stored."""
         if not self.__field_arrays_allocated:
             self.__preallocate_field_arrays()
-        return (
-            self.__e_x, self.__e_y, self.__e_z,
-            self.__b_x, self.__b_y, self.__b_z
-        )
+        return (self.__e_x, self.__e_y, self.__e_z, self.__b_x, self.__b_y, self.__b_z)
 
     def get_rk4_arrays(self):
         """Get the arrays needed by the RK4 pusher."""
         if not self.__rk4_arrays_allocated:
             self.__preallocate_rk4_arrays()
         return (
-            self.__x_rk4, self.__y_rk4, self.__xi_rk4,
-            self.__px_rk4, self.__py_rk4, self.__pz_rk4,
-            self.__dx_rk4, self.__dy_rk4, self.__dxi_rk4,
-            self.__dpx_rk4, self.__dpy_rk4, self.__dpz_rk4,
-            self.__k_x, self.__k_y, self.__k_xi,
-            self.__k_px, self.__k_py, self.__k_pz
+            self.__x_rk4,
+            self.__y_rk4,
+            self.__xi_rk4,
+            self.__px_rk4,
+            self.__py_rk4,
+            self.__pz_rk4,
+            self.__dx_rk4,
+            self.__dy_rk4,
+            self.__dxi_rk4,
+            self.__dpx_rk4,
+            self.__dpy_rk4,
+            self.__dpz_rk4,
+            self.__k_x,
+            self.__k_y,
+            self.__k_xi,
+            self.__k_px,
+            self.__k_py,
+            self.__k_pz,
         )
 
     def __preallocate_field_arrays(self):

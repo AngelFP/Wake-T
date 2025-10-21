@@ -40,17 +40,14 @@ class NumericalField(Field):
         self,
         dt_update: float,
         openpmd_diag_supported: Optional[bool] = False,
-        force_even_updates: Optional[bool] = False
+        force_even_updates: Optional[bool] = False,
     ) -> None:
         super().__init__(openpmd_diag_supported=openpmd_diag_supported)
         self.dt_update = dt_update
         self.force_even_updates = force_even_updates
         self.initialized = False
 
-    def update(
-        self,
-        bunches: List[ParticleBunch]
-    ) -> None:
+    def update(self, bunches: List[ParticleBunch]) -> None:
         """Update field to the next time step.
 
         Parameters
@@ -65,34 +62,22 @@ class NumericalField(Field):
             self.evolve_properties(bunches)
         self.calculate_field(bunches)
 
-    def initialize_properties(
-        self,
-        bunches: List[ParticleBunch]
-    ) -> None:
+    def initialize_properties(self, bunches: List[ParticleBunch]) -> None:
         """Initialize field properties."""
-        self.t = 0.
+        self.t = 0.0
         self._initialize_properties(bunches)
         self.initialized = True
 
-    def evolve_properties(
-        self,
-        bunches: List[ParticleBunch]
-    ) -> None:
+    def evolve_properties(self, bunches: List[ParticleBunch]) -> None:
         """Evolve field properties."""
         self.t += self.dt_update
         self._evolve_properties(bunches)
 
-    def calculate_field(
-        self,
-        bunches: List[ParticleBunch]
-    ) -> None:
+    def calculate_field(self, bunches: List[ParticleBunch]) -> None:
         """Calculate field using the current properties and given bunches."""
         self._calculate_field(bunches)
 
-    def adjust_dt(
-        self,
-        t_final: float
-    ) -> None:
+    def adjust_dt(self, t_final: float) -> None:
         """Autoadjust the time step of the field update."""
         if self.force_even_updates:
             n_updates = np.ceil(t_final / self.dt_update)

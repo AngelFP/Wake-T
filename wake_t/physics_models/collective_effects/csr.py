@@ -6,6 +6,7 @@ the CSR effects on the bunch are strongly based on the 1D CSR model from OCELOT
 (https://github.com/ocelot-collab/ocelot) written by S. Tomin and M. Dohlus.
 
 """
+
 from typing import Optional
 
 import numpy as np
@@ -13,7 +14,7 @@ from scipy import stats
 import scipy.constants as ct
 
 
-class CSRCalculator():
+class CSRCalculator:
     """Class taking care of calculating and applying CSR effects."""
 
     def __init__(self):
@@ -97,9 +98,10 @@ class CSRCalculator():
         # a Gaussian KDE. This method might be changed/optimized.
         bin_size = bin_edges[1] - bin_edges[0]
         n_part = len(bunch_q)
-        bin_centers = bin_edges[1:] - bin_size/2
+        bin_centers = bin_edges[1:] - bin_size / 2
         bunch_pdf = stats.gaussian_kde(
-            bin_centers, bw_method=n_part**(-1/5), weights=bunch_hist)
+            bin_centers, bw_method=n_part ** (-1 / 5), weights=bunch_hist
+        )
         bunch_hist = bunch_pdf(bin_centers) * bin_size * bunch_hist.sum()
         bin_center_0 = bin_centers[0]
 
@@ -113,15 +115,16 @@ class CSRCalculator():
         # Calculate CSR kernel.
         K1 = 0
         for it in it_range:
-            K1 += self._calculate_kernel(it, self._ref_traj, self._n_bins,
-                                         bin_size, gamma)
+            K1 += self._calculate_kernel(
+                it, self._ref_traj, self._n_bins, bin_size, gamma
+            )
         K1 /= n_iter
 
         # Convolve kernel with line charge
         lam_K1 = np.convolve(bunch_hist, K1[::-1]) / bin_size * ds_csr
 
         # Calculate and apply energy kick
-        z_norm = z * (1./bin_size) - bin_center_0/bin_size
+        z_norm = z * (1.0 / bin_size) - bin_center_0 / bin_size
         dE = np.interp(z_norm, np.arange(len(lam_K1)), lam_K1)
         pc_ref = np.sqrt(gamma**2 - 1) * 0.511e-3
         delta_p = dE * 1e-9 / pc_ref
@@ -138,12 +141,12 @@ class CSRCalculator():
         ds_traj = self._csr_traj_step
         if n_out is not None:
             ds_out = element.length / n_out
-            ds_csr = ds_out / np.ceil(ds_out/ds_csr)
+            ds_csr = ds_out / np.ceil(ds_out / ds_csr)
         elif element.length < ds_csr:
             ds_csr = element.length
         elif not element.length % ds_csr == 0:
-            ds_csr = element.length / np.ceil(element.length/ds_csr)
-        ds_traj = ds_csr / np.ceil(ds_csr/ds_traj)
+            ds_csr = element.length / np.ceil(element.length / ds_csr)
+        ds_traj = ds_csr / np.ceil(ds_csr / ds_traj)
         self._lattice_element_traj_steps.append([ds_csr, ds_traj])
 
     def _calculate_trajectory(self, element):
@@ -161,7 +164,7 @@ class CSRCalculator():
         ds_traj = element.length / n_steps
         traj = np.zeros((7, n_steps))
         if self._ref_traj is None:
-            self._ref_traj = np.transpose([[0, 0, 0, 0, 0, 0, 1.]])
+            self._ref_traj = np.transpose([[0, 0, 0, 0, 0, 0, 1.0]])
         traj_start = self._ref_traj[:, [-1]]
         e1 = traj_start[4:]
         l_traj = np.linspace(ds_traj, element.length, n_steps)
@@ -174,14 +177,14 @@ class CSRCalculator():
             rho_y = rho * np.sin(tilt)
             rho_vect = np.array([-rho_y, rho_x, 0])
 
-            n_vect = rho_vect/rho
+            n_vect = rho_vect / rho
             e2 = np.cross(n_vect, e1.T).T
             si = np.sin(l_traj / rho)
             co = np.cos(l_traj / rho)
-            omco = 2 * np.sin(l_traj / (2*rho))**2
+            omco = 2 * np.sin(l_traj / (2 * rho)) ** 2
 
-            traj[1:4, :] = traj_start[1:4] + rho * (e1*si + e2*omco)
-            traj[4:, :] = e1*co + e2*si
+            traj[1:4, :] = traj_start[1:4] + rho * (e1 * si + e2 * omco)
+            traj[4:, :] = e1 * co + e2 * si
 
         else:
             traj[1:4, :] = traj_start[1:4] + e1 * l_traj
@@ -223,14 +226,15 @@ class CSRCalculator():
         if w_range[0] < w_min:
             m = np.where(w_range < w_min)[0][-1]
             KS2 = self._calculate_kernel_short_range(
-                i, traj, np.append(w_range[0:m+1], w_min), gamma)
+                i, traj, np.append(w_range[0 : m + 1], w_min), gamma
+            )
             KS1 = KS[0]
             KS2 = (KS2[-1] - KS2) + KS1
-            KS = np.append(KS2[0:-1], np.interp(w_range[m+1:], w, KS))
+            KS = np.append(KS2[0:-1], np.interp(w_range[m + 1 :], w, KS))
         else:
             KS = np.interp(w_range, w, KS)
 
-        four_pi_eps0 = 1./(1e-7*ct.c**2)
+        four_pi_eps0 = 1.0 / (1e-7 * ct.c**2)
         K1 = np.diff(np.diff(KS, append=0), append=0) / bin_size / four_pi_eps0
         return K1
 
@@ -258,8 +262,8 @@ class CSRCalculator():
         """
 
         # Relativistic parameters
-        gamma_sq_inv = 1. / gamma ** 2
-        beta_sq = 1. - gamma_sq_inv
+        gamma_sq_inv = 1.0 / gamma**2
+        beta_sq = 1.0 - gamma_sq_inv
         beta = np.sqrt(beta_sq)
 
         i_0 = self._estimate_start_index(i, traj, wmin, beta)
@@ -274,7 +278,7 @@ class CSRCalculator():
         n2 = traj[3, i] - traj[3, i_0:i]
 
         # Distance from the current to previous trajectory points.
-        R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
+        R = np.sqrt(n0 * n0 + n1 * n1 + n2 * n2)
 
         w = s + beta * R
 
@@ -308,10 +312,11 @@ class CSRCalculator():
         n2 *= R_inv
 
         x = n0 * t4 + n1 * t5 + n2 * t6
-        K = ((beta * (x - n0 * t4_i - n1 * t5_i - n2 * t6_i) -
-              beta_sq * (1. - t4 * t4_i - t5 * t5_i - t6 * t6_i) -
-              gamma_sq_inv) * R_inv -
-             (1. - beta * x) / w * gamma_sq_inv)
+        K = (
+            beta * (x - n0 * t4_i - n1 * t5_i - n2 * t6_i)
+            - beta_sq * (1.0 - t4 * t4_i - t5 * t5_i - t6 * t6_i)
+            - gamma_sq_inv
+        ) * R_inv - (1.0 - beta * x) / w * gamma_sq_inv
 
         # Integrate kernel
         K[:-1] += K[1:]
@@ -342,8 +347,8 @@ class CSRCalculator():
         """
         # Relativistic parameters
         gamma_sq = gamma**2
-        gamma_sq_inv = 1./gamma_sq
-        beta_sq = 1. - gamma_sq_inv
+        gamma_sq_inv = 1.0 / gamma_sq
+        beta_sq = 1.0 - gamma_sq_inv
         beta = np.sqrt(beta_sq)
 
         # winf
@@ -353,28 +358,34 @@ class CSRCalculator():
         evo = traj[4:, i]
         winfms1 = np.dot(Rv1, ev1)
 
-        aup = -Rv1 + winfms1*ev1
+        aup = -Rv1 + winfms1 * ev1
         a2 = np.dot(aup, aup)
         a = np.sqrt(a2)
 
-        uup = aup/a if a != 0 else None
+        uup = aup / a if a != 0 else None
 
         winf = s1 + winfms1
-        s = winf + gamma * (gamma * (w_range - winf) -
-                            beta * np.sqrt(gamma_sq*(w_range-winf)**2 + a2))
-        R = (w_range-s) / beta
+        s = winf + gamma * (
+            gamma * (w_range - winf)
+            - beta * np.sqrt(gamma_sq * (w_range - winf) ** 2 + a2)
+        )
+        R = (w_range - s) / beta
 
-        KS = (beta * (1. - np.dot(ev1, evo)) * np.log(R[0]/R) -
-              (beta_sq * np.dot(ev1, evo) - 1.) * np.log(
-                  (winf - s + R) / (winf - s[0] + R[0])) +
-              gamma_sq_inv * np.log(w_range[0]/w_range))
-        if a2/R[1]**2 > 1e-7:
-            KS -= (beta * np.dot(uup, evo) *
-                   (np.arctan((s[0] - winf)/a) - np.arctan((s-winf)/a)))
+        KS = (
+            beta * (1.0 - np.dot(ev1, evo)) * np.log(R[0] / R)
+            - (beta_sq * np.dot(ev1, evo) - 1.0)
+            * np.log((winf - s + R) / (winf - s[0] + R[0]))
+            + gamma_sq_inv * np.log(w_range[0] / w_range)
+        )
+        if a2 / R[1] ** 2 > 1e-7:
+            KS -= (
+                beta
+                * np.dot(uup, evo)
+                * (np.arctan((s[0] - winf) / a) - np.arctan((s - winf) / a))
+            )
         return KS
 
-    def _estimate_start_index(
-            self, i, traj, w_min, beta, i_min=1000, n_test=10):
+    def _estimate_start_index(self, i, traj, w_min, beta, i_min=1000, n_test=10):
         """
         This method estimates the index of the first trajectory point from
         which CSR effects should be computed.
@@ -415,7 +426,7 @@ class CSRCalculator():
             n0 = traj[1, i] - traj[1, idx]
             n1 = traj[2, i] - traj[2, idx]
             n2 = traj[3, i] - traj[3, idx]
-            R = np.sqrt(n0*n0 + n1*n1 + n2*n2)
+            R = np.sqrt(n0 * n0 + n1 * n1 + n2 * n2)
             w = s + beta * R
             j = np.where(w <= w_min)[0]
             if len(j) > 0:
@@ -434,7 +445,7 @@ def get_csr_calculator() -> CSRCalculator:
 def set_csr_settings(
     csr_step: Optional[float] = 0.1,
     csr_traj_step: Optional[float] = 0.0005,
-    n_bins: Optional[int] = 2000
+    n_bins: Optional[int] = 2000,
 ) -> None:
     """
     Set the setting for CSR calculation.

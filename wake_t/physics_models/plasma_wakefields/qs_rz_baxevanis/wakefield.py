@@ -127,10 +127,10 @@ class Quasistatic2DWakefield(RZWakefield):
         ppc: Optional[int] = 2,
         dz_fields: Optional[float] = None,
         r_max_plasma: Optional[float] = None,
-        parabolic_coefficient: Optional[float] = 0.,
-        p_shape: Optional[str] = 'cubic',
+        parabolic_coefficient: Optional[float] = 0.0,
+        p_shape: Optional[str] = "cubic",
         max_gamma: Optional[float] = 10,
-        plasma_pusher: Optional[str] = 'rk4',
+        plasma_pusher: Optional[str] = "rk4",
         laser: Optional[LaserPulse] = None,
         laser_evolution: Optional[bool] = True,
         laser_envelope_substeps: Optional[int] = 1,
@@ -141,7 +141,8 @@ class Quasistatic2DWakefield(RZWakefield):
         self.ppc = ppc
         self.r_max_plasma = r_max_plasma
         self.parabolic_coefficient = self._get_parabolic_coefficient_fn(
-            parabolic_coefficient)
+            parabolic_coefficient
+        )
         self.p_shape = p_shape
         self.max_gamma = max_gamma
         self.plasma_pusher = plasma_pusher
@@ -159,42 +160,62 @@ class Quasistatic2DWakefield(RZWakefield):
             laser_envelope_nxi=laser_envelope_nxi,
             laser_envelope_nr=laser_envelope_nr,
             laser_envelope_use_phase=laser_envelope_use_phase,
-            model_name='quasistatic_2d'
+            model_name="quasistatic_2d",
         )
 
     def _calculate_wakefield(self, bunches):
-        parabolic_coefficient = self.parabolic_coefficient(self.t*ct.c)
+        parabolic_coefficient = self.parabolic_coefficient(self.t * ct.c)
 
         # Get square of laser envelope
         if self.laser is not None:
             a_env_2 = np.abs(self.laser.get_envelope()) ** 2
             # If linearly polarized, divide by 2 so that the ponderomotive
             # force on the plasma particles is correct.
-            if self.laser.polarization == 'linear':
+            if self.laser.polarization == "linear":
                 a_env_2 /= 2
         else:
             a_env_2 = np.zeros((self.n_xi, self.n_r))
 
         # Calculate plasma wakefields
         calculate_wakefields(
-            a_env_2, bunches, self.r_max, self.xi_min, self.xi_max,
-            self.n_r, self.n_xi, self.ppc, self.n_p,
+            a_env_2,
+            bunches,
+            self.r_max,
+            self.xi_min,
+            self.xi_max,
+            self.n_r,
+            self.n_xi,
+            self.ppc,
+            self.n_p,
             r_max_plasma=self.r_max_plasma,
             parabolic_coefficient=parabolic_coefficient,
-            p_shape=self.p_shape, max_gamma=self.max_gamma,
+            p_shape=self.p_shape,
+            max_gamma=self.max_gamma,
             plasma_pusher=self.plasma_pusher,
-            fld_arrays=[self.rho, self.chi, self.e_r, self.e_z, self.b_t,
-                        self.xi_fld, self.r_fld])
+            fld_arrays=[
+                self.rho,
+                self.chi,
+                self.e_r,
+                self.e_z,
+                self.b_t,
+                self.xi_fld,
+                self.r_fld,
+            ],
+        )
 
     def _get_parabolic_coefficient_fn(self, parabolic_coefficient):
-        """ Get parabolic_coefficient profile function """
+        """Get parabolic_coefficient profile function"""
         if isinstance(parabolic_coefficient, float):
+
             def uniform_parabolic_coefficient(z):
                 return np.ones_like(z) * parabolic_coefficient
+
             return uniform_parabolic_coefficient
         elif callable(parabolic_coefficient):
             return parabolic_coefficient
         else:
             raise ValueError(
-                'Type {} not supported for parabolic_coefficient.'.format(
-                    type(parabolic_coefficient)))
+                "Type {} not supported for parabolic_coefficient.".format(
+                    type(parabolic_coefficient)
+                )
+            )

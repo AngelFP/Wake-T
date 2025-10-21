@@ -1,7 +1,9 @@
 import math
 import numpy as np
 from aptools.plasma_accel.general_equations import (
-    laser_radius_at_z_pos, laser_rayleigh_length)
+    laser_radius_at_z_pos,
+    laser_rayleigh_length,
+)
 from wake_t import GaussianPulse, FlattenedGaussianPulse
 
 
@@ -27,12 +29,13 @@ def test_gaussian_init():
     w0 = 30e-6
     a0 = 1
     l0 = 0.8e-6
-    z_foc_to_test = [0., 1e-2]
+    z_foc_to_test = [0.0, 1e-2]
 
     for z_foc in z_foc_to_test:
         # Create and initialize pulse.
         laser = GaussianPulse(
-            xi_c=-50e-6, a_0=a0, w_0=w0, tau=25e-15, z_foc=z_foc, l_0=l0)
+            xi_c=-50e-6, a_0=a0, w_0=w0, tau=25e-15, z_foc=z_foc, l_0=l0
+        )
         laser.set_envelope_solver_params(xi_min, xi_max, r_max, nxi, nr, dt)
         laser.initialize_envelope()
 
@@ -46,7 +49,7 @@ def test_gaussian_init():
 
         # Check correct a0.
         z_r = laser_rayleigh_length(w0, l0)
-        a0_analytic = a0 / np.sqrt(1 + (z_foc/z_r)**2)
+        a0_analytic = a0 / np.sqrt(1 + (z_foc / z_r) ** 2)
         a0_env = np.max(np.abs(a_env))
         assert math.isclose(a0_env, a0_analytic, rel_tol=1e-4)
 
@@ -75,12 +78,13 @@ def test_flattened_gaussian_init():
     w0 = 30e-6
     a0 = 1
     l0 = 0.8e-6
-    z_foc_to_test = [0., 1e-2]
+    z_foc_to_test = [0.0, 1e-2]
 
     for z_foc in z_foc_to_test:
         # Create and initialize pulse.
         laser = FlattenedGaussianPulse(
-            xi_c=-50e-6, a_0=a0, w_0=w0, tau=25e-15, z_foc=z_foc, l_0=l0, N=0)
+            xi_c=-50e-6, a_0=a0, w_0=w0, tau=25e-15, z_foc=z_foc, l_0=l0, N=0
+        )
         laser.set_envelope_solver_params(xi_min, xi_max, r_max, nxi, nr, dt)
         laser.initialize_envelope()
 
@@ -94,7 +98,7 @@ def test_flattened_gaussian_init():
 
         # Check correct a0.
         z_r = laser_rayleigh_length(w0, l0)
-        a0_analytic = a0 / np.sqrt(1 + (z_foc/z_r)**2)
+        a0_analytic = a0 / np.sqrt(1 + (z_foc / z_r) ** 2)
         a0_env = np.max(np.abs(a_env))
         assert math.isclose(a0_env, a0_analytic, rel_tol=1e-4)
 
@@ -122,11 +126,11 @@ def calculate_spot_size(a_env, dr):
     # that is, do x = (y - a) / b, where y = a_max/e
     y_1 = a_proj[i_first - 1]
     y_2 = a_proj[i_first]
-    x_1 = (i_first-1) * dr + dr/2
-    x_2 = i_first * dr + dr/2
+    x_1 = (i_first - 1) * dr + dr / 2
+    x_2 = i_first * dr + dr / 2
     b = (y_2 - y_1) / (x_2 - x_1)
-    a = y_1 - b*x_1
-    w = (a_max/np.e - a) / b
+    a = y_1 - b * x_1
+    w = (a_max / np.e - a) / b
     return w
 
 

@@ -1,17 +1,25 @@
-""" Contains the 5th order Adams–Bashforth pusher for the plasma particles. """
-
-
-import numpy as np
+"""Contains the 5th order Adams–Bashforth pusher for the plasma particles."""
 
 from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial()
 def evolve_plasma_ab2(
-        dxi, r, pr, gamma, m, q,
-        nabla_a2, b_theta_0, b_theta, psi, dr_psi,
-        dr, dpr
-        ):
+    dxi,
+    r,
+    pr,
+    gamma,
+    m,
+    q,
+    nabla_a2,
+    b_theta_0,
+    b_theta,
+    psi,
+    dr_psi,
+    dr,
+    dpr,
+    r_to_x,
+):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
     using an Adams-Bashforth method of 2nd order.
@@ -20,9 +28,11 @@ def evolve_plasma_ab2(
     ----------
     dxi : float
         Longitudinal step.
-    r, pr, gamma, m, q : ndarray
-        Radial position, radial momentum, Lorentz factor, mass and charge of
-        the plasma particles.
+    r, pr, gamma, r_to_x : ndarray
+        Radial position, radial momentum, Lorentz factor as well an array that
+        keeps track of axis crosses to convert from r to x.
+    m, q : float
+        Mass and charge of the plasma species.
     nabla_a2, b_theta_0, b_theta, psi, dr_psi : ndarray
         Arrays with the value of the fields at the particle positions.
     dr, dpr : ndarray
@@ -31,8 +41,17 @@ def evolve_plasma_ab2(
     """
 
     calculate_derivatives(
-        pr, gamma, m, q, b_theta_0, nabla_a2, b_theta,
-        psi, dr_psi, dr[0], dpr[0]
+        pr,
+        gamma,
+        m,
+        q,
+        b_theta_0,
+        nabla_a2,
+        b_theta,
+        psi,
+        dr_psi,
+        dr[0],
+        dpr[0],
     )
 
     # Push radial position.
@@ -42,13 +61,12 @@ def evolve_plasma_ab2(
     apply_ab2(pr, dxi, dpr)
 
     # Shift derivatives for next step (i.e., the derivative at step i will be
-    # the derivative at step i+i in the next iteration.)
+    # the derivative at step i+1 in the next iteration.)
     dr[1] = dr[0]
     dpr[1] = dpr[0]
 
     # If a particle has crossed the axis, mirror it.
-    check_axis_crossing(r, pr, dr[1], dpr[1])
-
+    check_axis_crossing(r, pr, dr[1], dpr[1], r_to_x)
 
 @njit_serial(fastmath=True, error_model="numpy")
 def calculate_derivatives(
@@ -88,7 +106,6 @@ def calculate_derivatives(
                   - nabla_a2[i] * 0.5 * inv_psi_i * q_over_m) * q_over_m
         dr[i] = pr[i] * inv_psi_i
 
-
 @njit_serial()
 def apply_ab2(x, dt, dx):
     """Apply the Adams-Bashforth method of 2nd order to evolve `x`.
@@ -107,11 +124,12 @@ def apply_ab2(x, dt, dx):
 
 
 @njit_serial()
-def check_axis_crossing(r, pr, dr, dpr):
+def check_axis_crossing(r, pr, dr, dpr, r_to_x):
     """Check for particles with r < 0 and invert them."""
     for i in range(r.shape[0]):
-        if r[i] < 0.:
-            r[i] *= -1.
-            pr[i] *= -1.
-            dr[i] *= -1.
-            dpr[i] *= -1.
+        if r[i] < 0.0:
+            r[i] *= -1.0
+            pr[i] *= -1.0
+            dr[i] *= -1.0
+            dpr[i] *= -1.0
+            r_to_x[i] *= -1

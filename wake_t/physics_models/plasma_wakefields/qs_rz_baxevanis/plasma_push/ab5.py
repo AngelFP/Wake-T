@@ -1,5 +1,4 @@
-""" Contains the 5th order Adams–Bashforth pusher for the plasma particles. """
-
+"""Contains the 5th order Adams–Bashforth pusher for the plasma particles."""
 
 import numpy as np
 
@@ -8,9 +7,26 @@ from wake_t.utilities.numba import njit_serial
 
 @njit_serial()
 def evolve_plasma_ab5(
-        dxi, r, pr, gamma,
-        nabla_a2_pp, b_theta_0_pp, b_theta_pp, psi_pp, dr_psi_pp,
-        dr_1, dr_2, dr_3, dr_4, dr_5, dpr_1, dpr_2, dpr_3, dpr_4, dpr_5):
+    dxi,
+    r,
+    pr,
+    gamma,
+    nabla_a2_pp,
+    b_theta_0_pp,
+    b_theta_pp,
+    psi_pp,
+    dr_psi_pp,
+    dr_1,
+    dr_2,
+    dr_3,
+    dr_4,
+    dr_5,
+    dpr_1,
+    dpr_2,
+    dpr_3,
+    dpr_4,
+    dpr_5,
+):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step
     using an Adams–Bashforth method of 5th order.
@@ -34,8 +50,7 @@ def evolve_plasma_ab5(
     """
 
     calculate_derivatives(
-        pr, gamma, b_theta_0_pp, nabla_a2_pp, b_theta_pp,
-        psi_pp, dr_psi_pp, dr_1, dpr_1
+        pr, gamma, b_theta_0_pp, nabla_a2_pp, b_theta_pp, psi_pp, dr_psi_pp, dr_1, dpr_1
     )
 
     # Push radial position.
@@ -56,25 +71,26 @@ def evolve_plasma_ab5(
     dpr_2[:] = dpr_1
 
     # If a particle has crossed the axis, mirror it.
-    idx_neg = np.where(r < 0.)
+    idx_neg = np.where(r < 0.0)
     if idx_neg[0].size > 0:
-        r[idx_neg] *= -1.
-        pr[idx_neg] *= -1.
-        dr_1[idx_neg] *= -1.
-        dr_2[idx_neg] *= -1.
-        dr_3[idx_neg] *= -1.
-        dr_4[idx_neg] *= -1.
-        dr_5[idx_neg] *= -1.
-        dpr_1[idx_neg] *= -1.
-        dpr_2[idx_neg] *= -1.
-        dpr_3[idx_neg] *= -1.
-        dpr_4[idx_neg] *= -1.
-        dpr_5[idx_neg] *= -1.
+        r[idx_neg] *= -1.0
+        pr[idx_neg] *= -1.0
+        dr_1[idx_neg] *= -1.0
+        dr_2[idx_neg] *= -1.0
+        dr_3[idx_neg] *= -1.0
+        dr_4[idx_neg] *= -1.0
+        dr_5[idx_neg] *= -1.0
+        dpr_1[idx_neg] *= -1.0
+        dpr_2[idx_neg] *= -1.0
+        dpr_3[idx_neg] *= -1.0
+        dpr_4[idx_neg] *= -1.0
+        dpr_5[idx_neg] *= -1.0
 
 
 @njit_serial()
 def calculate_derivatives(
-        pr, gamma, b_theta_0, nabla_a2, b_theta_bar, psi, dr_psi, dr, dpr):
+    pr, gamma, b_theta_0, nabla_a2, b_theta_bar, psi, dr_psi, dr, dpr
+):
     """
     Calculate the derivative of the radial position and the radial momentum
     of the plasma particles at the current slice.
@@ -103,11 +119,13 @@ def calculate_derivatives(
     # Calculate derivatives of r and pr.
     for i in range(pr.shape[0]):
         psi_i = psi[i]
-        dpr[i] = (gamma[i] * dr_psi[i] / (1. + psi_i)
-                  - b_theta_bar[i]
-                  - b_theta_0[i]
-                  - nabla_a2[i] / (2. * (1. + psi_i)))
-        dr[i] = pr[i] / (1. + psi_i)
+        dpr[i] = (
+            gamma[i] * dr_psi[i] / (1.0 + psi_i)
+            - b_theta_bar[i]
+            - b_theta_0[i]
+            - nabla_a2[i] / (2.0 * (1.0 + psi_i))
+        )
+        dr[i] = pr[i] / (1.0 + psi_i)
 
 
 @njit_serial()
@@ -123,8 +141,16 @@ def apply_ab5(x, dt, dx_1, dx_2, dx_3, dx_4, dx_5):
     dx_1, dx_2, dx_3, dx_4, dx_5 : ndarray
         Arrays containing the derivatives of `x` at the five previous steps.
     """
-    inv_720 = 1. / 720.
+    inv_720 = 1.0 / 720.0
     for i in range(x.shape[0]):
-        x[i] += dt * (
-            1901. * dx_1[i] - 2774. * dx_2[i] + 2616. * dx_3[i]
-            - 1274. * dx_4[i] + 251. * dx_5[i]) * inv_720
+        x[i] += (
+            dt
+            * (
+                1901.0 * dx_1[i]
+                - 2774.0 * dx_2[i]
+                + 2616.0 * dx_3[i]
+                - 1274.0 * dx_4[i]
+                + 251.0 * dx_5[i]
+            )
+            * inv_720
+        )

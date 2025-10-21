@@ -1,9 +1,10 @@
-""" Contains the Runge-Kutta pusher of order 4 """
+"""Contains the Runge-Kutta pusher of order 4"""
 
 import math
 import scipy.constants as ct
+from numba import prange
 
-from wake_t.utilities.numba import njit_serial
+from wake_t.utilities.numba import njit_parallel
 from wake_t.fields.gather import gather_fields
 
 
@@ -44,8 +45,26 @@ def apply_rk4_pusher(bunch, fields, t, dt):
         Time step by which to push the particles.
     """
     # Get the necessary preallocated arrays.
-    (x, y, xi, px, py, pz, dx, dy, dxi, dpx, dpy, dpz,
-     k_x, k_y, k_xi, k_px, k_py, k_pz) = bunch.get_rk4_arrays()
+    (
+        x,
+        y,
+        xi,
+        px,
+        py,
+        pz,
+        dx,
+        dy,
+        dxi,
+        dpx,
+        dpy,
+        dpz,
+        k_x,
+        k_y,
+        k_xi,
+        k_px,
+        k_py,
+        k_pz,
+    ) = bunch.get_rk4_arrays()
     ex, ey, ez, bx, by, bz = bunch.get_field_arrays()
 
     # Particle species constant (currently assumes electrons).
@@ -57,25 +76,52 @@ def apply_rk4_pusher(bunch, fields, t, dt):
 
         # Calculate factors.
         if i in [0, 3]:
-            fac1 = 1.
-            fac2 = 1. / 6.
+            fac1 = 1.0
+            fac2 = 1.0 / 6.0
             if i == 3:
                 t_i += dt
         else:
             fac1 = 0.5
-            fac2 = 2. / 6.
+            fac2 = 2.0 / 6.0
             t_i += dt / 2
 
         # Calculate contributions the push.
         if i == 0:
             # Gather field at the initial location of the particles.
-            gather_fields(fields, bunch.x, bunch.y, bunch.xi, t_i,
-                          ex, ey, ez, bx, by, bz, bunch.name)
+            gather_fields(
+                fields,
+                bunch.x,
+                bunch.y,
+                bunch.xi,
+                t_i,
+                ex,
+                ey,
+                ez,
+                bx,
+                by,
+                bz,
+                bunch.name,
+            )
 
             # Calculate k_1.
-            calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,
-                        q_over_mc, bunch.px, bunch.py, bunch.pz,
-                        ex, ey, ez, bx, by, bz)
+            calculate_k(
+                k_x,
+                k_y,
+                k_xi,
+                k_px,
+                k_py,
+                k_pz,
+                q_over_mc,
+                bunch.px,
+                bunch.py,
+                bunch.pz,
+                ex,
+                ey,
+                ez,
+                bx,
+                by,
+                bz,
+            )
 
             # Initialize push with the contribution from k1.
             initialize_push(dx, k_x, fac2)
@@ -94,12 +140,27 @@ def apply_rk4_pusher(bunch, fields, t, dt):
             update_coord(pz, bunch.pz, dt, k_pz, fac1)
 
             # Gather field at updated positions.
-            gather_fields(fields, x, y, xi, t_i, ex, ey, ez, bx, by, bz,
-                          bunch.name)
+            gather_fields(fields, x, y, xi, t_i, ex, ey, ez, bx, by, bz, bunch.name)
 
             # Calculate k_i.
-            calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,
-                        q_over_mc, px, py, pz, ex, ey, ez, bx, by, bz)
+            calculate_k(
+                k_x,
+                k_y,
+                k_xi,
+                k_px,
+                k_py,
+                k_pz,
+                q_over_mc,
+                px,
+                py,
+                pz,
+                ex,
+                ey,
+                ez,
+                bx,
+                by,
+                bz,
+            )
 
             # Add the contribution of k_i to the push.
             update_push(dx, k_x, fac2)
@@ -118,40 +179,41 @@ def apply_rk4_pusher(bunch, fields, t, dt):
     apply_push(bunch.pz, dt, dpz)
 
 
-@njit_serial()
+@njit_parallel()
 def initialize_coord(x, x_0):
-    for i in range(x.shape[0]):
+    for i in prange(x.shape[0]):
         x[i] = x_0[i]
 
 
-@njit_serial()
+@njit_parallel()
 def update_coord(x, x_0, dt, k_x, fac):
-    for i in range(x.shape[0]):
+    for i in prange(x.shape[0]):
         x[i] = x_0[i] + dt * k_x[i] * fac
 
 
-@njit_serial()
+@njit_parallel()
 def initialize_push(dx, k_x, fac):
-    for i in range(dx.shape[0]):
+    for i in prange(dx.shape[0]):
         dx[i] = k_x[i] * fac
 
 
-@njit_serial()
+@njit_parallel()
 def update_push(dx, k_x, fac):
-    for i in range(dx.shape[0]):
+    for i in prange(dx.shape[0]):
         dx[i] += k_x[i] * fac
 
 
-@njit_serial()
+@njit_parallel()
 def apply_push(x, dt, dx):
-    for i in range(x.shape[0]):
+    for i in prange(x.shape[0]):
         x[i] += dt * dx[i]
 
 
-@njit_serial(fastmath=True, error_model='numpy')
-def calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,
-                q_over_mc, px, py, pz, ex, ey, ez, bx, by, bz):
-    for i in range(k_x.shape[0]):
+@njit_parallel(fastmath=True, error_model="numpy")
+def calculate_k(
+    k_x, k_y, k_xi, k_px, k_py, k_pz, q_over_mc, px, py, pz, ex, ey, ez, bx, by, bz
+):
+    for i in prange(k_x.shape[0]):
         px_i = px[i]
         py_i = py[i]
         pz_i = pz[i]
@@ -169,7 +231,7 @@ def calculate_k(k_x, k_y, k_xi, k_px, k_py, k_pz,
 
         k_x[i] = vx_i
         k_y[i] = vy_i
-        k_xi[i] = (vz_i - ct.c)
+        k_xi[i] = vz_i - ct.c
         k_px[i] = q_over_mc * (ex_i + vy_i * bz_i - vz_i * by_i)
         k_py[i] = q_over_mc * (ey_i - vx_i * bz_i + vz_i * bx_i)
         k_pz[i] = q_over_mc * (ez_i + vx_i * by_i - vy_i * bx_i)

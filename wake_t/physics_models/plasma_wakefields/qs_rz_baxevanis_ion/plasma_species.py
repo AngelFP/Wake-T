@@ -140,6 +140,7 @@ class PlasmaSpecies():
         # self.w *= - self.charge / ct.e
         self.m = np.ones(self.n_part) * self.mass / ct.m_e
         self.q = - np.ones(self.n_part) * self.charge / ct.e
+        self.r_to_x = np.ones(self.n_part, dtype=np.int32)
 
         # Create history arrays.
         if self.store_history:
@@ -148,6 +149,7 @@ class PlasmaSpecies():
             self.pr_hist = np.zeros((self.nz, self.n_part))
             self.pz_hist = np.zeros((self.nz, self.n_part))
             self.w_hist = np.zeros((self.nz, self.n_part))
+            self.r_to_x_hist = np.zeros((self.nz, self.n_part), dtype=np.int32)
             self.sum_1_hist = np.zeros((self.nz, self.n_part))
             self.sum_2_hist = np.zeros((self.nz, self.n_part))
             self.i_sort_hist = np.zeros((self.nz, self.n_part), dtype=np.int64)
@@ -220,11 +222,14 @@ class PlasmaSpecies():
 
     def evolve(self, dxi):
         """Evolve plasma particles to next longitudinal slice."""
+        # print("_dr_psi:", self._dr_psi.shape) 
+        # print("_dr:", self._dr.shape)
+        # print("_dpr:", self._dpr.shape)
         if self.can_move:
             evolve_plasma_ab2(
                 dxi, self.r, self.pr, self.gamma, self.m, self.q,
                 self._nabla_a2, self._b_t_0, self._b_t, self._psi,
-                self._dr_psi, self._dr, self._dpr
+                self._dr_psi, self._dr, self._dpr, self.r_to_x
             )
 
         if self.store_history:
@@ -234,7 +239,7 @@ class PlasmaSpecies():
 
     def calculate_weights(self):
         """Calculate the plasma density weights of each particle."""
-        calculate_rho(self.w * self.q, self.pz, self.gamma, self._rho)
+        calculate_rho(self.q, self.w, self.pz, self.gamma, self._rho)
 
     def deposit_rho(self, rho, slice_i, r_fld, nr, dr):
         """Deposit plasma density on a grid slice."""
@@ -247,7 +252,7 @@ class PlasmaSpecies():
 
     def deposit_chi(self, chi, slice_i, r_fld, nr, dr):
         """Deposit plasma susceptibility on a grid slice."""
-        calculate_chi(self.w * self.q, self.pz, self.gamma, self._chi)
+        calculate_chi(self.q, self.w, self.pz, self.gamma, self._chi)
         deposit_plasma_particles(
             self.r, self._chi, r_fld[0], nr, dr, self.chi_species[slice_i], self.shape
         )
@@ -334,6 +339,7 @@ class PlasmaSpecies():
                 'pr_hist': self.pr_hist,
                 'pz_hist': self.pz_hist,
                 'w_hist': self.w_hist,
+                "r_to_x_hist": self.r_to_x_hist,
                 'sum_1_hist': self.sum_1_hist,
                 'sum_2_hist': self.sum_2_hist,
                 'a_i_hist': self.a_i_hist,
@@ -356,6 +362,8 @@ class PlasmaSpecies():
             self.pz_hist[-1 - self.i_push] = self.pz
         if 'w' in self.diags:
             self.w_hist[-1 - self.i_push] = self._rho
+        if "r_to_x" in self.diags:
+            self.r_to_x_hist[-1 - self.i_push] = self.r_to_x
         if self.store_history:
             self.i_sort_hist[-1 - self.i_push] = self.i_sort
             self.psi_max_hist[-1 - self.i_push] = self._psi_max[0]

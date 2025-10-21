@@ -3,12 +3,12 @@
 import numpy as np
 
 from wake_t.physics_models.beam_optics.transfer_matrices import (
-    first_order_matrix, second_order_matrix
+    first_order_matrix,
+    second_order_matrix,
 )
 
 
-def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
-                            order=2):
+def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref, order=2):
     """
     Track beam distribution throwgh beamline element by using a transfer map.
     This function was initially based on code from Ocelot (see
@@ -48,5 +48,5 @@ def track_with_transfer_map(beam_matrix, z, L, theta, k1, k2, gamma_ref,
     bm_new = np.dot(R, beam_matrix)
     if order == 2:
         T = second_order_matrix(z, L, theta, k1, k2, gamma_ref)
-        bm_new += np.einsum('ijk,j...,k...', T, beam_matrix, beam_matrix).T
+        bm_new += np.einsum("ijk,j...,k...", T, beam_matrix, beam_matrix).T
     return bm_new

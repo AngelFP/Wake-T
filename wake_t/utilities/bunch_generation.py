@@ -1,4 +1,4 @@
-""" This module contains methods for generating particle distributions"""
+"""This module contains methods for generating particle distributions"""
 
 from typing import Optional
 
@@ -31,7 +31,7 @@ def get_gaussian_bunch_from_twiss(
     theta_y: Optional[float] = 0,
     name: Optional[str] = None,
     q_species: Optional[float] = -ct.e,
-    m_species: Optional[float] = ct.m_e
+    m_species: Optional[float] = ct.m_e,
 ) -> ParticleBunch:
     """
     Creates a 6D Gaussian particle bunch with the specified Twiss parameters.
@@ -76,42 +76,43 @@ def get_gaussian_bunch_from_twiss(
 
     # Calculate necessary values
     n_part = int(n_part)
-    ene_sp = ene_sp/100
-    ene_sp_abs = ene_sp*ene
-    s_z = s_t*1e-15*ct.c
-    em_x = en_x/ene
-    em_y = en_y/ene
-    g_x = (1+a_x**2)/b_x
-    g_y = (1+a_y**2)/b_y
-    s_x = np.sqrt(em_x*b_x)
-    s_y = np.sqrt(em_y*b_y)
-    s_xp = np.sqrt(em_x*g_x)
-    s_yp = np.sqrt(em_y*g_y)
-    p_x = -a_x*em_x/(s_x*s_xp)
-    p_y = -a_y*em_y/(s_y*s_yp)
+    ene_sp = ene_sp / 100
+    ene_sp_abs = ene_sp * ene
+    s_z = s_t * 1e-15 * ct.c
+    em_x = en_x / ene
+    em_y = en_y / ene
+    g_x = (1 + a_x**2) / b_x
+    g_y = (1 + a_y**2) / b_y
+    s_x = np.sqrt(em_x * b_x)
+    s_y = np.sqrt(em_y * b_y)
+    s_xp = np.sqrt(em_x * g_x)
+    s_yp = np.sqrt(em_y * g_y)
+    p_x = -a_x * em_x / (s_x * s_xp)
+    p_y = -a_y * em_y / (s_y * s_yp)
     p_x_off = theta_x * ene
     p_y_off = theta_y * ene
-    q_tot = q_tot/1e12
+    q_tot = q_tot / 1e12
     # Create normalized gaussian distributions
     u_x = np.random.standard_normal(n_part)
     v_x = np.random.standard_normal(n_part)
     u_y = np.random.standard_normal(n_part)
     v_y = np.random.standard_normal(n_part)
     # Calculate transverse particle distributions
-    x = s_x*u_x + x_off
-    xp = s_xp*(p_x*u_x + np.sqrt(1-np.square(p_x))*v_x)
-    y = s_y*u_y + y_off
-    yp = s_yp*(p_y*u_y + np.sqrt(1-np.square(p_y))*v_y)
+    x = s_x * u_x + x_off
+    xp = s_xp * (p_x * u_x + np.sqrt(1 - np.square(p_x)) * v_x)
+    y = s_y * u_y + y_off
+    yp = s_yp * (p_y * u_y + np.sqrt(1 - np.square(p_y)) * v_y)
     # Create longitudinal distributions (truncated at -3 and 3 sigma in xi)
     xi = truncnorm.rvs(-3, 3, loc=xi_c, scale=s_z, size=n_part)
     pz = np.random.normal(ene, ene_sp_abs, n_part)
     # Change from slope to momentum and apply offset
-    px = xp*pz + p_x_off
-    py = yp*pz + p_y_off
+    px = xp * pz + p_x_off
+    py = yp * pz + p_y_off
     # Macroparticle weight.
     w = np.abs(np.ones(n_part) * q_tot / (n_part * q_species))
-    return ParticleBunch(w, x, y, xi, px, py, pz, name=name,
-                         q_species=q_species, m_species=m_species)
+    return ParticleBunch(
+        w, x, y, xi, px, py, pz, name=name, q_species=q_species, m_species=m_species
+    )
 
 
 def get_gaussian_bunch_from_size(
@@ -131,7 +132,7 @@ def get_gaussian_bunch_from_size(
     theta_y: Optional[float] = 0,
     name: Optional[str] = None,
     q_species: Optional[float] = -ct.e,
-    m_species: Optional[float] = ct.m_e
+    m_species: Optional[float] = ct.m_e,
 ) -> ParticleBunch:
     """
     Creates a Gaussian bunch with the specified emitance and spot size. It is
@@ -172,12 +173,29 @@ def get_gaussian_bunch_from_size(
         The generated particle bunch.
 
     """
-    b_x = s_x**2*ene/en_x
-    b_y = s_y**2*ene/en_y
+    b_x = s_x**2 * ene / en_x
+    b_y = s_y**2 * ene / en_y
     return get_gaussian_bunch_from_twiss(
-        en_x, en_y, 0, 0, b_x, b_y, ene, ene_sp, s_t, xi_c, q_tot, n_part,
-        x_off, y_off, theta_x, theta_y, name=name, q_species=q_species,
-        m_species=m_species)
+        en_x,
+        en_y,
+        0,
+        0,
+        b_x,
+        b_y,
+        ene,
+        ene_sp,
+        s_t,
+        xi_c,
+        q_tot,
+        n_part,
+        x_off,
+        y_off,
+        theta_x,
+        theta_y,
+        name=name,
+        q_species=q_species,
+        m_species=m_species,
+    )
 
 
 def get_matched_bunch(
@@ -197,7 +215,7 @@ def get_matched_bunch(
     k_x: Optional[float] = None,
     name: Optional[str] = None,
     q_species: Optional[float] = -ct.e,
-    m_species: Optional[float] = ct.m_e
+    m_species: Optional[float] = ct.m_e,
 ) -> ParticleBunch:
     """
     Creates a Gaussian bunch matched to the plasma focusing fields.
@@ -244,9 +262,26 @@ def get_matched_bunch(
         n_p *= 1e-6
     b_m = ge.matched_plasma_beta_function(ene, n_p, k_x)
     return get_gaussian_bunch_from_twiss(
-        en_x, en_y, 0, 0, b_m, b_m, ene, ene_sp, s_t, xi_c, q_tot, n_part,
-        x_off, y_off, theta_x, theta_y, name=name, q_species=q_species,
-        m_species=m_species)
+        en_x,
+        en_y,
+        0,
+        0,
+        b_m,
+        b_m,
+        ene,
+        ene_sp,
+        s_t,
+        xi_c,
+        q_tot,
+        n_part,
+        x_off,
+        y_off,
+        theta_x,
+        theta_y,
+        name=name,
+        q_species=q_species,
+        m_species=m_species,
+    )
 
 
 def get_from_file(
@@ -255,7 +290,7 @@ def get_from_file(
     preserve_prop_dist: Optional[bool] = False,
     name: Optional[str] = None,
     species_name: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ) -> ParticleBunch:
     """Get particle bunch from file.
 
@@ -294,24 +329,23 @@ def get_from_file(
         A ParticleBunch with the distribution from the specified file.
     """
     # If reading from an openPMD file, use the right `name` and `species_name`.
-    if data_format == 'openpmd':
+    if data_format == "openpmd":
         if species_name is None:
             available_species = get_available_species(file_path)
             n_species = len(available_species)
             if n_species == 0:
-                raise ValueError(
-                    "No particle species found in '{}'".format(file_path)
-                )
+                raise ValueError("No particle species found in '{}'".format(file_path))
             elif n_species == 1:
                 species_name = available_species[0]
             else:
                 raise ValueError(
-                    'More than one particle species is available in' +
-                    "'{}'. ".format(file_path) +
-                    'Please specify a `species_name`. ' +
-                    'Available species are: ' + str(available_species)
+                    "More than one particle species is available in"
+                    + "'{}'. ".format(file_path)
+                    + "Please specify a `species_name`. "
+                    + "Available species are: "
+                    + str(available_species)
                 )
-        kwargs['species_name'] = species_name
+        kwargs["species_name"] = species_name
         if name is None:
             name = species_name
     distribution = read_distribution(file_path, data_format, **kwargs)
@@ -329,7 +363,7 @@ def get_from_file(
         pz=distribution.pz,
         q_species=distribution.q_species,
         m_species=distribution.m_species,
-        name=name
+        name=name,
     )
     # Preserve `z_avg` as the initial propagation distance of the bunch.
     if preserve_prop_dist:

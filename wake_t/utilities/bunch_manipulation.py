@@ -1,4 +1,4 @@
-""" This module contains functions for manupulating bunch distributions """
+"""This module contains functions for manupulating bunch distributions"""
 
 import numpy as np
 
@@ -17,10 +17,10 @@ def convert_to_ocelot_matrix(bunch_matrix, w, gamma_ref=None):
     g = np.sqrt(1 + px**2 + py**2 + pz**2)
     if gamma_ref is None:
         gamma_ref = np.average(g, weights=w)
-    b_ref = np.sqrt(1 - gamma_ref**(-2))
-    dp = (g-gamma_ref)/(gamma_ref*b_ref)
+    b_ref = np.sqrt(1 - gamma_ref ** (-2))
+    dp = (g - gamma_ref) / (gamma_ref * b_ref)
     p_kin = np.sqrt(gamma_ref**2 - 1)
-    return np.array([x, px/p_kin, y, py/p_kin, -xi, dp]), gamma_ref
+    return np.array([x, px / p_kin, y, py / p_kin, -xi, dp]), gamma_ref
 
 
 def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
@@ -42,8 +42,8 @@ def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
 
     """
     dp = beam_matrix[5]
-    b_ref = np.sqrt(1 - gamma_ref**(-2))
-    gamma = dp*gamma_ref*b_ref + gamma_ref
+    b_ref = np.sqrt(1 - gamma_ref ** (-2))
+    gamma = dp * gamma_ref * b_ref + gamma_ref
     p_kin = np.sqrt(gamma_ref**2 - 1)
     x = beam_matrix[0]
     px = beam_matrix[1] * p_kin
@@ -55,12 +55,16 @@ def convert_from_ocelot_matrix(beam_matrix, gamma_ref):
 
 
 def rotation_matrix_xz(angle):
-    """ Returns matrix to rotate the beam in the x-z plane """
+    """Returns matrix to rotate the beam in the x-z plane"""
     cs = np.cos(angle)
     sn = np.sin(angle)
-    return np.array([[cs, 0., 0., 0., sn, 0.],
-                     [0., cs, 0., 0., 0., sn],
-                     [0., 0., 1., 0., 0., 0.],
-                     [0., 0., 0., 1., 0., 0.],
-                     [-sn, 0., 0., 0., cs, 0.],
-                     [0., -sn, 0., 0., 0., cs]])
+    return np.array(
+        [
+            [cs, 0.0, 0.0, 0.0, sn, 0.0],
+            [0.0, cs, 0.0, 0.0, 0.0, sn],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            [-sn, 0.0, 0.0, 0.0, cs, 0.0],
+            [0.0, -sn, 0.0, 0.0, 0.0, cs],
+        ]
+    )

@@ -15,19 +15,19 @@ def test_different_species_single_particle(make_plots=False):
     with all particle pushers agree with the analytical solution.
     """
     # Define particles with different mass and charge.
-    electron = {'m_species': ct.m_e, 'q_species': -ct.e}
-    positron = {'m_species': ct.m_e, 'q_species': ct.e}
-    proton = {'m_species': ct.m_p, 'q_species': ct.e}
+    electron = {"m_species": ct.m_e, "q_species": -ct.e}
+    positron = {"m_species": ct.m_e, "q_species": ct.e}
+    proton = {"m_species": ct.m_p, "q_species": ct.e}
     species_params = [electron, positron, proton]
 
     # Total tracking time.
     tracking_time = 1e-12
 
     # Initial longitudinal momentum.
-    pz = 100.
+    pz = 100.0
 
     # Magnetic field to apply
-    b_y = 10.  # T
+    b_y = 10.0  # T
 
     def constant_by(x, y, z, t, by, constants):
         by[:] = constants[0]
@@ -35,7 +35,7 @@ def test_different_species_single_particle(make_plots=False):
     field = AnalyticalField(b_y=constant_by, constants=[b_y])
 
     # List of particle pushers to test.
-    pushers_to_test = ['rk4', 'boris']
+    pushers_to_test = ["rk4", "boris"]
 
     # Test particle evolution with all pushers.
     for pusher in pushers_to_test:
@@ -43,14 +43,14 @@ def test_different_species_single_particle(make_plots=False):
         particles = []
         for params in species_params:
             particle = ParticleBunch(
-                w=np.array([1.]),
-                x=np.array([0.]),
-                y=np.array([0.]),
-                xi=np.array([0.]),
-                px=np.array([0.]),
-                py=np.array([0.]),
+                w=np.array([1.0]),
+                x=np.array([0.0]),
+                y=np.array([0.0]),
+                xi=np.array([0.0]),
+                px=np.array([0.0]),
+                py=np.array([0.0]),
                 pz=np.array([pz]),
-                **params
+                **params,
             )
             particles.append(particle)
 
@@ -61,7 +61,7 @@ def test_different_species_single_particle(make_plots=False):
             dt_bunches=[0.1e-15, 0.1e-15, 0.1e-15],
             fields=[field],
             n_diags=50,
-            bunch_pusher=pusher
+            bunch_pusher=pusher,
         )
 
         # Track particles.
@@ -71,8 +71,8 @@ def test_different_species_single_particle(make_plots=False):
         for particle, params in zip(particles, species_params):
             gamma = np.sqrt(1 + pz**2)
             vz_0 = pz / gamma * ct.c
-            w = - params['q_species'] * b_y / (params['m_species'] * gamma)
-            x_an = vz_0 / w * (1. - np.cos(w * tracking_time))
+            w = -params["q_species"] * b_y / (params["m_species"] * gamma)
+            x_an = vz_0 / w * (1.0 - np.cos(w * tracking_time))
             np.testing.assert_almost_equal(particle.x, x_an, decimal=14)
 
         # Make plot.
@@ -96,5 +96,5 @@ def test_different_species_single_particle(make_plots=False):
             plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_different_species_single_particle(make_plots=True)

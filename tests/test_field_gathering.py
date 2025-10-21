@@ -1,7 +1,9 @@
 import numpy as np
 import scipy.constants as ct
 from wake_t.particles.interpolation import (
-    gather_field_cyl_linear, gather_main_fields_cyl_linear)
+    gather_field_cyl_linear,
+    gather_main_fields_cyl_linear,
+)
 from wake_t.utilities.bunch_generation import get_matched_bunch
 
 
@@ -23,10 +25,10 @@ def test_gather_field_cyl_linear():
     z_max = 10
     dr = (r_max - r_min) / n_r
     dz = (z_max - z_min) / (n_z - 1)
-    r = np.linspace(dr/2, r_max-dr/2, n_r)
+    r = np.linspace(dr / 2, r_max - dr / 2, n_r)
     z = np.linspace(z_min, z_max, n_z)
     R, Z = np.meshgrid(r, z)
-    f = np.zeros((n_z+4, n_r+4))
+    f = np.zeros((n_z + 4, n_r + 4))
     f[2:-2, 2:-2] = np.sin(R) * np.sin(Z)
 
     # Particles positioned exactly at grid nodes.
@@ -36,7 +38,8 @@ def test_gather_field_cyl_linear():
 
     # Gather field
     f_part = gather_field_cyl_linear(
-        f, z_min, z_max, r_min+dr/2, r_max, dz, dr, x_part, y_part, z_part)
+        f, z_min, z_max, r_min + dr / 2, r_max, dz, dr, x_part, y_part, z_part
+    )
 
     # Check
     f_part = np.reshape(f_part, (n_z, n_r))
@@ -62,10 +65,10 @@ def test_gather_main_fields_cyl_linear():
     z_max = 10
     dr = (r_max - r_min) / n_r
     dz = (z_max - z_min) / (n_z - 1)
-    r = np.linspace(dr/2, r_max-dr/2, n_r)
+    r = np.linspace(dr / 2, r_max - dr / 2, n_r)
     z = np.linspace(z_min, z_max, n_z)
     R, Z = np.meshgrid(r, z)
-    f = np.zeros((n_z+4, n_r+4))
+    f = np.zeros((n_z + 4, n_r + 4))
     f[2:-2, 2:-2] = np.sin(R) * np.sin(Z)
 
     # Particles positioned exactly at grid nodes.
@@ -84,8 +87,25 @@ def test_gather_main_fields_cyl_linear():
 
     # Gather field
     gather_main_fields_cyl_linear(
-        f, f, f, z_min, z_max, r_min+dr/2, r_max, dz, dr,
-        x_part, y_part, z_part, ex, ey, ez, bx, by, bz)
+        f,
+        f,
+        f,
+        z_min,
+        z_max,
+        r_min + dr / 2,
+        r_max,
+        dz,
+        dr,
+        x_part,
+        y_part,
+        z_part,
+        ex,
+        ey,
+        ez,
+        bx,
+        by,
+        bz,
+    )
 
     ex = np.reshape(ex, (n_z, n_r))
     ey = np.reshape(ey, (n_z, n_r))
@@ -111,7 +131,7 @@ def test_gather_main_fields_cyl_linear_at_bunch():
     en = 1e-6  # m
     ene = 200  # units of beta*gamma
     ene_sp = 0.3  # %
-    xi_c = 0.  # m
+    xi_c = 0.0  # m
     s_t = 3  # fs
     q_tot = 1  # pC
     n_part = 1e4
@@ -120,8 +140,7 @@ def test_gather_main_fields_cyl_linear_at_bunch():
     np.random.seed(1)
 
     # Generate bunch (in this case, matched to a density of 10^23 cm-3)
-    bunch = get_matched_bunch(
-        en, en, ene, ene_sp, s_t, xi_c, q_tot, n_part, n_p=1e23)
+    bunch = get_matched_bunch(en, en, ene, ene_sp, s_t, xi_c, q_tot, n_part, n_p=1e23)
 
     # Create field (r: cell centered, z: node centered)
     n_r = 1000
@@ -132,19 +151,36 @@ def test_gather_main_fields_cyl_linear_at_bunch():
     z_max = 10e-6
     dr = (r_max - r_min) / n_r
     dz = (z_max - z_min) / (n_z - 1)
-    r = np.linspace(dr/2, r_max-dr/2, n_r)
+    r = np.linspace(dr / 2, r_max - dr / 2, n_r)
     z = np.linspace(z_min, z_max, n_z)
     R, Z = np.meshgrid(r, z)
-    f = np.zeros((n_z+4, n_r+4))
-    f[2:-2, 2:-2] = np.sin(R/r_max-1) * np.sin(Z/z_max-1)
+    f = np.zeros((n_z + 4, n_r + 4))
+    f[2:-2, 2:-2] = np.sin(R / r_max - 1) * np.sin(Z / z_max - 1)
 
     # Get preallocated field arrays
     ex, ey, ez, bx, by, bz = bunch.get_field_arrays()
-    
+
     # Gather field
     gather_main_fields_cyl_linear(
-        f, f, f, z_min, z_max, r_min+dr/2, r_max, dz, dr,
-        bunch.x, bunch.y, bunch.xi, ex, ey, ez, bx, by, bz)
+        f,
+        f,
+        f,
+        z_min,
+        z_max,
+        r_min + dr / 2,
+        r_max,
+        dz,
+        dr,
+        bunch.x,
+        bunch.y,
+        bunch.xi,
+        ex,
+        ey,
+        ez,
+        bx,
+        by,
+        bz,
+    )
 
     # Check
     np.testing.assert_almost_equal(np.sum(ex / ct.c + by), 15.709780373078333)
@@ -152,7 +188,7 @@ def test_gather_main_fields_cyl_linear_at_bunch():
     np.testing.assert_almost_equal(np.sum(ez), 6798.124201568496)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_gather_field_cyl_linear()
     test_gather_main_fields_cyl_linear()
     test_gather_main_fields_cyl_linear_at_bunch()

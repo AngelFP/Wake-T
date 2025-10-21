@@ -32,14 +32,13 @@ def test_rz_interpolation_one_to_one():
     tau = 25e-15  # s
     w_0 = 50e-6  # m
     l_0 = 0.8e-6  # m
-    z_c = 0.  # m
+    z_c = 0.0  # m
     a_0 = 3
     z_foc = z_tot / 2
 
     # Create and initialize laser pulse.
     laser = GaussianPulse(
-        z_c, l_0=l_0, w_0=w_0, a_0=a_0, tau=tau, z_foc=z_foc,
-        polarization='circular'
+        z_c, l_0=l_0, w_0=w_0, a_0=a_0, tau=tau, z_foc=z_foc, polarization="circular"
     )
     laser.set_envelope_solver_params(xi_min, xi_max, r_max, nxi, nr, dt)
     laser.initialize_envelope()
@@ -53,10 +52,9 @@ def test_rz_interpolation_one_to_one():
     dr_new = r_max / nr_new
     r_min_grid = dr / 2
     xi_new = np.linspace(xi_min, xi_max, nxi_new)
-    r_new = np.linspace(dr_new/2, r_max-dr_new/2, nr_new)
+    r_new = np.linspace(dr_new / 2, r_max - dr_new / 2, nr_new)
     a_env_new = np.zeros((nxi_new, nr_new), dtype=np.complex128)
-    interpolate_rz_field(
-        a_env, xi_min, r_min_grid, dxi, dr, xi_new, r_new, a_env_new)
+    interpolate_rz_field(a_env, xi_min, r_min_grid, dxi, dr, xi_new, r_new, a_env_new)
 
     # Both the old and new arrays should be identical. Check that this is the
     # case.
@@ -84,8 +82,8 @@ def test_rz_interpolation_back_and_forth():
     # Create original grid.
     r_min_grid_orig = dr_orig / 2
     xi_orig = np.linspace(xi_min, xi_max, nxi)
-    r_orig = np.linspace(dr_orig/2, r_max-dr_orig/2, nr)
-    xi_grid_orig, r_grid_orig = np.meshgrid(xi_orig, r_orig, indexing='ij')
+    r_orig = np.linspace(dr_orig / 2, r_max - dr_orig / 2, nr)
+    xi_grid_orig, r_grid_orig = np.meshgrid(xi_orig, r_orig, indexing="ij")
 
     # Create array with linear variation in both directions.
     array_orig = xi_grid_orig * 10 + r_grid_orig * 25
@@ -97,17 +95,24 @@ def test_rz_interpolation_back_and_forth():
     dxi_new = (xi_max - xi_min) / (nxi_new - 1)
     r_min_grid_new = dr_new / 2
     xi_new = np.linspace(xi_min, xi_max, nxi_new)
-    r_new = np.linspace(dr_new/2, r_max-dr_new/2, nr_new)
+    r_new = np.linspace(dr_new / 2, r_max - dr_new / 2, nr_new)
     array_new = np.zeros((nxi_new, nr_new))
     interpolate_rz_field(
-        array_orig, xi_min, r_min_grid_orig, dxi_orig, dr_orig, xi_new, r_new,
-        array_new)
+        array_orig, xi_min, r_min_grid_orig, dxi_orig, dr_orig, xi_new, r_new, array_new
+    )
 
     # Interpolate back to original grid.
     array_orig_interp = np.zeros((nxi, nr))
     interpolate_rz_field(
-        array_new, xi_min, r_min_grid_new, dxi_new, dr_new, xi_orig, r_orig,
-        array_orig_interp)
+        array_new,
+        xi_min,
+        r_min_grid_new,
+        dxi_new,
+        dr_new,
+        xi_orig,
+        r_orig,
+        array_orig_interp,
+    )
 
     # Since the original array varies linearly, the final array should be equal
     # to the original (within precision). Check that this is true.

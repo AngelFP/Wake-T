@@ -1,7 +1,8 @@
 import numpy as np
 
 from wake_t.physics_models.plasma_wakefields.qs_rz_baxevanis_ion.utils import (
-    radial_gradient, longitudinal_gradient
+    radial_gradient,
+    longitudinal_gradient,
 )
 
 
@@ -14,7 +15,7 @@ def test_gradients():
     r = np.linspace(0, 3, nr)
     dz = z[1] - z[0]
     dr = r[1] - r[0]
-    z, r = np.meshgrid(z, r, indexing='ij')
+    z, r = np.meshgrid(z, r, indexing="ij")
     f = np.cos(z) * np.sin(r)
 
     dr_f = np.zeros((nz, nr))

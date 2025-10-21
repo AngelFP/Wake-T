@@ -1,4 +1,4 @@
-""" Contains methods for interpolating fields to a different grid. """
+"""Contains methods for interpolating fields to a different grid."""
 
 import math
 import numpy as np
@@ -15,7 +15,7 @@ def interpolate_rz_field(
     dr: float,
     z_new: np.ndarray,
     r_new: np.ndarray,
-    fld_new: np.ndarray
+    fld_new: np.ndarray,
 ) -> None:
     """
     Interpolate a field in r-z geometry to a new grid using linear
@@ -81,7 +81,7 @@ def interpolate_rz_field(
             dr_l = 1 - dr_u
 
             # Make sure jz_upper does not go beyond boundaries.
-            jr_upper = min(jr_lower + 1, nr-1)
+            jr_upper = min(jr_lower + 1, nr - 1)
 
             # Get field value at each bounding cell.
             fld_ll = fld[iz_lower, jr_lower]
@@ -91,12 +91,12 @@ def interpolate_rz_field(
 
             # If evaluating beyond the last value in r, extrapolate linearly.
             if jr_lower == jr_upper:
-                fld_lu += fld_lu - fld[iz_lower, jr_upper-1]
-                fld_uu += fld_uu - fld[iz_upper, jr_upper-1]
+                fld_lu += fld_lu - fld[iz_lower, jr_upper - 1]
+                fld_uu += fld_uu - fld[iz_upper, jr_upper - 1]
 
             # Interpolate in z.
-            fld_z_1 = dz_u*fld_ll + dz_l*fld_ul
-            fld_z_2 = dz_u*fld_lu + dz_l*fld_uu
+            fld_z_1 = dz_u * fld_ll + dz_l * fld_ul
+            fld_z_2 = dz_u * fld_lu + dz_l * fld_uu
 
             # Interpolate in r.
-            fld_new[i, j] = dr_u*fld_z_1 + dr_l*fld_z_2
+            fld_new[i, j] = dr_u * fld_z_1 + dr_l * fld_z_2

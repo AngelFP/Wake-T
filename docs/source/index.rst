@@ -20,11 +20,13 @@ Wake-T |release| documentation
 
 |tests| |codefactor| |PyPI| |license|
 
-.. grid:: 2
+.. grid:: 1 2 2 2
     :gutter: 2
 
     .. grid-item-card:: Getting started
         :text-align: center
+
+        :octicon:`book;3em`
 
         Get the code up and running.
 
@@ -39,6 +41,8 @@ Wake-T |release| documentation
 
     .. grid-item-card:: Tutorials
         :text-align: center
+
+        :octicon:`mortar-board;3em`
               
         Step-by-step tutorials covering the functionality of Wake-T.
 
@@ -54,6 +58,8 @@ Wake-T |release| documentation
     .. grid-item-card:: Examples
         :text-align: center
 
+        :octicon:`light-bulb;3em`
+
         Explore quick examples showcasing how to use the code.
 
         +++
@@ -67,6 +73,8 @@ Wake-T |release| documentation
 
     .. grid-item-card:: API reference
         :text-align: center
+
+        :octicon:`code;3em`
         
         Detailed documentation of the Wake-T API.
 
