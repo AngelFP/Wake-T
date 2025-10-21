@@ -3,6 +3,7 @@ Contains the method to compute the wakefield potential and its derivatives
 according to the paper by P. Baxevanis and G. Stupakov.
 
 """
+
 from typing import List
 import numpy as np
 
@@ -13,7 +14,7 @@ from .plasma_species import PlasmaSpecies
 def calculate_psi_and_derivatives_at_species(species: List[PlasmaSpecies]):
     """Calculate wakefield potential and derivatives at the plasma particles."""
     species = [sp for sp in species if not sp.is_empty]
-    psi_max = 0.
+    psi_max = 0.0
     # Calculate cumulative sums 1 and 2 (Eqs. (29) and (31)).
     for s in species:
         if s.can_move or not s.first_iteration_computed:
@@ -26,7 +27,7 @@ def calculate_psi_and_derivatives_at_species(species: List[PlasmaSpecies]):
         psi_max -= s._sum_2[s.i_sort[-1]]
     for s in species:
         s._psi_max[:] = psi_max
-    
+
     # Calculate the psi and dr_psi at the neighboring points adding
     # the contribution of each species. Then, use linear interpolation to get
     # the value at the location of each particle.
@@ -34,15 +35,25 @@ def calculate_psi_and_derivatives_at_species(species: List[PlasmaSpecies]):
         if s_gather.can_move:
             for i, s_deposit in enumerate(species):
                 calculate_psi_and_dr_psi(
-                    s_gather._r_neighbor, s_gather._log_r_neighbor,
-                    s_deposit.r, s_deposit.dr_p, s_deposit.i_sort,
-                    s_deposit._sum_1, s_deposit._sum_2,
-                    s_gather._psi_bg, s_gather._dr_psi_bg,
-                    first=i==0
+                    s_gather._r_neighbor,
+                    s_gather._log_r_neighbor,
+                    s_deposit.r,
+                    s_deposit.dr_p,
+                    s_deposit.i_sort,
+                    s_deposit._sum_1,
+                    s_deposit._sum_2,
+                    s_gather._psi_bg,
+                    s_gather._dr_psi_bg,
+                    first=i == 0,
                 )
             interpolate_psi_dr_psi_from_neighbors(
-                s_gather.r, s_gather._psi_bg, s_gather._r_neighbor,
-                s_gather.i_sort, s_gather._psi, s_gather._dr_psi)            
+                s_gather.r,
+                s_gather._psi_bg,
+                s_gather._r_neighbor,
+                s_gather.i_sort,
+                s_gather._psi,
+                s_gather._dr_psi,
+            )
             # Apply boundary condition.
             s_gather._psi -= psi_max
             # Check that the values of psi are within a reasonable range (prevents
@@ -50,7 +61,7 @@ def calculate_psi_and_derivatives_at_species(species: List[PlasmaSpecies]):
             check_psi(s_gather._psi)
 
     # Calculate cumulative sum 3 (Eq. (32)).
-    dxi_psi_max = 0.
+    dxi_psi_max = 0.0
     for s in species:
         if s.can_move or not s.first_iteration_computed:
             calculate_cumulative_sum_3(s.r, s.pr, s.q * s.w, s._psi, s.i_sort, s._sum_3)
@@ -58,7 +69,7 @@ def calculate_psi_and_derivatives_at_species(species: List[PlasmaSpecies]):
         # This will be used to ensure the boundary condition (dxi_psi = 0) after
         # last plasma particle.
         dxi_psi_max += s._sum_3[s.i_sort[-1]]
-    
+
     # Calculate dxi_psi at the neighboring points adding
     # the contribution of each species. Then, use linear interpolation to get
     # the value at the location of each particle.
@@ -67,13 +78,18 @@ def calculate_psi_and_derivatives_at_species(species: List[PlasmaSpecies]):
             for i, s_deposit in enumerate(species):
                 calculate_dxi_psi(
                     s_gather._r_neighbor,
-                    s_deposit.r, s_deposit.i_sort, s_deposit._sum_3,
+                    s_deposit.r,
+                    s_deposit.i_sort,
+                    s_deposit._sum_3,
                     s_gather._dxi_psi_bg,
-                    first=i==0
+                    first=i == 0,
                 )
             interpolate_dxi_psi_from_neighbors(
-                s_gather.r, s_gather._dxi_psi_bg, s_gather._r_neighbor,
-                s_gather.i_sort, s_gather._dxi_psi
+                s_gather.r,
+                s_gather._dxi_psi_bg,
+                s_gather._r_neighbor,
+                s_gather.i_sort,
+                s_gather._dxi_psi,
             )
             # Apply boundary condition
             s_gather._dxi_psi += dxi_psi_max
@@ -86,9 +102,7 @@ def calculate_psi_at_grid(species: List[PlasmaSpecies], r_grid, log_r_grid, psi)
     """Calculate psi at the simulation grid."""
     species = [sp for sp in species if not sp.is_empty]
     for sp in species:
-        calculate_psi(
-            r_grid, log_r_grid, sp.r, sp._sum_1, sp._sum_2,
-            sp.i_sort, psi)
+        calculate_psi(r_grid, log_r_grid, sp.r, sp._sum_1, sp._sum_2, sp.i_sort, psi)
     psi -= sp._psi_max
 
 
@@ -142,8 +156,7 @@ def calculate_cumulative_sum_3(q, r, pr, w, w_center, psi, sum_3_arr):
 
 
 @njit_serial(fastmath=True, error_model="numpy")
-def interpolate_psi_dr_psi_from_neighbors(
-        r, psi_bg, r_neighbor, idx, psi, dr_psi):
+def interpolate_psi_dr_psi_from_neighbors(r, psi_bg, r_neighbor, idx, psi, dr_psi):
     """
     Calculate psi and dr_psi at the particles using linear interpolation
     between the left and right neighbors.
@@ -166,8 +179,8 @@ def interpolate_psi_dr_psi_from_neighbors(
 
         # Interpolate psi between left and right neighbors.
         b_1 = (psi_right - psi_left) / (r_right - r_left)
-        a_1 = psi_left - b_1*r_left
-        psi[i] = a_1 + b_1*r_i
+        a_1 = psi_left - b_1 * r_left
+        psi[i] = a_1 + b_1 * r_i
 
         # dr_psi is simply the slope used for interpolation.
         dr_psi[i] = b_1
@@ -179,8 +192,7 @@ def interpolate_psi_dr_psi_from_neighbors(
 
 
 @njit_serial(fastmath=True, error_model="numpy")
-def interpolate_dxi_psi_from_neighbors(
-        r, dxi_psi_bg, r_neighbor, idx, dxi_psi):
+def interpolate_dxi_psi_from_neighbors(r, dxi_psi_bg, r_neighbor, idx, dxi_psi):
     """
     Calculate dxi_psi at the particles using linear interpolation
     between the left and right neighbors.
@@ -204,8 +216,8 @@ def interpolate_dxi_psi_from_neighbors(
 
         # Interpolate value between left and right neighbors.
         b_1 = (dxi_psi_right - dxi_psi_left) / (r_right - r_left)
-        a_1 = dxi_psi_left - b_1*r_left
-        dxi_psi[i] = a_1 + b_1*r_i
+        a_1 = dxi_psi_left - b_1 * r_left
+        dxi_psi[i] = a_1 + b_1 * r_i
 
         # Update values of next left neighbor with those of the current right
         # neighbor.
@@ -272,7 +284,8 @@ def calculate_psi(r_eval, log_r_eval, r, sum_1, sum_2, idx, psi):
 
 @njit_serial(fastmath=True, error_model="numpy")
 def calculate_psi_and_dr_psi(
-        r_eval, log_r_eval, r, dr_p, idx, sum_1_arr, sum_2_arr, psi, dr_psi, first=True):
+    r_eval, log_r_eval, r, dr_p, idx, sum_1_arr, sum_2_arr, psi, dr_psi, first=True
+):
     """Calculate psi and dr_psi at the radial positions given in `r_eval`."""
     # Get number of plasma particles.
     n_part = r.shape[0]
@@ -328,11 +341,11 @@ def calculate_psi_and_dr_psi(
             psi_j = sum_1_left * np.log(r_j) - sum_2_left + sum_2_max
 
         # Calculate fields at r_j.
-        if first:            
-            psi[j] = sum_1_j*log_r_j - sum_2_j
+        if first:
+            psi[j] = sum_1_j * log_r_j - sum_2_j
             dr_psi[j] = sum_1_j / r_j
         else:
-            psi[j] += sum_1_j*log_r_j - sum_2_j
+            psi[j] += sum_1_j * log_r_j - sum_2_j
             dr_psi[j] += sum_1_j / r_j
 
 
@@ -367,9 +380,9 @@ def calculate_dxi_psi(r_eval, r, idx, sum_3_arr, dxi_psi, first=True):
             i = idx[i_last - 1]
             sum_3_j = sum_3_arr[i]
         if first:
-            dxi_psi[j] = - sum_3_j
+            dxi_psi[j] = -sum_3_j
         else:
-            dxi_psi[j] += - sum_3_j
+            dxi_psi[j] += -sum_3_j
 
 
 @njit_serial()

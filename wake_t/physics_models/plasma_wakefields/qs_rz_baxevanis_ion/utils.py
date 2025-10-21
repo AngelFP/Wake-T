@@ -196,6 +196,7 @@ def sort_particle_arrays(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
             a10[:, i] = a10_orig[:, i_sort]
             a11[:, i] = a11_orig[:, i_sort]
 
+
 @njit_serial()
 def determine_neighboring_points(r, dr_p, idx, r_neighbor):
     """
@@ -209,7 +210,7 @@ def determine_neighboring_points(r, dr_p, idx, r_neighbor):
     # Initialize arrays.
     n_part = r.shape[0]
 
-    r_im1 = 0.
+    r_im1 = 0.0
     # Calculate psi and dr_psi.
     # Their value at the position of each plasma particle is calculated
     # by doing a linear interpolation between two values at the left and
@@ -235,4 +236,3 @@ def determine_neighboring_points(r, dr_p, idx, r_neighbor):
         if i_sort == n_part - 1:
             r_right = r_i + dr_p_i * 0.5
             r_neighbor[-1] = r_right
-

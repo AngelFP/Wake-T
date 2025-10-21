@@ -28,6 +28,7 @@ the GPU. In order, to limit the amount of data to be transfered, particles are
 handled in batches of 10 particles, so that only the cumulative sum of the
 number of particles in each batch need to be performed.
 """
+
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import numpy as np
@@ -37,10 +38,14 @@ from .read_atomic_data import get_ionization_energies
 from .numba_methods import ionize_ions_numba, copy_ionized_electrons_numba
 
 from wake_t.utilities.numba import njit_serial
-from aptools.plasma_accel.general_equations import plasma_cold_non_relativisct_wave_breaking_field
-if TYPE_CHECKING:   
+from aptools.plasma_accel.general_equations import (
+    plasma_cold_non_relativisct_wave_breaking_field,
+)
+
+if TYPE_CHECKING:
     from ..plasma_species import PlasmaSpecies
-    
+
+
 class Ionizer(object):
     """
     Class that contains the data associated with ionization (on the ions side)
@@ -59,8 +64,16 @@ class Ionizer(object):
       whenever further ionization happens, and is passed to the deposition
       kernel as the effective weight of the particles)
     """
-    def __init__(self, element, ionizable_species: PlasmaSpecies, target_species: PlasmaSpecies,
-                 dt, level_start, level_max=None):
+
+    def __init__(
+        self,
+        element,
+        ionizable_species: PlasmaSpecies,
+        target_species: PlasmaSpecies,
+        dt,
+        level_start,
+        level_max=None,
+    ):
         """
         Initialize an Ionizer instance
 
@@ -107,11 +120,11 @@ class Ionizer(object):
         self.batch_size = 10
 
         # Initialize ionization-relevant meta-data
-        self.initialize_ADK_parameters( element, dt )
+        self.initialize_ADK_parameters(element, dt)
 
         # Initialize the required arrays
         Ntot = ionizable_species.n_part
-        self.ionization_level = np.ones( Ntot, dtype=np.uint64 ) * level_start
+        self.ionization_level = np.ones(Ntot, dtype=np.uint64) * level_start
         self.w_times_level = ionizable_species.w * self.ionization_level
 
         # Check if electrons from different ionization levels should
@@ -122,17 +135,20 @@ class Ionizer(object):
             for level in range(self.level_start, self.level_max):
                 if level not in target_species.keys():
                     raise ValueError(
-                    'When passing a dictionary for `target_species`, its keys '
-                    'should be\nthe integers corresponding to the ionizable '
-                    'levels.\n (i.e. the integers from %d to %d'
-                    'for %s with level_start=%d.)' %(self.level_start,
-                    self.level_max, element, self.level_start))
+                        "When passing a dictionary for `target_species`, its keys "
+                        "should be\nthe integers corresponding to the ionizable "
+                        "levels.\n (i.e. the integers from %d to %d"
+                        "for %s with level_start=%d.)"
+                        % (self.level_start, self.level_max, element, self.level_start)
+                    )
                 # Check that the dictionary contains Particles objects
                 assert isinstance(target_species[level], type(ionizable_species))
             # Convert to a list internally: the dictionary input is
             # just for less error-prone user input.
-            self.target_species = [ target_species[level] \
-                for level in range(self.level_start, self.level_max) ]
+            self.target_species = [
+                target_species[level]
+                for level in range(self.level_start, self.level_max)
+            ]
             self.store_electrons_per_level = True
         elif isinstance(target_species, type(ionizable_species)):
             # When passing a single Particles object
@@ -142,15 +158,15 @@ class Ionizer(object):
             raise ValueError(
                 "Unexpected type for target_species: %s\n"
                 "Please pass a `Particles` object, or a dictionary"
-                %type(target_species))
+                % type(target_species)
+            )
 
         # Check that the target species are indeed electrons
         for species in self.target_species:
             assert species.charge == -e
             assert species.mass == m_e
 
-
-    def initialize_ADK_parameters( self, element, dt ):
+    def initialize_ADK_parameters(self, element, dt):
         """
         Initialize parameters needed for the calculation of ADK ionization rate
 
@@ -167,11 +183,13 @@ class Ionizer(object):
         See Chen, JCP 236 (2013), equation (2) for the ionization rate formula
         """
         # Get the array of energies
-        Uion = get_ionization_energies( element )
+        Uion = get_ionization_energies(element)
         # Check whether the element string was valid
         if Uion is None:
-            raise ValueError("Unknown ionizable element %s.\n" %element + \
-            "Please use atomic symbol (e.g. 'He') not full name (e.g. Helium)")
+            raise ValueError(
+                "Unknown ionizable element %s.\n" % element
+                + "Please use atomic symbol (e.g. 'He') not full name (e.g. Helium)"
+            )
         else:
             self.element = element
 
@@ -180,30 +198,38 @@ class Ionizer(object):
             self.level_max = len(Uion)
         else:
             assert type(self.level_max) is int, "level_max must be integer"
-            if self.level_max>len(Uion):
-                raise ValueError("Chosen level_max for {}".format(element) + \
-                                 " cannot exceed {}".format(len(Uion)))
+            if self.level_max > len(Uion):
+                raise ValueError(
+                    "Chosen level_max for {}".format(element)
+                    + " cannot exceed {}".format(len(Uion))
+                )
 
         # Calculate the ADK prefactors (See Chen, JCP 236 (2013), equation (2))
         # - Scalars
-        alpha = physical_constants['fine-structure constant'][0]
-        r_e = physical_constants['classical electron radius'][0]
+        alpha = physical_constants["fine-structure constant"][0]
+        r_e = physical_constants["classical electron radius"][0]
         wa = alpha**3 * c / r_e
-        Ea = m_e*c**2/e * alpha**4/r_e
+        Ea = m_e * c**2 / e * alpha**4 / r_e
         # - Arrays (one element per ionization level)
-        UH = get_ionization_energies('H')[0]
-        Z = np.arange( len(Uion) ) + 1
-        n_eff = Z * np.sqrt( UH/Uion )
+        UH = get_ionization_energies("H")[0]
+        Z = np.arange(len(Uion)) + 1
+        n_eff = Z * np.sqrt(UH / Uion)
         l_eff = n_eff[0] - 1
-        C2 = 2**(2*n_eff) / (n_eff * gamma(n_eff+l_eff+1) * gamma(n_eff-l_eff))
+        C2 = 2 ** (2 * n_eff) / (
+            n_eff * gamma(n_eff + l_eff + 1) * gamma(n_eff - l_eff)
+        )
         # For now, we assume l=0, m=0
-        self.adk_power = - (2*n_eff - 1)
-        self.adk_prefactor = dt * wa * C2 * ( Uion/(2*UH) ) \
-            * ( 2*(Uion/UH)**(3./2)*Ea )**(2*n_eff - 1)
-        self.adk_exp_prefactor = -2./3 * ( Uion/UH )**(3./2) * Ea
+        self.adk_power = -(2 * n_eff - 1)
+        self.adk_prefactor = (
+            dt
+            * wa
+            * C2
+            * (Uion / (2 * UH))
+            * (2 * (Uion / UH) ** (3.0 / 2) * Ea) ** (2 * n_eff - 1)
+        )
+        self.adk_exp_prefactor = -2.0 / 3 * (Uion / UH) ** (3.0 / 2) * Ea
 
-
-    def handle_ionization( self, ion: PlasmaSpecies ):
+    def handle_ionization(self, ion: PlasmaSpecies):
         """
         Handle ionization, either on CPU or GPU
 
@@ -219,7 +245,7 @@ class Ionizer(object):
         # Skip this function if there are no ions
         # if ion.Ntot == 0:
         #     return
-        
+
         # Process particles in batches (of typically 10, 20 particles)
         # N_batch = int( ion.Ntot / self.batch_size ) + 1
         N_batch = 1
@@ -234,29 +260,44 @@ class Ionizer(object):
 
         # Create temporary arrays (on CPU or GPU, depending on `use_cuda`)
         # ionized_from = allocate_empty( ion.Ntot, use_cuda, dtype=np.int16 )
-        ionized_from = np.empty( ion.n_part, dtype=np.int16 )
+        ionized_from = np.empty(ion.n_part, dtype=np.int16)
         # n_ionized = allocate_empty( (n_levels, N_batch), use_cuda,
         #                             dtype=np.int64 )
-        n_ionized = np.empty( (n_levels, N_batch), dtype=np.int64 )
+        n_ionized = np.empty((n_levels, N_batch), dtype=np.int64)
         # Draw random numbers
-        random_draw = np.random.rand( ion.n_part )
+        random_draw = np.random.rand(ion.n_part)
 
         E0 = plasma_cold_non_relativisct_wave_breaking_field(ion.n_p / 1e6)
         # Determine the ions that are ionized, and count them in each batch
         # (one thread per batch on GPU; parallel loop over batches on CPU)
         ionize_ions_numba(
-            N_batch, self.batch_size, ion.n_part,
-            self.level_start, self.level_max, n_levels,
-            n_ionized, ionized_from, self.ionization_level, random_draw,
-            self.adk_prefactor, self.adk_power, self.adk_exp_prefactor,
-            ion.gamma, ion._b_t_0*E0, ion.w, self.w_times_level )
+            N_batch,
+            self.batch_size,
+            ion.n_part,
+            self.level_start,
+            self.level_max,
+            n_levels,
+            n_ionized,
+            ionized_from,
+            self.ionization_level,
+            random_draw,
+            self.adk_prefactor,
+            self.adk_power,
+            self.adk_exp_prefactor,
+            ion.gamma,
+            ion._b_t_0 * E0,
+            ion.w,
+            self.w_times_level,
+        )
 
-        # Count the total number of new electrons 
-        cumulative_n_ionized = np.zeros( (n_ionized.shape[0], n_ionized.shape[1]+1), dtype=np.int64 )
-        np.cumsum( n_ionized, out=cumulative_n_ionized[:,1:], axis=-1 )
+        # Count the total number of new electrons
+        cumulative_n_ionized = np.zeros(
+            (n_ionized.shape[0], n_ionized.shape[1] + 1), dtype=np.int64
+        )
+        np.cumsum(n_ionized, out=cumulative_n_ionized[:, 1:], axis=-1)
         # cumulative_n_ionized = perform_cumsum_2d( n_ionized, use_cuda )
         # If no new particle was created, skip the rest of this function
-        if np.all( cumulative_n_ionized[:,-1] == 0 ):
+        if np.all(cumulative_n_ionized[:, -1] == 0):
             return
 
         # Loop over the electron species associated to each level
@@ -268,21 +309,38 @@ class Ionizer(object):
         for i_level, elec in enumerate(self.target_species):
             old_Ntot = elec.n_part
             # Cast to int transfers the data from the GPU if needed
-            new_Ntot = old_Ntot + int( cumulative_n_ionized[i_level,-1] )
-            reallocate_and_copy_old( elec, old_Ntot, new_Ntot )
+            new_Ntot = old_Ntot + int(cumulative_n_ionized[i_level, -1])
+            reallocate_and_copy_old(elec, old_Ntot, new_Ntot)
             # Create the new electrons from ionization (one thread per batch)
             copy_ionized_electrons_numba(
-                N_batch, self.batch_size, old_Ntot, ion.n_part,
-                cumulative_n_ionized, ionized_from,
-                i_level, self.store_electrons_per_level,
-                elec.r, elec.dr_p, elec.pr, elec.pz,
-                elec.gamma, elec.w, elec.m, elec.q,
-                ion.r, ion.dr_p, ion.pr, ion.pz,
-                ion.gamma, ion.w, ion.m, ion.q
+                N_batch,
+                self.batch_size,
+                old_Ntot,
+                ion.n_part,
+                cumulative_n_ionized,
+                ionized_from,
+                i_level,
+                self.store_electrons_per_level,
+                elec.r,
+                elec.dr_p,
+                elec.pr,
+                elec.pz,
+                elec.gamma,
+                elec.w,
+                elec.m,
+                elec.q,
+                ion.r,
+                ion.dr_p,
+                ion.pr,
+                ion.pz,
+                ion.gamma,
+                ion.w,
+                ion.m,
+                ion.q,
             )
 
 
-def reallocate_and_copy_old( species: PlasmaSpecies, old_Ntot, new_Ntot ):
+def reallocate_and_copy_old(species: PlasmaSpecies, old_Ntot, new_Ntot):
     """
     Copy the particle quantities of `species` from arrays of size `old_Ntot`
     into arrays of size `new_Ntot`. Set these arrays as attributes of `species.
@@ -304,11 +362,11 @@ def reallocate_and_copy_old( species: PlasmaSpecies, old_Ntot, new_Ntot ):
     """
 
     # Iterate over particle attributes and copy the old particles
-    for attr in ['r', 'dr_p', 'pr', 'pz', 'gamma', 'w', 'm', 'q']:
+    for attr in ["r", "dr_p", "pr", "pz", "gamma", "w", "m", "q"]:
         old_array = getattr(species, attr)
         new_array = np.empty(new_Ntot, dtype=np.float64)
-        copy_particle_data_numba( old_Ntot, old_array, new_array )
-        setattr( species, attr, new_array )
+        copy_particle_data_numba(old_Ntot, old_array, new_array)
+        setattr(species, attr, new_array)
 
     # Modify the total number of particles
     species.n_part = new_Ntot
@@ -319,11 +377,11 @@ def reallocate_and_copy_old( species: PlasmaSpecies, old_Ntot, new_Ntot ):
 
 
 @njit_serial
-def copy_particle_data_numba( Ntot, old_array, new_array ):
+def copy_particle_data_numba(Ntot, old_array, new_array):
     """
     Copy the `Ntot` elements of `old_array` into `new_array`, on CPU
     """
     # Loop over single particles (in parallel if threading is enabled)
-    for ip in range( Ntot ):
+    for ip in range(Ntot):
         new_array[ip] = old_array[ip]
-    return( new_array )
+    return new_array

@@ -1,4 +1,5 @@
 """Contains the definition of the `PlasmaParticles` class."""
+
 from typing import Optional, List, Callable
 
 import numpy as np
@@ -8,12 +9,11 @@ from wake_t.utilities.numba import njit_serial
 from .deposition import deposit_plasma_particles
 from .gather import gather_bunch_sources, gather_laser_sources
 from .plasma_push.ab2 import evolve_plasma_ab2
-from .utils import (log, calculate_chi, calculate_rho,
-                    determine_neighboring_points)
+from .utils import log, calculate_chi, calculate_rho, determine_neighboring_points
 from .ionization.ionizer import Ionizer
 
 
-class PlasmaSpecies():
+class PlasmaSpecies:
     """
     Class containing the 1D slice of plasma particles used in the quasi-static
     Baxevanis wakefield model.
@@ -66,17 +66,16 @@ class PlasmaSpecies():
         nr: int,
         nz: int,
         radial_density: Callable[[float], float],
-        max_gamma: Optional[float] = 10.,
+        max_gamma: Optional[float] = 10.0,
         can_move: Optional[bool] = True,
         mass: Optional[float] = ct.m_p,
         charge: Optional[float] = ct.e,
-        pusher: Optional[str] = 'ab2',
-        shape: Optional[str] = 'linear',
+        pusher: Optional[str] = "ab2",
+        shape: Optional[str] = "linear",
         store_history: Optional[bool] = False,
         diags: Optional[List[str]] = [],
-        n_p=1e23
+        n_p=1e23,
     ):
-
         # Store parameters.
         self.r_max = r_max
         self.r_max_plasma = r_max_plasma
@@ -93,8 +92,8 @@ class PlasmaSpecies():
         self.charge = charge
         self.store_history = store_history
         self.diags = diags
-        self.rho_species = np.zeros((nz+4, nr+4))
-        self.chi_species = np.zeros((nz+4, nr+4))
+        self.rho_species = np.zeros((nz + 4, nr + 4))
+        self.chi_species = np.zeros((nz + 4, nr + 4))
         self.n_p = n_p
         self.ionizer = None
 
@@ -103,7 +102,7 @@ class PlasmaSpecies():
 
         if not empty:
             # Create radial distribution of plasma particles.
-            rmin = 0.
+            rmin = 0.0
             for i in range(self.ppc.shape[0]):
                 rmax = self.ppc[i, 0]
                 ppc = self.ppc[i, 1]
@@ -139,7 +138,7 @@ class PlasmaSpecies():
         self.w = dr_p * r * self.radial_density(r)
         # self.w *= - self.charge / ct.e
         self.m = np.ones(self.n_part) * self.mass / ct.m_e
-        self.q = - np.ones(self.n_part) * self.charge / ct.e
+        self.q = -np.ones(self.n_part) * self.charge / ct.e
         self.r_to_x = np.ones(self.n_part, dtype=np.int32)
 
         # Create history arrays.
@@ -158,7 +157,7 @@ class PlasmaSpecies():
             self.b_i_hist = np.zeros((self.nz, self.n_part))
             self.a_0_hist = np.zeros(self.nz)
             self.i_push = 0
-            self.xi_current = 0.
+            self.xi_current = 0.0
 
         self.first_iteration_computed = False
 
@@ -167,7 +166,7 @@ class PlasmaSpecies():
         self._allocate_field_arrays()
 
         # Allocate arrays needed for the particle pusher.
-        if self.can_move and self.pusher == 'ab2':
+        if self.can_move and self.pusher == "ab2":
             self._allocate_ab2_arrays()
 
     @property
@@ -177,9 +176,9 @@ class PlasmaSpecies():
     def sort(self):
         """Sort plasma particles radially (only by index)."""
         if self.can_move or not self.first_iteration_computed:
-            self.i_sort = np.argsort(self.r, kind='stable')
+            self.i_sort = np.argsort(self.r, kind="stable")
 
-    def determine_neighboring_points(self):        
+    def determine_neighboring_points(self):
         """Determine the neighboring points of each plasma particle."""
         if self.can_move:
             determine_neighboring_points(
@@ -191,14 +190,14 @@ class PlasmaSpecies():
         """Gather the source terms (a^2 and nabla(a)^2) from the laser."""
         if self.can_move:
             gather_laser_sources(
-                a2, nabla_a2, r_min, r_max, dr,
-                self.r, self._a2, self._nabla_a2
+                a2, nabla_a2, r_min, r_max, dr, self.r, self._a2, self._nabla_a2
             )
 
-    def gather_bunch_sources(self, source_arrays, source_xi_indices,
-                             source_metadata, slice_i):
+    def gather_bunch_sources(
+        self, source_arrays, source_xi_indices, source_metadata, slice_i
+    ):
         """Gather the source terms (b_theta) from the particle bunches."""
-        self._b_t_0[:] = 0.
+        self._b_t_0[:] = 0.0
         for i in range(len(source_arrays)):
             array = source_arrays[i]
             idx = source_xi_indices[i]
@@ -209,27 +208,38 @@ class PlasmaSpecies():
             if slice_i in idx:
                 xi_index = slice_i + 2 - idx[0]
                 if self.can_move:
-                    gather_bunch_sources(array[xi_index], r_min, r_max, dr,
-                                         self.r, self._b_t_0)
+                    gather_bunch_sources(
+                        array[xi_index], r_min, r_max, dr, self.r, self._b_t_0
+                    )
 
     def update_gamma_and_pz(self):
         if self.can_move:
             update_gamma_and_pz(
-                self.gamma, self.pz, self.pr,
-                self._a2, self._psi, self.q, self.m
+                self.gamma, self.pz, self.pr, self._a2, self._psi, self.q, self.m
             )
             check_gamma(self.gamma, self.pz, self.pr, self.max_gamma)
 
     def evolve(self, dxi):
         """Evolve plasma particles to next longitudinal slice."""
-        # print("_dr_psi:", self._dr_psi.shape) 
+        # print("_dr_psi:", self._dr_psi.shape)
         # print("_dr:", self._dr.shape)
         # print("_dpr:", self._dpr.shape)
         if self.can_move:
             evolve_plasma_ab2(
-                dxi, self.r, self.pr, self.gamma, self.m, self.q,
-                self._nabla_a2, self._b_t_0, self._b_t, self._psi,
-                self._dr_psi, self._dr, self._dpr, self.r_to_x
+                dxi,
+                self.r,
+                self.pr,
+                self.gamma,
+                self.m,
+                self.q,
+                self._nabla_a2,
+                self._b_t_0,
+                self._b_t,
+                self._psi,
+                self._dr_psi,
+                self._dr,
+                self._dpr,
+                self.r_to_x,
             )
 
         if self.store_history:
@@ -258,8 +268,9 @@ class PlasmaSpecies():
         )
         chi += self.chi_species[slice_i]
 
-    def make_ionizable(self, element, target_species, dt,
-                       level_start=0, level_max=None):
+    def make_ionizable(
+        self, element, target_species, dt, level_start=0, level_max=None
+    ):
         """
         Make this species ionizable.
 
@@ -302,8 +313,9 @@ class PlasmaSpecies():
             limit for the chosen element.
         """
         # Initialize the ionizer module
-        self.ionizer = Ionizer( element, self, target_species, dt,
-                                level_start, level_max=level_max )
+        self.ionizer = Ionizer(
+            element, self, target_species, dt, level_start, level_max=level_max
+        )
         # Set charge to the elementary charge e (assumed by deposition kernel,
         # when using self.ionizer.w_times_level as the effective weight)
         # self.q = ct.e
@@ -334,33 +346,33 @@ class PlasmaSpecies():
         """
         if self.store_history:
             history = {
-                'r_hist': self.r_hist,
-                'xi_hist': self.xi_hist,
-                'pr_hist': self.pr_hist,
-                'pz_hist': self.pz_hist,
-                'w_hist': self.w_hist,
+                "r_hist": self.r_hist,
+                "xi_hist": self.xi_hist,
+                "pr_hist": self.pr_hist,
+                "pz_hist": self.pz_hist,
+                "w_hist": self.w_hist,
                 "r_to_x_hist": self.r_to_x_hist,
-                'sum_1_hist': self.sum_1_hist,
-                'sum_2_hist': self.sum_2_hist,
-                'a_i_hist': self.a_i_hist,
-                'b_i_hist': self.b_i_hist,
-                'a_0_hist': self.a_0_hist,
-                'psi_max_hist': self.psi_max_hist,
-                'i_sort_hist': self.i_sort_hist,
+                "sum_1_hist": self.sum_1_hist,
+                "sum_2_hist": self.sum_2_hist,
+                "a_i_hist": self.a_i_hist,
+                "b_i_hist": self.b_i_hist,
+                "a_0_hist": self.a_0_hist,
+                "psi_max_hist": self.psi_max_hist,
+                "i_sort_hist": self.i_sort_hist,
             }
             return history
 
     def store_current_step(self):
         """Store current particle properties in the history arrays."""
-        if 'r' in self.diags or self.store_history:
+        if "r" in self.diags or self.store_history:
             self.r_hist[-1 - self.i_push] = self.r
-        if 'z' in self.diags:
+        if "z" in self.diags:
             self.xi_hist[-1 - self.i_push] = self.xi_current
-        if 'pr' in self.diags:
+        if "pr" in self.diags:
             self.pr_hist[-1 - self.i_push] = self.pr
-        if 'pz' in self.diags:
+        if "pz" in self.diags:
             self.pz_hist[-1 - self.i_push] = self.pz
-        if 'w' in self.diags:
+        if "w" in self.diags:
             self.w_hist[-1 - self.i_push] = self._rho
         if "r_to_x" in self.diags:
             self.r_to_x_hist[-1 - self.i_push] = self.r_to_x
@@ -401,18 +413,18 @@ class PlasmaSpecies():
         self._dxi_psi = np.zeros(self.n_part)
         self._chi = np.zeros(self.n_part)
         self._sum_3 = np.zeros(self.n_part)
-        self._psi_bg = np.zeros(self.n_part+1)
-        self._dr_psi_bg = np.zeros(self.n_part+1)
-        self._dxi_psi_bg = np.zeros(self.n_part+1)
-        self._b_t_bg = np.zeros(self.n_part+1)
+        self._psi_bg = np.zeros(self.n_part + 1)
+        self._dr_psi_bg = np.zeros(self.n_part + 1)
+        self._dxi_psi_bg = np.zeros(self.n_part + 1)
+        self._b_t_bg = np.zeros(self.n_part + 1)
         self._a_0 = np.zeros(1)
         self._A = np.zeros(self.n_part)
         self._B = np.zeros(self.n_part)
         self._C = np.zeros(self.n_part)
         self._K = np.zeros(self.n_part)
         self._U = np.zeros(self.n_part)
-        self._r_neighbor = np.zeros(self.n_part+1)
-        self._log_r_neighbor = np.zeros(self.n_part+1)
+        self._r_neighbor = np.zeros(self.n_part + 1)
+        self._log_r_neighbor = np.zeros(self.n_part + 1)
 
         self._psi_max = np.zeros(1)
 
@@ -431,7 +443,7 @@ class PlasmaSpecies():
 
         When storing the particle history, some auxiliary arrays (e.g., those
         storing the cumulative sums, the a_i, b_i coefficients, ...) have to be
-    	stored at every longitudinal step. In principle, this used to be done
+        stored at every longitudinal step. In principle, this used to be done
         by writing the 1D auxiliary arrays into the corresponding slice of the
         2D history arrays. However, this is time consuming as it leads to
         copying data at every step. In order to avoid this, the auxiliary
@@ -452,7 +464,7 @@ class PlasmaSpecies():
             self._sum_2[:] = self.sum_2_hist[-self.i_push]
 
 
-@njit_serial(error_model='numpy')
+@njit_serial(error_model="numpy")
 def update_gamma_and_pz(gamma, pz, pr, a2, psi, q, m):
     """
     Update the gamma factor and longitudinal momentum of the plasma particles.
@@ -470,12 +482,11 @@ def update_gamma_and_pz(gamma, pz, pr, a2, psi, q, m):
     for i in range(pr.shape[0]):
         q_over_m = q[i] / m[i]
         psi_i = psi[i] * q_over_m
-        pz_i = (
-            (1 + pr[i] ** 2 + q_over_m ** 2 * a2[i] - (1 + psi_i) ** 2) /
-            (2 * (1 + psi_i))
+        pz_i = (1 + pr[i] ** 2 + q_over_m**2 * a2[i] - (1 + psi_i) ** 2) / (
+            2 * (1 + psi_i)
         )
         pz[i] = pz_i
-        gamma[i] = 1. + pz_i + psi_i
+        gamma[i] = 1.0 + pz_i + psi_i
 
 
 @njit_serial()
@@ -483,6 +494,6 @@ def check_gamma(gamma, pz, pr, max_gamma):
     """Check that the gamma of particles does not exceed `max_gamma`"""
     for i in range(gamma.shape[0]):
         if gamma[i] > max_gamma:
-            gamma[i] = 1.
-            pz[i] = 0.
-            pr[i] = 0.
+            gamma[i] = 1.0
+            pz[i] = 0.0
+            pr[i] = 0.0

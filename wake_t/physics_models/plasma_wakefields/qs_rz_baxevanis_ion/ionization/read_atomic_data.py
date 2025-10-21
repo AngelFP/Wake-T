@@ -5,13 +5,15 @@
 This file is part of the Fourier-Bessel Particle-In-Cell code (FB-PIC)
 It contains a helper function that parses the data file atomic_data.txt
 """
+
 import re, os
 import numpy as np
 from scipy.constants import e
 
 cached_ionization_energies = {}
 
-def get_ionization_energies( element ):
+
+def get_ionization_energies(element):
     """
     Return an array of ionization energies (in Joules), with one
     array element per ionization state.
@@ -34,14 +36,15 @@ def get_ionization_energies( element ):
     """
     # Lookup in the cached dictionary
     if element in cached_ionization_energies.keys():
-        return( cached_ionization_energies[element] )
+        return cached_ionization_energies[element]
     else:
         energies = read_ionization_energies(element)
         # Record energies in the cached dictionary
         cached_ionization_energies[element] = energies
-        return( energies )
+        return energies
 
-def read_ionization_energies( element ):
+
+def read_ionization_energies(element):
     """
     Read the ionization energies from a data file
 
@@ -57,7 +60,7 @@ def read_ionization_energies( element ):
     ionization energy in Joules.
     """
     # Open and read the file atomic_data.txt
-    filename = os.path.join( os.path.dirname(__file__), 'atomic_data.txt' )
+    filename = os.path.join(os.path.dirname(__file__), "atomic_data.txt")
     with open(filename) as f:
         text_data = f.read()
     # Parse the data using regular expressions (a.k.a. regex)
@@ -70,22 +73,22 @@ def read_ionization_energies( element ):
     # - the atomic number (represented as (\d+))
     # - the ionization level (represented as the second (\d+))
     # - the ionization energy (represented as (\d+\.*\d*))
-    regex_command = \
-        '\n\s+(\d+)\s+\|\s+%s\s+\w+\s+\|\s+\+*(\d+)\s+\|\s+\(*\[*(\d+\.*\d*)' \
-        %element
-    list_of_tuples = re.findall( regex_command, text_data )
+    regex_command = (
+        "\n\s+(\d+)\s+\|\s+%s\s+\w+\s+\|\s+\+*(\d+)\s+\|\s+\(*\[*(\d+\.*\d*)" % element
+    )
+    list_of_tuples = re.findall(regex_command, text_data)
     # Return None if the requested element was not found
     if list_of_tuples == []:
-        return(None)
+        return None
     # Go through the list of tuples and fill the array of ionization energies.
-    atomic_number = int( list_of_tuples[0][0] )
+    atomic_number = int(list_of_tuples[0][0])
     assert atomic_number > 0
-    energies = np.zeros( atomic_number )
-    for ion_level in range( atomic_number ):
+    energies = np.zeros(atomic_number)
+    for ion_level in range(atomic_number):
         # Check that, when reading the file,
         # we obtained the correct ionization level
-        assert ion_level == int( list_of_tuples[ion_level][1] )
+        assert ion_level == int(list_of_tuples[ion_level][1])
         # Get the ionization energy and convert in Joules using e
-        energies[ ion_level ] = e * float( list_of_tuples[ion_level][2] )
+        energies[ion_level] = e * float(list_of_tuples[ion_level][2])
 
-    return( energies )
+    return energies

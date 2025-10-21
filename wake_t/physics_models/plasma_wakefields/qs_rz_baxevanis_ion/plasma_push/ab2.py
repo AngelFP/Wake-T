@@ -68,6 +68,7 @@ def evolve_plasma_ab2(
     # If a particle has crossed the axis, mirror it.
     check_axis_crossing(r, pr, dr[1], dpr[1], r_to_x)
 
+
 @njit_serial(fastmath=True, error_model="numpy")
 def calculate_derivatives(
     pr, gamma, m, q, b_theta_0, nabla_a2, b_theta_bar, psi, dr_psi, dr, dpr
@@ -110,6 +111,7 @@ def calculate_derivatives(
             - nabla_a2[i] * 0.5 * inv_psi_i * q_over_m
         ) * q_over_m
         dr[i] = pr[i] * inv_psi_i
+
 
 @njit_serial()
 def apply_ab2(x, dt, dx):
