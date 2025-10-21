@@ -70,7 +70,8 @@ def evolve_plasma_ab2(
 
 @njit_serial(fastmath=True, error_model="numpy")
 def calculate_derivatives(
-        pr, gamma, m, q, b_theta_0, nabla_a2, b_theta_bar, psi, dr_psi, dr, dpr):
+    pr, gamma, m, q, b_theta_0, nabla_a2, b_theta_bar, psi, dr_psi, dr, dpr
+):
     """
     Calculate the derivative of the radial position and the radial momentum
     of the plasma particles at the current slice.
@@ -80,6 +81,8 @@ def calculate_derivatives(
     pr, gamma : ndarray
         Arrays containing the radial momentum and Lorentz factor of the
         plasma particles.
+    m, q : float
+        Mass and charge of the plasma species.
     b_theta_0 : ndarray
         Array containing the value of the azimuthal magnetic field from
         the beam distribution at the position of each plasma particle.
@@ -97,13 +100,15 @@ def calculate_derivatives(
         radial momentum will be stored.
     """
     # Calculate derivatives of r and pr.
+    q_over_m = q / m
     for i in range(pr.shape[0]):
-        q_over_m = q[i] / m[i]
-        inv_psi_i = 1. / (1. + psi[i] * q_over_m)
-        dpr[i] = (gamma[i] * dr_psi[i] * inv_psi_i
-                  - b_theta_bar[i]
-                  - b_theta_0[i]
-                  - nabla_a2[i] * 0.5 * inv_psi_i * q_over_m) * q_over_m
+        inv_psi_i = 1.0 / (1.0 + psi[i] * q_over_m)
+        dpr[i] = (
+            gamma[i] * dr_psi[i] * inv_psi_i
+            - b_theta_bar[i]
+            - b_theta_0[i]
+            - nabla_a2[i] * 0.5 * inv_psi_i * q_over_m
+        ) * q_over_m
         dr[i] = pr[i] * inv_psi_i
 
 @njit_serial()

@@ -93,40 +93,52 @@ def calculate_psi_at_grid(species: List[PlasmaSpecies], r_grid, log_r_grid, psi)
 
 
 @njit_serial(fastmath=True)
-def calculate_cumulative_sum_1(q, idx, sum_1_arr):
+def calculate_cumulative_sum_1(q, w, w_center, sum_1_arr):
     """Calculate the cumulative sum in Eq. (29)."""
-    sum_1 = 0.
-    for i_sort in range(q.shape[0]):
-        i = idx[i_sort]
-        q_i = q[i]
-        sum_1 += q_i
-        sum_1_arr[i] = sum_1
+    sum_1 = 0.0
+    for i in range(w.shape[0]):
+        w_i = w[i]
+        w_center_i = w_center[i]
+        # Integrate up to particle centers.
+        sum_1_arr[i] = sum_1 + q * w_center_i
+        # And add all charge for next iteration.
+        sum_1 += q * w_i
+    # Total sum after last particle.
+    sum_1_arr[-1] = sum_1
 
 
 @njit_serial(fastmath=True)
-def calculate_cumulative_sum_2(r, q, idx, sum_2_arr):
+def calculate_cumulative_sum_2(q, log_r, w, w_center, sum_2_arr):
     """Calculate the cumulative sum in Eq. (31)."""
-    sum_2 = 0.
-    for i_sort in range(r.shape[0]):
-        i = idx[i_sort]
-        r_i = r[i]
-        q_i = q[i]
-        sum_2 += q_i * np.log(r_i)
-        sum_2_arr[i] = sum_2
+    sum_2 = 0.0
+    for i in range(log_r.shape[0]):
+        log_r_i = log_r[i]
+        w_i = w[i]
+        w_center_i = w_center[i]
+        # Integrate up to particle centers.
+        sum_2_arr[i] = sum_2 + q * w_center_i * log_r_i
+        # And add all charge for next iteration.
+        sum_2 += q * w_i * log_r_i
+    # Total sum after last particle.
+    sum_2_arr[-1] = sum_2
 
 
 @njit_serial(fastmath=True, error_model="numpy")
-def calculate_cumulative_sum_3(r, pr, q, psi, idx, sum_3_arr):
+def calculate_cumulative_sum_3(q, r, pr, w, w_center, psi, sum_3_arr):
     """Calculate the cumulative sum in Eq. (32)."""
-    sum_3 = 0.
-    for i_sort in range(r.shape[0]):
-        i = idx[i_sort]
+    sum_3 = 0.0
+    for i in range(r.shape[0]):
         r_i = r[i]
         pr_i = pr[i]
-        q_i = q[i]
+        w_i = w[i]
+        w_center_i = w_center[i]
         psi_i = psi[i]
-        sum_3 += (q_i * pr_i) / (r_i * (1 + psi_i))
-        sum_3_arr[i] = sum_3
+        # Integrate up to particle centers.
+        sum_3_arr[i] = sum_3 + (q * w_center_i * pr_i) / (r_i * (1 + psi_i))
+        # And add all charge for next iteration.
+        sum_3 += (q * w_i * pr_i) / (r_i * (1 + psi_i))
+    # Total sum after last particle.
+    sum_3_arr[-1] = sum_3
 
 
 @njit_serial(fastmath=True, error_model="numpy")
@@ -210,26 +222,52 @@ def calculate_psi(r_eval, log_r_eval, r, sum_1, sum_2, idx, psi):
     # Get number of points to evaluate.
     n_points = r_eval.shape[0]
 
+    # Calculate psi after the last plasma plasma particle
+    # This is used to ensure the boundary condition psi=0, which also
+    # assumes that the total electron and ion charge are the same.
+    sum_2_max = sum_2_arr[-1]
+
     # Calculate fields at r_eval.
     i_last = 0
-    sum_1_i = 0.
-    sum_2_i = 0.
+    r_left = 0.0
+    sum_1_left = 0.0
+    sum_2_left = 0.0
+    psi_left = 0.0
     for j in range(n_points):
         r_j = r_eval[j]
-        log_r_j = log_r_eval[j]
         # Get index of last plasma particle with r_i < r_j, continuing from
         # last particle found in previous iteration.
         while i_last < n_part:
-            i = idx[i_last]
-            r_i = r[i]
-            if r_i >= r_j:
+            r_right = r[i_last]
+            if r_right >= r_j:
                 break
+            r_left = r_right
             i_last += 1
-        if i_last > 0:
-            i = idx[i_last - 1]
-            sum_1_i = sum_1[i]
-            sum_2_i = sum_2[i]
-        psi[j] += sum_1_i * log_r_j - sum_2_i
+        if i_last < n_part:
+            if i_last > 0:
+                log_r_left = log_r[i_last - 1]
+                sum_1_left = sum_1_arr[i_last - 1]
+                sum_2_left = sum_2_arr[i_last - 1]
+                psi_left = sum_1_left * log_r_left - sum_2_left
+            log_r_right = log_r[i_last]
+            sum_1_right = sum_1_arr[i_last]
+            sum_2_right = sum_2_arr[i_last]
+            psi_right = sum_1_right * log_r_right - sum_2_right
+
+            # Interpolate sums.
+            inv_dr = 1.0 / (r_right - r_left)
+            slope_2 = (psi_right - psi_left) * inv_dr
+            psi_j = psi_left + slope_2 * (r_j - r_left) + sum_2_max
+        else:
+            sum_1_left = sum_1_arr[-1]
+            sum_2_left = sum_2_arr[-1]
+            psi_j = sum_1_left * np.log(r_j) - sum_2_left + sum_2_max
+
+        # Calculate fields at r_j.
+        if add:
+            psi[j] += psi_j
+        else:
+            psi[j] = psi_j
 
 
 @njit_serial(fastmath=True, error_model="numpy")
@@ -242,28 +280,53 @@ def calculate_psi_and_dr_psi(
     # Get number of points to evaluate.
     n_points = r_eval.shape[0]
 
-    # r_max_plasma = r[idx[-1]] + dr_p[idx[-1]] * 0.5
-    # log_r_max_plasma = np.log(r_max_plasma)
+    # Calculate psi after the last plasma plasma particle
+    # This is used to ensure the boundary condition psi=0, which also
+    # assumes that the total electron and ion charge are the same.
+    sum_2_max = sum_2_arr[-1]
 
     # Calculate fields at r_eval.
     i_last = 0
-    sum_1_j = 0.
-    sum_2_j = 0.
+    r_left = 0.0
+    sum_1_left = 0.0
+    sum_2_left = 0.0
+    psi_left = 0.0
+    dr_psi_left = 0.0
     for j in range(n_points):
         r_j = r_eval[j]
-        log_r_j = log_r_eval[j]
         # Get index of last plasma particle with r_i < r_j, continuing from
         # last particle found in previous iteration.
         while i_last < n_part:
-            i = idx[i_last]
-            r_i = r[i]
-            if r_i >= r_j:
+            r_right = r[i_last]
+            if r_right >= r_j:
                 break
+            r_left = r_right
             i_last += 1
-        if i_last > 0:
-            i = idx[i_last - 1]
-            sum_1_j = sum_1_arr[i]
-            sum_2_j = sum_2_arr[i]
+        if i_last < n_part:
+            if i_last > 0:
+                log_r_left = log_r[i_last - 1]
+                sum_1_left = sum_1_arr[i_last - 1]
+                sum_2_left = sum_2_arr[i_last - 1]
+                dr_psi_left = sum_1_left / r_left
+                psi_left = sum_1_left * log_r_left - sum_2_left
+            log_r_right = log_r[i_last]
+            sum_1_right = sum_1_arr[i_last]
+            sum_2_right = sum_2_arr[i_last]
+            dr_psi_right = sum_1_right / r_right
+            psi_right = sum_1_right * log_r_right - sum_2_right
+
+            # Interpolate sums.
+            inv_dr = 1.0 / (r_right - r_left)
+            slope_1 = (dr_psi_right - dr_psi_left) * inv_dr
+            slope_2 = (psi_right - psi_left) * inv_dr
+            dr_psi_j = dr_psi_left + slope_1 * (r_j - r_left)
+            psi_j = psi_left + slope_2 * (r_j - r_left) + sum_2_max
+        else:
+            sum_1_left = sum_1_arr[-1]
+            sum_2_left = sum_2_arr[-1]
+            dr_psi_j = sum_1_left / r_j
+            psi_j = sum_1_left * np.log(r_j) - sum_2_left + sum_2_max
+
         # Calculate fields at r_j.
         if first:            
             psi[j] = sum_1_j*log_r_j - sum_2_j
@@ -282,16 +345,21 @@ def calculate_dxi_psi(r_eval, r, idx, sum_3_arr, dxi_psi, first=True):
     # Get number of points to evaluate.
     n_points = r_eval.shape[0]
 
+    # Calculate dxi_psi after the last plasma plasma particle
+    # This is used to ensure the boundary condition dxi_psi=0, which also
+    # assumes that the total electron and ion charge are the same.
+    sum_3_max = sum_3_arr[-1]
+
     # Calculate fields at r_eval.
     i_last = 0
-    sum_3_j = 0
+    r_left = 0.0
+    dxi_psi_left = 0.0
     for j in range(n_points):
         r_j = r_eval[j]
         # Get index of last plasma particle with r_i < r_j, continuing from
         # last particle found in previous iteration.
         while i_last < n_part:
-            i = idx[i_last]
-            r_i = r[i]
+            r_i = r[i_last]
             if r_i >= r_j:
                 break
             i_last += 1
@@ -311,12 +379,15 @@ def check_psi(psi):
     This is used to prevent issues at the peak of a blowout wake, for example).
     """
     for i in range(psi.shape[0]):
-        if psi[i] < -0.9:
-            psi[i] = -0.9
+        psi_i = psi[i]
+        if psi_i < -0.99:
+            psi[i] = -0.99
+        elif psi_i > 0.99:
+            psi[i] = 0.99
 
 
 @njit_serial()
-def check_dxi_psi(dxi_psi):
+def check_psi_derivative(dxi_psi):
     """Check that the values of dxi_psi are within a reasonable range
 
     This is used to prevent issues at the peak of a blowout wake, for example).
