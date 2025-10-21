@@ -156,7 +156,7 @@ class AdaptiveGrid:
             s_d,
             self.psi_grid,
             self.b_t,
-            pp_hist['r_hist'],
+            pp_hist["r_hist"],
             pp_hist["log_r_hist"],
             pp_hist["sum_1_hist"],
             pp_hist["sum_2_hist"],
