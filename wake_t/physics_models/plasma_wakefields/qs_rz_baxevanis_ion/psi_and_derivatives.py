@@ -53,7 +53,6 @@ def calculate_psi_and_derivatives_at_species(
     """
 
     species = [sp for sp in species]
-    n_species = len(species)
     psi_max = 0.0
     # Calculate cumulative sums 1 and 2 (Eqs. (29) and (31)).
     for s in species:
