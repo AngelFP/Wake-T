@@ -11,6 +11,7 @@ def evolve_plasma_ab2(
     gamma,
     m,
     q,
+    r_to_x,
     nabla_a2,
     b_theta_0,
     b_theta,
@@ -18,7 +19,6 @@ def evolve_plasma_ab2(
     dr_psi,
     dr,
     dpr,
-    r_to_x,
 ):
     """
     Evolve the r and pr coordinates of plasma particles to the next xi step

@@ -120,6 +120,12 @@ def test_adaptive_grid():
 
         # Check that the field in the adaptive grid agree with those
         # of the base grid.
+        print("bt_base:", bt_base[ag.i_grid])
+        print("bt_ag:", bt_ag[:, : -ag.nr_border])
+        print("er_base:", er_base[ag.i_grid, :-1])
+        print("er_ag:", er_ag[:, : -ag.nr_border - 1])
+        print("ez_base:", ez_base[ag.i_grid][1:-1])
+        print("ez_ag:", ez_ag[1:-1, : -ag.nr_border])
         np.testing.assert_allclose(
             bt_base[ag.i_grid], bt_ag[:, : -ag.nr_border], rtol=1e-8
         )

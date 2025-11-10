@@ -6,19 +6,23 @@ See https://journals.aps.org/prab/abstract/10.1103/PhysRevAccelBeams.21.071301
 for the full details about this model.
 """
 
+
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
-# from .plasma_particles import PlasmaParticles
-from .plasma_species import PlasmaSpecies
-from .psi_and_derivatives import (
-    calculate_psi_and_derivatives_at_species,
-    calculate_psi_at_grid,
-)
-from .b_theta import calculate_b_theta_at_species, calculate_b_theta_at_grid
+from .plasma_particles import PlasmaParticles
 from .utils import longitudinal_gradient, radial_gradient
-
+from .plasma_operations import ( 
+    gather_bunch_sources_b, gather_laser_sources_b,
+    update_gamma_and_pz_b, deposit_rho,
+    calculate_weights, deposit_chi, evolve,
+)
+from .psi_and_derivatives import( 
+    calculate_psi_and_derivatives_at_species, calculate_psi_at_grid,
+    calculate_b_theta_at_grid,
+)
+from .b_theta import calculate_b_theta_at_species
 
 def calculate_wakefields(
     laser_a2,
@@ -128,22 +132,18 @@ def calculate_wakefields(
     dxi = (xi_max - xi_min) / (n_xi - 1)
     ppc = ppc.copy()
     ppc[:, 0] /= s_d
+    r_max_plasma = r_max_plasma / s_d
 
     def radial_density_normalized(r):
         return radial_density(r * s_d) / n_p
 
-    # Maximum radial extent of the plasma.
-    if r_max_plasma is None:
-        r_max_plasma = r_max
-    else:
-        r_max_plasma = r_max_plasma / s_d
-
     # Field node coordinates.
     r_fld = r_fld / s_d
     xi_fld = xi_fld / s_d
-    log_r_fld = np.log(r_fld)
 
     # Initialize field arrays, including guard cells.
+    nabla_a2 = np.zeros((n_xi + 4, n_r + 4))
+    psi = np.zeros((n_xi + 4, n_r + 4))
     nabla_a2 = np.zeros((n_xi + 4, n_r + 4))
     psi = np.zeros((n_xi + 4, n_r + 4))
 
@@ -155,153 +155,63 @@ def calculate_wakefields(
     # Calculate plasma response (including density, susceptibility, potential
     # and magnetic field)
     pp_hist = calculate_plasma_response(
-        r_max,
-        r_max_plasma,
-        radial_density_normalized,
-        dr,
-        ppc,
-        n_r,
-        plasma_pusher,
-        p_shape,
-        max_gamma,
-        ion_motion,
-        ion_mass,
-        free_electrons_per_ion,
-        n_xi,
-        laser_a2,
-        nabla_a2,
-        laser_source,
-        bunch_source_arrays,
-        bunch_source_xi_indices,
-        bunch_source_metadata,
-        r_fld,
-        log_r_fld,
-        psi,
-        B_t,
-        rho,
-        rho_e,
-        rho_i,
-        chi,
-        dxi,
+        r_max, r_max_plasma, radial_density_normalized, dr, ppc, n_r,
+        plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
+        free_electrons_per_ion, n_xi, laser_a2, nabla_a2, laser_source,
+        bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
+        r_fld, psi, B_t, rho, rho_e, rho_i, chi, dxi,
         store_plasma_history=store_plasma_history,
-        calculate_rho=calculate_rho,
-        particle_diags=particle_diags,
-        n_p=n_p,
-        enable_ionization=False,
+        calculate_rho=calculate_rho, particle_diags=particle_diags,
+        enable_ionization=False
     )
-
+    
     # Calculate derived fields (E_z, W_r, and E_r).
+    E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
     longitudinal_gradient(psi[2:-2, 2:-2], dxi, E_z[2:-2, 2:-2])
     radial_gradient(psi[2:-2, 2:-2], dr, E_r[2:-2, 2:-2])
     E_r -= B_t
     E_z *= -E_0
     E_r *= -E_0
+    E_z *= -E_0
+    E_r *= -E_0
     # B_t[:] = (b_t_bar + b_t_beam) * E_0 / ct.c
     B_t *= E_0 / ct.c
     return pp_hist
-
-
+    
 def calculate_plasma_response(
-    r_max,
-    r_max_plasma,
-    radial_density_normalized,
-    dr,
-    ppc,
-    n_r,
-    plasma_pusher,
-    p_shape,
-    max_gamma,
-    ion_motion,
-    ion_mass,
-    free_electrons_per_ion,
-    n_xi,
-    a2,
-    nabla_a2,
-    laser_source,
-    bunch_source_arrays,
-    bunch_source_xi_indices,
-    bunch_source_metadata,
-    r_fld,
-    log_r_fld,
-    psi,
-    b_t_bar,
-    rho,
-    rho_e,
-    rho_i,
-    chi,
-    dxi,
-    store_plasma_history,
-    calculate_rho,
-    particle_diags,
-    n_p,
-    enable_ionization=False,
+    r_max, r_max_plasma, radial_density_normalized, dr, ppc, n_r,
+    plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
+    free_electrons_per_ion, n_xi, laser_a2, nabla_a2, laser_source,
+    bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
+    r_fld, psi, b_t_bar, rho,
+    rho_e, rho_i, chi, dxi, store_plasma_history, calculate_rho,
+    particle_diags, enable_ionization=False
 ):
     # Initialize plasma particles.
-    pe = PlasmaSpecies(
-        r_max,
-        r_max_plasma,
-        dr,
-        ppc,
-        n_r,
-        n_xi,
-        radial_density_normalized,
-        max_gamma,
-        True,
-        ct.m_e,
-        -free_electrons_per_ion * ct.e,
-        plasma_pusher,
-        p_shape,
-        store_plasma_history,
-        particle_diags,
-        n_p,
-    )
+    pe = PlasmaParticles(
+        r_max, r_max_plasma, dr, ppc, n_r, n_xi, radial_density_normalized,
+        max_gamma, True, ct.m_e, -free_electrons_per_ion*ct.e,
+        plasma_pusher, p_shape, store_plasma_history, particle_diags)
     pe.rho_species = rho_e
     pe.initialize()
-    pi = PlasmaSpecies(
-        r_max,
-        r_max_plasma,
-        dr,
-        ppc,
-        n_r,
-        n_xi,
-        radial_density_normalized,
-        max_gamma,
-        ion_motion,
-        ion_mass,
-        free_electrons_per_ion * ct.e,
-        plasma_pusher,
-        p_shape,
-        store_plasma_history,
-        particle_diags,
-        n_p,
-    )
+    pi = PlasmaParticles(
+        r_max, r_max_plasma, dr, ppc, n_r, n_xi, radial_density_normalized,
+        max_gamma, ion_motion, ion_mass, free_electrons_per_ion*ct.e,
+        plasma_pusher, p_shape, store_plasma_history, particle_diags)
     pi.rho_species = rho_i
     pi.initialize()
     species = [pe, pi]
-    if enable_ionization:
-        pe_i = PlasmaSpecies(
-            r_max,
-            r_max_plasma,
-            dr,
-            ppc,
-            n_r,
-            n_xi,
-            radial_density_normalized,
-            max_gamma,
-            True,
-            ct.m_e,
-            -ct.e,
-            plasma_pusher,
-            p_shape,
-            store_plasma_history,
-            particle_diags,
-            n_p,
-        )
-        s_d = ge.plasma_skin_depth(n_p * 1e-6)
-        pe_i.initialize(empty=True)
-        pi.make_ionizable("He", pe_i, dxi * s_d / ct.c, level_start=1)
-        species.append(pe_i)
+    # if enable_ionization:
+    #     pe_i = PlasmaParticles(
+    #         r_max, r_max_plasma, dr, ppc, n_r, n_xi, radial_density_normalized,
+    #         max_gamma, True, ct.m_e, -ct.e,
+    #         plasma_pusher, p_shape, store_plasma_history, particle_diags, n_p
+    #     )
+    #     s_d = ge.plasma_skin_depth(n_p * 1e-6)
+    #     pe_i.initialize(empty=True)
+    #     pi.make_ionizable('He', pe_i, dxi*s_d/ct.c, level_start=1)
+    #     species.append(pe_i)
 
     # Evolve plasma from right to left and calculate psi, b_t_bar, rho and
     # chi on a grid.
@@ -310,40 +220,45 @@ def calculate_plasma_response(
 
         for sp in species:
             sp.sort()
-            sp.determine_neighboring_points()
 
             if laser_source:
-                sp.gather_laser_sources(
-                    a2[slice_i + 2], nabla_a2[slice_i + 2], r_fld[0], r_fld[-1], dr
+                gather_laser_sources_b(
+                    sp,
+                    laser_a2[slice_i + 2],
+                    nabla_a2[slice_i + 2],
+                    r_fld[0],
+                    r_fld[-1],
+                    dr,
                 )
-            sp.gather_bunch_sources(
+            gather_bunch_sources_b(
+                sp,
                 bunch_source_arrays,
                 bunch_source_xi_indices,
                 bunch_source_metadata,
                 slice_i,
             )
-            sp.handle_ionization()
+                # sp.handle_ionization()
 
         calculate_psi_and_derivatives_at_species(species)
         for sp in species:
-            sp.update_gamma_and_pz()
+            update_gamma_and_pz_b(sp)
         calculate_b_theta_at_species(species)
 
-        calculate_psi_at_grid(species, r_fld, log_r_fld, psi[slice_i + 2, 2:-2])
-        calculate_b_theta_at_grid(species, r_fld, b_t_bar[slice_i + 2, 2:-2])
+        calculate_psi_at_grid(species, r_fld, psi[slice_i + 2, 2:-2])
+        calculate_b_theta_at_grid(species, r_fld, b_t_bar[slice_i+2, 2:-2])
 
         for sp in species:
             if calculate_rho:
-                sp.deposit_rho(rho[slice_i + 2], slice_i + 2, r_fld, n_r, dr)
-            elif "w" in particle_diags:
-                sp.calculate_weights()
-            if laser_source and sp.mass == ct.m_e:
-                sp.deposit_chi(chi[slice_i + 2], slice_i + 2, r_fld, n_r, dr)
+                deposit_rho(sp,rho[slice_i+2], slice_i+2, r_fld, n_r, dr)
+            elif 'w' in particle_diags:
+                calculate_weights(sp)
+            if laser_source and sp.mass==ct.m_e:
+                deposit_chi(sp, chi[slice_i+2], slice_i+2, r_fld, n_r, dr)
 
-            sp.first_iteration_computed = True
+            sp.ions_computed = True
 
             if store_plasma_history:
                 sp.store_current_step()
             if slice_i > 0:
-                sp.evolve(dxi)
+                evolve(sp, dxi)
     return [sp.get_history() for sp in species]

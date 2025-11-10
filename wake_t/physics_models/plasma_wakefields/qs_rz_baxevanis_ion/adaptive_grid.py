@@ -8,8 +8,8 @@ import aptools.plasma_accel.general_equations as ge
 
 from wake_t.utilities.numba import njit_serial
 from wake_t.particles.interpolation import gather_main_fields_cyl_linear
-from .psi_and_derivatives import calculate_psi
-from .b_theta import calculate_b_theta
+from .psi_and_derivatives import calculate_psi_with_interpolation
+from .b_theta import calculate_b_theta_with_interpolation
 from .b_theta_bunch import calculate_bunch_source, deposit_bunch_charge
 from .utils import longitudinal_gradient, radial_gradient
 
@@ -375,7 +375,7 @@ def calculate_fields_on_grid(
         j = i_grid[i]
         psi = psi_grid[i + 2, 2:-2]
         b_theta = bt_grid[i + 2, 2:-2]
-        calculate_psi(
+        calculate_psi_with_interpolation(
             r_eval=r_grid / s_d,
             r=r_hist[j, :n_elec],
             log_r=log_r_hist[j, :n_elec],
@@ -383,7 +383,7 @@ def calculate_fields_on_grid(
             sum_2_arr=sum_2_hist[j, : n_elec + 1],
             psi=psi,
         )
-        calculate_psi(
+        calculate_psi_with_interpolation(
             r_eval=r_grid / s_d,
             r=r_hist[j, n_elec:],
             log_r=log_r_hist[j, n_elec:],
@@ -392,7 +392,7 @@ def calculate_fields_on_grid(
             psi=psi,
             add=True,
         )
-        calculate_b_theta(
+        calculate_b_theta_with_interpolation(
             r_fld=r_grid / s_d,
             a_0=a_0_hist[j],
             a=a_i_hist[j],
