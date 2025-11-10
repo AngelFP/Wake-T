@@ -11,7 +11,7 @@ import numpy as np
 
 
 def calculate_b_theta_at_species(
-    species:List[PlasmaParticles],
+    species: List[PlasmaParticles],
 ):
     """Calculate the azimuthal magnetic field at the plasma particles.
 
@@ -115,7 +115,7 @@ def calculate_b_theta_at_species(
     w_center_list = []
     q_list = []
     m_list = []
-    
+
     for s in species:
         r_list.append(s.r)
         pr_list.append(s.pr)
@@ -151,8 +151,7 @@ def calculate_b_theta_at_species(
     b = np.zeros(r.size)
     a_0 = np.zeros(1)
 
-
-        # Only the magnetic field from the electrons is computed, so the equations
+    # Only the magnetic field from the electrons is computed, so the equations
     # below assume that q_i/m_i = 1.
 
     # Calculate the A_i, B_i, C_i coefficients in Eq. (26).
@@ -221,6 +220,7 @@ def calculate_b_theta_with_interpolation(r_fld, a_0, a, b, r, b_theta):
         else:
             b_theta_j = a_i * r_j + b_i / r_j
         b_theta[j] = b_theta_j
+
 
 @njit_serial(error_model="numpy")
 def calculate_b_theta_at_particle_centers(a, b, r, b_theta):
