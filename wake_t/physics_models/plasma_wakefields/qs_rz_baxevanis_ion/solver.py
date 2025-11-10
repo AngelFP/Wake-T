@@ -6,23 +6,28 @@ See https://journals.aps.org/prab/abstract/10.1103/PhysRevAccelBeams.21.071301
 for the full details about this model.
 """
 
-
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
 
 from .plasma_particles import PlasmaParticles
 from .utils import longitudinal_gradient, radial_gradient
-from .plasma_operations import ( 
-    gather_bunch_sources_b, gather_laser_sources_b,
-    update_gamma_and_pz_b, deposit_rho,
-    calculate_weights, deposit_chi, evolve,
+from .plasma_operations import (
+    gather_bunch_sources_b,
+    gather_laser_sources_b,
+    update_gamma_and_pz_b,
+    deposit_rho,
+    calculate_weights,
+    deposit_chi,
+    evolve,
 )
-from .psi_and_derivatives import( 
-    calculate_psi_and_derivatives_at_species, calculate_psi_at_grid,
+from .psi_and_derivatives import (
+    calculate_psi_and_derivatives_at_species,
+    calculate_psi_at_grid,
     calculate_b_theta_at_grid,
 )
 from .b_theta import calculate_b_theta_at_species
+
 
 def calculate_wakefields(
     laser_a2,
@@ -155,16 +160,39 @@ def calculate_wakefields(
     # Calculate plasma response (including density, susceptibility, potential
     # and magnetic field)
     pp_hist = calculate_plasma_response(
-        r_max, r_max_plasma, radial_density_normalized, dr, ppc, n_r,
-        plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
-        free_electrons_per_ion, n_xi, laser_a2, nabla_a2, laser_source,
-        bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
-        r_fld, psi, B_t, rho, rho_e, rho_i, chi, dxi,
+        r_max,
+        r_max_plasma,
+        radial_density_normalized,
+        dr,
+        ppc,
+        n_r,
+        plasma_pusher,
+        p_shape,
+        max_gamma,
+        ion_motion,
+        ion_mass,
+        free_electrons_per_ion,
+        n_xi,
+        laser_a2,
+        nabla_a2,
+        laser_source,
+        bunch_source_arrays,
+        bunch_source_xi_indices,
+        bunch_source_metadata,
+        r_fld,
+        psi,
+        B_t,
+        rho,
+        rho_e,
+        rho_i,
+        chi,
+        dxi,
         store_plasma_history=store_plasma_history,
-        calculate_rho=calculate_rho, particle_diags=particle_diags,
-        enable_ionization=False
+        calculate_rho=calculate_rho,
+        particle_diags=particle_diags,
+        enable_ionization=False,
     )
-    
+
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
@@ -178,27 +206,78 @@ def calculate_wakefields(
     # B_t[:] = (b_t_bar + b_t_beam) * E_0 / ct.c
     B_t *= E_0 / ct.c
     return pp_hist
-    
+
+
 def calculate_plasma_response(
-    r_max, r_max_plasma, radial_density_normalized, dr, ppc, n_r,
-    plasma_pusher, p_shape, max_gamma, ion_motion, ion_mass,
-    free_electrons_per_ion, n_xi, laser_a2, nabla_a2, laser_source,
-    bunch_source_arrays, bunch_source_xi_indices, bunch_source_metadata,
-    r_fld, psi, b_t_bar, rho,
-    rho_e, rho_i, chi, dxi, store_plasma_history, calculate_rho,
-    particle_diags, enable_ionization=False
+    r_max,
+    r_max_plasma,
+    radial_density_normalized,
+    dr,
+    ppc,
+    n_r,
+    plasma_pusher,
+    p_shape,
+    max_gamma,
+    ion_motion,
+    ion_mass,
+    free_electrons_per_ion,
+    n_xi,
+    laser_a2,
+    nabla_a2,
+    laser_source,
+    bunch_source_arrays,
+    bunch_source_xi_indices,
+    bunch_source_metadata,
+    r_fld,
+    psi,
+    b_t_bar,
+    rho,
+    rho_e,
+    rho_i,
+    chi,
+    dxi,
+    store_plasma_history,
+    calculate_rho,
+    particle_diags,
+    enable_ionization=False,
 ):
     # Initialize plasma particles.
     pe = PlasmaParticles(
-        r_max, r_max_plasma, dr, ppc, n_r, n_xi, radial_density_normalized,
-        max_gamma, True, ct.m_e, -free_electrons_per_ion*ct.e,
-        plasma_pusher, p_shape, store_plasma_history, particle_diags)
+        r_max,
+        r_max_plasma,
+        dr,
+        ppc,
+        n_r,
+        n_xi,
+        radial_density_normalized,
+        max_gamma,
+        True,
+        ct.m_e,
+        -free_electrons_per_ion * ct.e,
+        plasma_pusher,
+        p_shape,
+        store_plasma_history,
+        particle_diags,
+    )
     pe.rho_species = rho_e
     pe.initialize()
     pi = PlasmaParticles(
-        r_max, r_max_plasma, dr, ppc, n_r, n_xi, radial_density_normalized,
-        max_gamma, ion_motion, ion_mass, free_electrons_per_ion*ct.e,
-        plasma_pusher, p_shape, store_plasma_history, particle_diags)
+        r_max,
+        r_max_plasma,
+        dr,
+        ppc,
+        n_r,
+        n_xi,
+        radial_density_normalized,
+        max_gamma,
+        ion_motion,
+        ion_mass,
+        free_electrons_per_ion * ct.e,
+        plasma_pusher,
+        p_shape,
+        store_plasma_history,
+        particle_diags,
+    )
     pi.rho_species = rho_i
     pi.initialize()
     species = [pe, pi]
@@ -237,7 +316,7 @@ def calculate_plasma_response(
                 bunch_source_metadata,
                 slice_i,
             )
-                # sp.handle_ionization()
+            # sp.handle_ionization()
 
         calculate_psi_and_derivatives_at_species(species)
         for sp in species:
@@ -245,15 +324,15 @@ def calculate_plasma_response(
         calculate_b_theta_at_species(species)
 
         calculate_psi_at_grid(species, r_fld, psi[slice_i + 2, 2:-2])
-        calculate_b_theta_at_grid(species, r_fld, b_t_bar[slice_i+2, 2:-2])
+        calculate_b_theta_at_grid(species, r_fld, b_t_bar[slice_i + 2, 2:-2])
 
         for sp in species:
             if calculate_rho:
-                deposit_rho(sp,rho[slice_i+2], slice_i+2, r_fld, n_r, dr)
-            elif 'w' in particle_diags:
+                deposit_rho(sp, rho[slice_i + 2], slice_i + 2, r_fld, n_r, dr)
+            elif "w" in particle_diags:
                 calculate_weights(sp)
-            if laser_source and sp.mass==ct.m_e:
-                deposit_chi(sp, chi[slice_i+2], slice_i+2, r_fld, n_r, dr)
+            if laser_source and sp.mass == ct.m_e:
+                deposit_chi(sp, chi[slice_i + 2], slice_i + 2, r_fld, n_r, dr)
 
             sp.ions_computed = True
 

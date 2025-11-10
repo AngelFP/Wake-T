@@ -8,7 +8,6 @@ It defines numba methods that are used in particle ionization.
 Apart from synthactic, this file is very close to cuda_methods.py
 """
 
-
 import numpy as np
 from wake_t.utilities.numba import njit_serial
 

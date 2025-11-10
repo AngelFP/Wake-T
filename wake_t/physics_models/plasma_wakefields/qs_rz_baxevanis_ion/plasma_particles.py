@@ -90,8 +90,8 @@ class PlasmaParticles:
         self.free_electrons_per_ion = free_electrons_per_ion
         self.store_history = store_history
         self.diags = diags
-        self.rho_species = np.zeros((nz+4, nr+4))
-        self.chi_species = np.zeros((nz+4, nr+4))
+        self.rho_species = np.zeros((nz + 4, nr + 4))
+        self.chi_species = np.zeros((nz + 4, nr + 4))
 
     def initialize(self):
         """Initialize column of plasma particles."""
@@ -119,7 +119,7 @@ class PlasmaParticles:
 
         # Determine number of particles.
         self.n_part = r.shape[0]
-        
+
         # Initialize particle arrays.
         # `q_center` represents the charge until the particle center. That is,
         # the charge of the first half of the particle.
@@ -183,7 +183,7 @@ class PlasmaParticles:
         """
         if self.ion_motion or not self.ions_computed:
             self.i_sort = np.argsort(self.r, kind="stable")
-    
+
     def store_current_step(self):
         """Store current particle properties in the history arrays."""
         if "r" in self.diags or self.store_history:
@@ -228,7 +228,7 @@ class PlasmaParticles:
                 "a_i_hist": self.a_i_hist,
                 "b_i_hist": self.b_i_hist,
                 "a_0_hist": self.a_0_hist,
-                'i_sort_hist': self.i_sort_hist,
+                "i_sort_hist": self.i_sort_hist,
             }
             return history
 
