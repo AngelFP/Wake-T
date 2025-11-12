@@ -78,7 +78,7 @@ def calculate_psi_and_derivatives_at_species(
                     species[1 - i]._sum_2,
                     sp._psi,
                     sp._dr_psi,
-                    add=i==0,
+                    add=i == 0,
                 )
             calculate_psi_and_dr_psi_at_particle_centers(
                 sp.r, sp._log_r, sp._sum_1, sp._sum_2, sp._psi, sp._dr_psi
@@ -108,7 +108,11 @@ def calculate_psi_and_derivatives_at_species(
         if sp.ion_motion:
             for i in range(len(species)):
                 calculate_dxi_psi_with_interpolation(
-                    sp.r, species[1 - i].r, species[1 - i]._sum_3, sp._dxi_psi, add=i==0
+                    sp.r,
+                    species[1 - i].r,
+                    species[1 - i]._sum_3,
+                    sp._dxi_psi,
+                    add=i == 0,
                 )
             calculate_dxi_psi_at_particle_centers(sp.r, sp._sum_3, sp._dxi_psi)
             # Apply boundary condition

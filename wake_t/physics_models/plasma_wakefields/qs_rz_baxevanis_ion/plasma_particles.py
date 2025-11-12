@@ -249,7 +249,7 @@ class PlasmaParticles:
                 "a_i_hist": self.a_i_hist,
                 "b_i_hist": self.b_i_hist,
                 "a_0_hist": self.a_0_hist,
-                'psi_max_hist': self.psi_max_hist,
+                "psi_max_hist": self.psi_max_hist,
                 "i_sort_hist": self.i_sort_hist,
             }
             return history
