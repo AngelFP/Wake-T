@@ -11,7 +11,8 @@ import numpy as np
 
 
 def calculate_b_theta_at_species(
-    species: List[PlasmaParticles],
+    # species:List[PlasmaParticles],
+    self,
 ):
     """Calculate the azimuthal magnetic field at the plasma particles.
 
@@ -101,81 +102,83 @@ def calculate_b_theta_at_species(
         Arrays where azimuthal magnetic field at the plasma electrons and ions
         will be stored.
     """
-    species = [sp for sp in species]
-    r_list = []
-    pr_list = []
-    gamma_list = []
-    psi_list = []
-    dr_psi_list = []
-    dxi_psi_list = []
-    bt0_list = []
-    bt_list = []
-    na2_list = []
-    w_list = []
-    w_center_list = []
-    q_list = []
-    m_list = []
+    # species = [sp for sp in species if not sp.is_empty]
+    # r_list = []
+    # pr_list = []
+    # gamma_list = []
+    # psi_list = []
+    # dr_psi_list = []
+    # dxi_psi_list = []
+    # bt0_list = []
+    # bt_list = []
+    # na2_list = []
+    # w_list = []
+    # w_center_list = []
+    # q_list = []
+    # m_list = []
+    
+    # for s in species:
+    #     r_list.append(s.r)
+    #     pr_list.append(s.pr)
+    #     gamma_list.append(s.gamma)
+    #     psi_list.append(s._psi)
+    #     dr_psi_list.append(s._dr_psi)
+    #     dxi_psi_list.append(s._dxi_psi)
+    #     bt0_list.append(s._b_t_0)
+    #     bt_list.append(s._b_t)
+    #     na2_list.append(s._nabla_a2)
+    #     w_list.append(s.w)
+    #     w_center_list.append(s.w_center)
+    #     q_list.append(s.q)
+    #     m_list.append(s.m)
+    # r = np.concatenate(r_list)
+    # pr = np.concatenate(pr_list)
+    # gamma = np.concatenate(gamma_list)
+    # psi = np.concatenate(psi_list)
+    # dr_psi = np.concatenate(dr_psi_list)
+    # dxi_psi = np.concatenate(dxi_psi_list)
+    # b_t_0 = np.concatenate(bt0_list)
+    # b_t = np.concatenate(bt_list)
+    # nabla_a2 = np.concatenate(na2_list)
+    # w = np.concatenate(w_list)
+    # q = q_list
+    # w_center = np.concatenate(w_center_list)
+    # A = np.zeros(r.size)
+    # B = np.zeros(r.size)
+    # C = np.zeros(r.size)
+    # K = np.zeros(r.size)
+    # U = np.zeros(r.size)
+    # a = np.zeros(r.size)
+    # b = np.zeros(r.size)
+    # a_0 = np.zeros(1)
 
-    for s in species:
-        r_list.append(s.r)
-        pr_list.append(s.pr)
-        gamma_list.append(s.gamma)
-        psi_list.append(s._psi)
-        dr_psi_list.append(s._dr_psi)
-        dxi_psi_list.append(s._dxi_psi)
-        bt0_list.append(s._b_t_0)
-        bt_list.append(s._b_t)
-        na2_list.append(s._nabla_a2)
-        w_list.append(s.w)
-        w_center_list.append(s.w_center)
-        q_list.append(s.q)
-        m_list.append(s.m)
-    r = np.concatenate(r_list)
-    pr = np.concatenate(pr_list)
-    gamma = np.concatenate(gamma_list)
-    psi = np.concatenate(psi_list)
-    dr_psi = np.concatenate(dr_psi_list)
-    dxi_psi = np.concatenate(dxi_psi_list)
-    b_t_0 = np.concatenate(bt0_list)
-    b_t = np.concatenate(bt_list)
-    nabla_a2 = np.concatenate(na2_list)
-    w = np.concatenate(w_list)
-    q = q_list
-    w_center = np.concatenate(w_center_list)
-    A = np.zeros(r.size)
-    B = np.zeros(r.size)
-    C = np.zeros(r.size)
-    K = np.zeros(r.size)
-    U = np.zeros(r.size)
-    a = np.zeros(r.size)
-    b = np.zeros(r.size)
-    a_0 = np.zeros(1)
 
+    # Only the magnetic field from the electrons is computed, so the equations
     # Only the magnetic field from the electrons is computed, so the equations
     # below assume that q_i/m_i = 1.
 
     # Calculate the A_i, B_i, C_i coefficients in Eq. (26).
     calculate_ABC(
-        r,
-        pr,
-        gamma,
-        psi,
-        dr_psi,
-        dxi_psi,
-        b_t_0,
-        nabla_a2,
-        A,
-        B,
-        C,
+        self.r,
+        self.pr,
+        self.gamma,
+        self._psi,
+        self._dr_psi,
+        self._dxi_psi,
+        self._b_t_0,
+        self._nabla_a2,
+        self._A,
+        self._B,
+        self._C,
     )
 
     # Calculate the a_i, b_i coefficients in Eq. (27).
-    calculate_KU(r, q[0], w, w_center, A, K, U)
-    calculate_ai_bi_from_axis(r, q[0], w, w_center, A, B, C, K, U, a_0, a, b)
+    calculate_KU(self.r, self.q, self.w, self.w_center, self._A, self._K, self._U)
+    calculate_ai_bi_from_axis(self.r, self.q, self.w, self.w_center, self._A, self._B, self._C, self._K, self._U, self._a_0, self._a_i, self._b_i)
 
     # Calculate b_theta at plasma particles.
-    calculate_b_theta_at_particle_centers(a, b, r, b_t)
-    check_b_theta(b_t)
+    calculate_b_theta_at_particle_centers(self._a_i, self._b_i, self.r, self._b_t)
+    check_b_theta(self._b_t)
     # if species.ion_motion:
     #     calculate_b_theta_with_interpolation(r_i, a_0[0], a, b, r_e, b_t_i)
     #     check_b_theta(b_t_i)

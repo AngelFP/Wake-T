@@ -52,7 +52,7 @@ def calculate_psi_and_derivatives_at_species(
         plasma particles is stored.
     """
 
-    species = [sp for sp in species]
+    species = [sp for sp in species if not sp.is_empty]
     psi_max = 0.0
     # Calculate cumulative sums 1 and 2 (Eqs. (29) and (31)).
     for s in species:

@@ -321,7 +321,8 @@ def calculate_plasma_response(
         calculate_psi_and_derivatives_at_species(species)
         for sp in species:
             update_gamma_and_pz_b(sp)
-        calculate_b_theta_at_species(species)
+            if sp.mass == ct.m_e:
+                calculate_b_theta_at_species(sp)
 
         calculate_psi_at_grid(species, r_fld, psi[slice_i + 2, 2:-2])
         calculate_b_theta_at_grid(species, r_fld, b_t_bar[slice_i + 2, 2:-2])

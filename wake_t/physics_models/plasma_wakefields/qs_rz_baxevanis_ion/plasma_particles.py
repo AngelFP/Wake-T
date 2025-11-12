@@ -4,8 +4,9 @@ from typing import Optional, List, Callable
 
 import numpy as np
 import scipy.constants as ct
+from numba.experimental import jitclass
 
-
+# @jitclass
 class PlasmaParticles:
     """
     Class containing a 1D slice of plasma particles.
@@ -172,9 +173,13 @@ class PlasmaParticles:
         self._allocate_field_arrays()
 
         # Allocate arrays needed for the particle pusher.
-        if self.ion_motion or self.pusher == "ab2":
+        if self.pusher == "ab2":
             self._allocate_ab2_arrays()
 
+    @property
+    def is_empty(self):
+        return self.r.size == 0
+    
     def sort(self):
         """Sort plasma particles radially.
 
