@@ -195,12 +195,9 @@ def calculate_wakefields(
 
     # Calculate derived fields (E_z, W_r, and E_r).
     E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
-    E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
     longitudinal_gradient(psi[2:-2, 2:-2], dxi, E_z[2:-2, 2:-2])
     radial_gradient(psi[2:-2, 2:-2], dr, E_r[2:-2, 2:-2])
     E_r -= B_t
-    E_z *= -E_0
-    E_r *= -E_0
     E_z *= -E_0
     E_r *= -E_0
     # B_t[:] = (b_t_bar + b_t_beam) * E_0 / ct.c
