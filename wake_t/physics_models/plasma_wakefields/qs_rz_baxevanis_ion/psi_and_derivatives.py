@@ -67,20 +67,9 @@ def calculate_psi_and_derivatives_at_species(
     for s in species:
         s._psi_max[:] = psi_max
 
-    calculate_psi_and_dr_psi_with_interpolation(
-        species[0].r,
-        species[1].r,
-        species[1]._log_r,
-        species[1]._sum_1,
-        species[1]._sum_2,
-        species[0]._psi,
-        species[0]._dr_psi,
-        add=True,
-    )
-
     for sp in species:
         if sp.ion_motion:
-            for i, sp_other in enumerate(species):
+            for i in range(len(species)):
                 calculate_psi_and_dr_psi_with_interpolation(
                     sp.r,
                     species[1 - i].r,
@@ -89,7 +78,7 @@ def calculate_psi_and_derivatives_at_species(
                     species[1 - i]._sum_2,
                     sp._psi,
                     sp._dr_psi,
-                    add=True,
+                    add=i==0,
                 )
             calculate_psi_and_dr_psi_at_particle_centers(
                 sp.r, sp._log_r, sp._sum_1, sp._sum_2, sp._psi, sp._dr_psi
@@ -106,10 +95,10 @@ def calculate_psi_and_derivatives_at_species(
             calculate_cumulative_sum_3(
                 s.q, s.r, s.pr, s.w, s.w_center, s._psi, s._sum_3
             )
-            # Calculate dxi_psi after the last plasma plasma particle.
-            # This will be used to ensure the boundary condition (dxi_psi = 0) after
-            # last plasma particle.
-            dxi_psi_max += s._sum_3[s.i_sort[-1]]
+        # Calculate dxi_psi after the last plasma plasma particle.
+        # This will be used to ensure the boundary condition (dxi_psi = 0) after
+        # last plasma particle.
+        dxi_psi_max += s._sum_3[s.i_sort[-1]]
 
     # Calculate the dxi_psi background at the neighboring points.
     # For the electrons, compute the psi and dr_psi due to the ions at
@@ -117,16 +106,16 @@ def calculate_psi_and_derivatives_at_species(
     # electrons at r_neighbor_i.
     for sp in species:
         if sp.ion_motion:
-            for i, sp_other in enumerate(species):
+            for i in range(len(species)):
                 calculate_dxi_psi_with_interpolation(
-                    sp.r, species[1 - i].r, species[1 - i]._sum_3, sp._dxi_psi, add=True
+                    sp.r, species[1 - i].r, species[1 - i]._sum_3, sp._dxi_psi, add=i==0
                 )
-        calculate_dxi_psi_at_particle_centers(sp.r, sp._sum_3, sp._dxi_psi)
-        # Apply boundary condition
-        sp._dxi_psi += dxi_psi_max
-        # Check that the values of dxi_psi are within a reasonable range (prevents
-        # issues at the peak of a blowout wake, for example).
-        check_psi_derivative(sp._dxi_psi)
+            calculate_dxi_psi_at_particle_centers(sp.r, sp._sum_3, sp._dxi_psi)
+            # Apply boundary condition
+            sp._dxi_psi += dxi_psi_max
+            # Check that the values of dxi_psi are within a reasonable range (prevents
+            # issues at the peak of a blowout wake, for example).
+            check_psi_derivative(sp._dxi_psi)
 
 
 @njit_serial(fastmath=True)
@@ -423,7 +412,7 @@ def check_psi_derivative(dxi_psi):
 
 def calculate_psi_at_grid(species: List[PlasmaParticles], r_eval, psi):
     """Calculate psi on the current grid slice."""
-    species = [sp for sp in species]
+    species = [sp for sp in species if not sp.is_empty]
     for sp in species:
         calculate_psi_with_interpolation(
             r_eval,

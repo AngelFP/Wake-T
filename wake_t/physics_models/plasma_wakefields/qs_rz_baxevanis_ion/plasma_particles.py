@@ -5,6 +5,7 @@ from typing import Optional, List, Callable
 import numpy as np
 import scipy.constants as ct
 from numba.experimental import jitclass
+from .utils import sort_particle_arrays
 
 
 # @jitclass
@@ -189,6 +190,20 @@ class PlasmaParticles:
         """
         if self.ion_motion or not self.ions_computed:
             self.i_sort = np.argsort(self.r, kind="stable")
+            sort_particle_arrays(
+                self.r,
+                self.dr_p,
+                self.pr,
+                self.pz,
+                self.gamma,
+                self.w,
+                self.w_center,
+                self.r_to_x,
+                self.id,
+                self._dr,
+                self._dpr,
+                self.i_sort,
+            )
 
     def store_current_step(self):
         """Store current particle properties in the history arrays."""
@@ -234,6 +249,7 @@ class PlasmaParticles:
                 "a_i_hist": self.a_i_hist,
                 "b_i_hist": self.b_i_hist,
                 "a_0_hist": self.a_0_hist,
+                'psi_max_hist': self.psi_max_hist,
                 "i_sort_hist": self.i_sort_hist,
             }
             return history
@@ -280,53 +296,6 @@ class PlasmaParticles:
         self._U = np.zeros(self.n_part)
         self._psi_max = np.zeros(1)
 
-    # def _make_species_views(self):
-    #     """Make species arrays as partial views of the particle arrays."""
-    #     self.r_elec = self.r[: self.n_elec]
-    #     self.log_r_elec = self._log_r[: self.n_elec]
-    #     self.dr_p_elec = self.dr_p[: self.n_elec]
-    #     self.pr_elec = self.pr[: self.n_elec]
-    #     self.pz_elec = self.pz[: self.n_elec]
-    #     self.gamma_elec = self.gamma[: self.n_elec]
-    #     self.w_elec = self.w[: self.n_elec]
-    #     self.w_center_elec = self.w_center[: self.n_elec]
-    #     self.r_to_x_elec = self.r_to_x[: self.n_elec]
-    #     self.id_elec = self.id[: self.n_elec]
-
-    #     self.r_ion = self.r[self.n_elec :]
-    #     self.log_r_ion = self._log_r[self.n_elec :]
-    #     self.dr_p_ion = self.dr_p[self.n_elec :]
-    #     self.pr_ion = self.pr[self.n_elec :]
-    #     self.pz_ion = self.pz[self.n_elec :]
-    #     self.gamma_ion = self.gamma[self.n_elec :]
-    #     self.w_ion = self.w[self.n_elec :]
-    #     self.w_center_ion = self.w_center[self.n_elec :]
-    #     self.r_to_x_ion = self.r_to_x[self.n_elec :]
-    #     self.id_ion = self.id[self.n_elec :]
-
-    #     self._psi_e = self._psi[: self.n_elec]
-    #     self._dr_psi_e = self._dr_psi[: self.n_elec]
-    #     self._dxi_psi_e = self._dxi_psi[: self.n_elec]
-    #     self._psi_i = self._psi[self.n_elec :]
-    #     self._dr_psi_i = self._dr_psi[self.n_elec :]
-    #     self._dxi_psi_i = self._dxi_psi[self.n_elec :]
-    #     self._b_t_e = self._b_t[: self.n_elec]
-    #     self._b_t_i = self._b_t[self.n_elec :]
-    #     self._b_t_0_e = self._b_t_0[: self.n_elec]
-    #     self._b_t_0_i = self._b_t_0[self.n_elec :]
-    #     self._nabla_a2_e = self._nabla_a2[: self.n_elec]
-    #     self._nabla_a2_i = self._nabla_a2[self.n_elec :]
-    #     self._a2_e = self._a2[: self.n_elec]
-    #     self._a2_i = self._a2[self.n_elec :]
-    #     self._sum_1_e = self._sum_1[: self.n_elec + 1]
-    #     self._sum_2_e = self._sum_2[: self.n_elec + 1]
-    #     self._sum_1_i = self._sum_1[self.n_elec + 1 :]
-    #     self._sum_2_i = self._sum_2[self.n_elec + 1 :]
-    #     self._rho_e = self._rho[: self.n_elec]
-    #     self._rho_i = self._rho[self.n_elec :]
-    #     self._chi_e = self._chi[: self.n_elec]
-    #     self._chi_i = self._chi[self.n_elec :]
-
     def _allocate_ab2_arrays(self):
         """Allocate the arrays needed for the 5th order Adams-Bashforth pusher.
 
@@ -338,10 +307,6 @@ class PlasmaParticles:
         size = self.n_part
         self._dr = np.zeros((2, size))
         self._dpr = np.zeros((2, size))
-        # self._dr_e = self._dr[:, : self.n_elec]
-        # self._dpr_e = self._dpr[:, : self.n_elec]
-        # self._dr_i = self._dr[:, self.n_elec :]
-        # self._dpr_i = self._dpr[:, self.n_elec :]
 
     def _move_auxiliary_arrays_to_next_slice(self):
         """Point auxiliary 1D arrays to next slice of the 2D history arrays.
@@ -368,17 +333,3 @@ class PlasmaParticles:
         if not self.ion_motion:
             self._sum_1[:] = self.sum_1_hist[-self.i_push]
             self._sum_2[:] = self.sum_2_hist[-self.i_push]
-
-        # self._sum_1_e = self._sum_1[: self.n_elec + 1]
-        # self._sum_2_e = self._sum_2[: self.n_elec + 1]
-        # self._sum_1_i = self._sum_1[self.n_elec + 1 :]
-        # self._sum_2_i = self._sum_2[self.n_elec + 1 :]
-        # self._rho_e = self._rho[: self.n_elec]
-        # self._rho_i = self._rho[self.n_elec :]
-        # self.log_r_elec = self._log_r[: self.n_elec]
-        # self.log_r_ion = self._log_r[self.n_elec :]
-
-        # if not self.ion_motion:
-        #     self._sum_1_i[:] = self.sum_1_hist[-self.i_push, self.n_elec + 1 :]
-        #     self._sum_2_i[:] = self.sum_2_hist[-self.i_push, self.n_elec + 1 :]
-        #     self.log_r_ion[:] = self.log_r_hist[-self.i_push, self.n_elec :]
