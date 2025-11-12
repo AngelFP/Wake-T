@@ -116,7 +116,7 @@ def calculate_b_theta_at_species(
     # w_center_list = []
     # q_list = []
     # m_list = []
-    
+
     # for s in species:
     #     r_list.append(s.r)
     #     pr_list.append(s.pr)
@@ -152,7 +152,6 @@ def calculate_b_theta_at_species(
     # b = np.zeros(r.size)
     # a_0 = np.zeros(1)
 
-
     # Only the magnetic field from the electrons is computed, so the equations
     # Only the magnetic field from the electrons is computed, so the equations
     # below assume that q_i/m_i = 1.
@@ -174,7 +173,20 @@ def calculate_b_theta_at_species(
 
     # Calculate the a_i, b_i coefficients in Eq. (27).
     calculate_KU(self.r, self.q, self.w, self.w_center, self._A, self._K, self._U)
-    calculate_ai_bi_from_axis(self.r, self.q, self.w, self.w_center, self._A, self._B, self._C, self._K, self._U, self._a_0, self._a_i, self._b_i)
+    calculate_ai_bi_from_axis(
+        self.r,
+        self.q,
+        self.w,
+        self.w_center,
+        self._A,
+        self._B,
+        self._C,
+        self._K,
+        self._U,
+        self._a_0,
+        self._a_i,
+        self._b_i,
+    )
 
     # Calculate b_theta at plasma particles.
     calculate_b_theta_at_particle_centers(self._a_i, self._b_i, self.r, self._b_t)

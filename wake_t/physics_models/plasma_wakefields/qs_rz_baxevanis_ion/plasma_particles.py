@@ -6,6 +6,7 @@ import numpy as np
 import scipy.constants as ct
 from numba.experimental import jitclass
 
+
 # @jitclass
 class PlasmaParticles:
     """
@@ -179,7 +180,7 @@ class PlasmaParticles:
     @property
     def is_empty(self):
         return self.r.size == 0
-    
+
     def sort(self):
         """Sort plasma particles radially.
 
