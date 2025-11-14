@@ -607,7 +607,7 @@ class OpenPMDPulse(LaserPulse):
         The name of the envelope field (this is not prescribed by the openPMD standard for the envelope).
         If specified, an envelope field is expected from the openPMD file. Otherwise, a full electric field is assumed.
     iteration : int (optional)
-        The iteration to read from the openPMD file. If not specified, the last iteration is read.
+        The iteration to read from the openPMD file. If not specified, the last iteration is used.
     t_start : float, optional
         The initialization of this class aligns the right (spatial) edge
         of the Wake-T grid with the left (temporal) edge of the Lasy grid,
