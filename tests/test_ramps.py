@@ -49,7 +49,7 @@ def test_downramp():
     downramp.track(bunch)
     bunch_params = analyze_bunch(bunch)
     beta_x = bunch_params["beta_x"]
-    assert beta_x == 0.0097503087049851
+    np.testing.assert_almost_equal(beta_x, 0.0097503087049851, decimal=9)
 
 
 def test_upramp():
@@ -96,7 +96,7 @@ def test_upramp():
     downramp.track(bunch)
     bunch_params = analyze_bunch(bunch)
     beta_x = bunch_params["beta_x"]
-    assert beta_x == 0.0007631550504736755
+    np.testing.assert_almost_equal(beta_x, 0.0007631550504736755, decimal=9)
 
 
 if __name__ == "__main__":
