@@ -21,7 +21,7 @@ Wake-T |release| documentation
 .. |license| image:: https://img.shields.io/github/license/AngelFP/Wake-T
    :target: https://github.com/AngelFP/Wake-T/blob/master/LICENSE
 
-|tests| |codefactor| |PyPI| |license|
+|tests| |codacy| |codacy-cov| |PyPI| |license|
 
 .. grid:: 1 2 2 2
     :gutter: 2
