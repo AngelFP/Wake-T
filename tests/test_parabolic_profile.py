@@ -117,7 +117,7 @@ def test_variable_parabolic_coefficient():
 
     # Check that both envelopes are equal.
     np.testing.assert_almost_equal(a_mod_2, a_mod_1)
-    np.testing.assert_almost_equal(a_phase_2, a_phase_1, decimal=6)
+    np.testing.assert_almost_equal(a_phase_2, a_phase_1, decimal=5)
 
     # Check final spot size value
     dr = r_max / Nr

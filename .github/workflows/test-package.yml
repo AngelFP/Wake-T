@@ -33,6 +33,8 @@ jobs:
         path: coverage.xml
 
   codacy-coverage-reporter:
+    # disabled due to API token not working
+    if: 0
     needs: build
     runs-on: ubuntu-latest
     name: codacy-coverage-reporter
