@@ -599,22 +599,21 @@ class OpenPMDPulse(LaserPulse):
 
     Parameters
     ----------
-    path : str
-        Path to the openPMD file or folder containing the laser data.
-    iteration : int
-        Iteration at which to read the laser pulse.
-    field : str, optional
-        Name of the field containing the laser pulse. By default `'E'`.
-    coord : string, optional
-        Coordinate of the field containing the laser pulse.. By default `'x'`.
-    prefix : string, optional
-        Prefix of the openPMD file from which the envelope is read.
-        Only used when envelope=True.
-        The provided iteration is read from <path>/<prefix>_%T.h5.
-    theta : float or None, optional
-        Only used if the openPMD input is in thetaMode geometry.
-        The angle of the plane of observation, with respect to the x axis.
-        By default `0`.
+    file_name : string
+        Name of openPMD file, including path, to read the laser field or envelope from.
+        Either specify the exact file name (e.g. ``file_name="/path/data_00001.h5"``)
+        or a file pattern + iteration (e.g. ``file_name="/path/data%T.h5", iteration=1``).
+    envelope_name : string (optional)
+        The name of the envelope field (this is not prescribed by the openPMD standard for the envelope).
+        If specified, an envelope field is expected from the openPMD file. Otherwise, a full electric field is assumed.
+    iteration : int (optional)
+        The iteration to read from the openPMD file. If not specified, the last iteration is used.
+    t_start : float, optional
+        The initialization of this class aligns the right (spatial) edge
+        of the Wake-T grid with the left (temporal) edge of the Lasy grid,
+        regardless of the actual time values in the lasy file. The `t_start`
+        parameter introduces a time delay to the initialized laser, allowing
+        for precise adjustment of the pulse position in the Wake-T grid.
     smooth_edges : bool, optional
         Whether to smooth the edges of the laser profile along `r` using a
         super-Gaussian function of power 8. This is useful when the laser
@@ -647,12 +646,10 @@ class OpenPMDPulse(LaserPulse):
 
     def __init__(
         self,
-        path: str,
-        iteration: int,
-        field: Optional[str] = "E",
-        coord: Optional[str] = "x",
-        prefix: Optional[str] = None,
-        theta: Optional[float] = 0.0,
+        file_name: str,
+        envelope_name: Optional[str] = None,
+        iteration: Optional[int] = None,
+        t_start: Optional[float] = 0.0,
         smooth_edges: Optional[bool] = False,
         apply_gaussian_filter: Optional[bool] = False,
         gaussian_filter_sigma: Optional[Union[int, float, Iterable]] = (5, 0),
@@ -662,28 +659,36 @@ class OpenPMDPulse(LaserPulse):
             "You can do so with `pip install lasy`."
         )
         self.lasy_profile = FromOpenPMDProfile(
-            path=path,
+            file_name=file_name,
+            envelope_name=envelope_name,
             iteration=iteration,
-            pol=(1, 0),  # dummy value, currently not needed
-            field=field,
-            coord=coord,
-            prefix=prefix,
-            theta=theta,
         )
-        super().__init__(self.lasy_profile.lambda0, "linear")
+        pol = self.lasy_profile.pol
+        assert np.isclose(np.abs(pol[0]) ** 2 + np.abs(pol[1]) ** 2, 1)
+        phase_diff = np.abs(np.angle(pol[0]) - np.angle(pol[1]))
+        if np.isclose(phase_diff, np.pi / 2):
+            polarization = "circular"
+        else:
+            polarization = "linear"
+        super().__init__(self.lasy_profile.lambda0, polarization)
+        self._t_start = t_start
         self._smooth_edges = smooth_edges
         self._apply_gaussian_filter = apply_gaussian_filter
         self._gaussian_filter_sigma = gaussian_filter_sigma
 
     def _envelope_function(self, xi, r, z_pos):
-        # Create laser
-        t = -xi / ct.c
+        # Change from Wake-T to Lasy coordinates:
+        # The right edge of the Wake-T grid corresponds
+        # to the left edge of the Lasy grid.
+        xi_max = self.solver_params["zmax"]
+        t_min_0 = self.lasy_profile.axes["t"][0]
+        t = (xi_max - xi) / ct.c + t_min_0 - self._t_start
         t_min = np.min(t)
         t_max = np.max(t)
-        t_max -= t_min
-        t_min = 0
         r_min = np.min(r)
         r_max = np.max(r)
+
+        # Create Lasy laser
         laser = Laser(
             dim="rt",
             lo=(r_min, t_min),
@@ -692,6 +697,8 @@ class OpenPMDPulse(LaserPulse):
             profile=self.lasy_profile,
             n_azimuthal_modes=1,
         )
+
+        # Get vector potential from the electric field envelope.
         a_env = field_to_vector_potential(laser.grid, laser.profile.omega0)
 
         # Get 2D slice and change to Wake-T ordering.
