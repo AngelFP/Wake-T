@@ -12,13 +12,16 @@ Wake-T |release| documentation
 .. |PyPI| image:: https://img.shields.io/pypi/v/Wake-T.svg?logo=python&logoColor=white
    :target: https://pypi.org/project/Wake-T/
 
-.. |codefactor| image:: https://www.codefactor.io/repository/github/angelfp/wake-t/badge
-   :target: https://www.codefactor.io/repository/github/angelfp/wake-t
+.. |codacy| image:: https://app.codacy.com/project/badge/Grade/ea4fbbfd03a94996ba72b7060dc4bf4b
+   :target: https://app.codacy.com/gh/Wake-T/Wake-T/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade
+
+.. |codacy-cov| image:: https://app.codacy.com/project/badge/Coverage/ea4fbbfd03a94996ba72b7060dc4bf4b
+   :target: https://app.codacy.com/gh/Wake-T/Wake-T/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage
 
 .. |license| image:: https://img.shields.io/github/license/AngelFP/Wake-T
    :target: https://github.com/AngelFP/Wake-T/blob/master/LICENSE
 
-|tests| |codefactor| |PyPI| |license|
+|tests| |codacy| |codacy-cov| |PyPI| |license|
 
 .. grid:: 1 2 2 2
     :gutter: 2
