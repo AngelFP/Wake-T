@@ -616,10 +616,10 @@ class OpenPMDPulse(LaserPulse):
         The angle of the plane of observation, with respect to the x axis.
         By default `0`.
     t_start : float, optional
-        The initialization of this class aligns the right (spatial) edge 
-        of the Wake-T grid with the left (temporal) edge of the Lasy grid, 
-        regardless of the actual time values in the lasy file. The `t_start` 
-        parameter introduces a time delay to the initialized laser, allowing 
+        The initialization of this class aligns the right (spatial) edge
+        of the Wake-T grid with the left (temporal) edge of the Lasy grid,
+        regardless of the actual time values in the lasy file. The `t_start`
+        parameter introduces a time delay to the initialized laser, allowing
         for precise adjustment of the pulse position in the Wake-T grid.
     smooth_edges : bool, optional
         Whether to smooth the edges of the laser profile along `r` using a
@@ -685,10 +685,10 @@ class OpenPMDPulse(LaserPulse):
 
     def _envelope_function(self, xi, r, z_pos):
         # Change from Wake-T to Lasy coordinates:
-        # The right edge of the Wake-T grid corresponds 
+        # The right edge of the Wake-T grid corresponds
         # to the left edge of the Lasy grid.
-        xi_max = self.solver_params['zmax']
-        t_min_0 = self.lasy_profile.axes['t'][0]
+        xi_max = self.solver_params["zmax"]
+        t_min_0 = self.lasy_profile.axes["t"][0]
         t = (xi_max - xi) / ct.c + t_min_0 - self._t_start
         t_min = np.min(t)
         t_max = np.max(t)
