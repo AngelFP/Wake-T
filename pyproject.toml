@@ -37,6 +37,7 @@ test = [
     "pytest-cov",
     "matplotlib",
     "openpmd-viewer",
+    "lasy>=0.6.2",
 ]
 
 [tool.pytest.ini_options]
