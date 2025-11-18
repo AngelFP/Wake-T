@@ -1,5 +1,5 @@
 # Note: This file is called `test_openpmd_zpulse.py`,
-# where the `z` is just for the test to be run after `test_openpmd_viewer.py` 
+# where the `z` is just for the test to be run after `test_openpmd_viewer.py`
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,7 +26,7 @@ def test_openpmd_pulse():
 
     # Load laser envelope from openPMD file
     file_name = os.path.join(diag_dir_orig, "hdf5", "data%T.h5")
-    laser = OpenPMDPulse(file_name=file_name, envelope_name='a', iteration=0)
+    laser = OpenPMDPulse(file_name=file_name, envelope_name="a", iteration=0)
 
     # Create bunch (matched to a blowout at a density of 10^{23} m^{-3}).
     en = 1e-6  # m
