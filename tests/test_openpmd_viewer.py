@@ -31,6 +31,7 @@ def test_openpmd_viewer():
     s_t = 10  # fs
     q_tot = 100  # pC
     n_part = 1e4
+    np.random.seed(42)
     bunch = get_matched_bunch(en, en, ene, ene_sp, s_t, xi_c, q_tot, n_part, n_p=1e23)
 
     # Create plasma stage.
