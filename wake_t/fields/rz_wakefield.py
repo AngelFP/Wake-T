@@ -281,6 +281,12 @@ class RZWakefield(NumericalField):
                 fld_comps += [None]
                 fld_attrs += [{"angularFrequency": 2 * np.pi * ct.c / self.laser.l_0}]
                 fld_arrays += [[np.ascontiguousarray(a)]]
+            if "a_subgrid" in self.field_diags:
+                a = self.laser._a_env[0:-2].T
+                fld_names += ["a_subgrid"]
+                fld_comps += [None]
+                fld_attrs += [{"angularFrequency": 2 * np.pi * ct.c / self.laser.l_0}]
+                fld_arrays += [[np.ascontiguousarray(a)]]
 
         fld_comp_pos = [fld_position] * len(fld_names)
 
