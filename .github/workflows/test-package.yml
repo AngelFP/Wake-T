@@ -36,6 +36,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     name: codacy-coverage-reporter
+    if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v2
       - name: Download code coverage results
