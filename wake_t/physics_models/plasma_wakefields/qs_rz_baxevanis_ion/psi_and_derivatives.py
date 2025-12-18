@@ -10,120 +10,74 @@ from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial(fastmath=True, error_model="numpy")
-def calculate_psi_and_derivatives_at_particles(
-    r_e,
-    log_r_e,
-    pr_e,
-    w_e,
-    w_center_e,
-    q_e,
-    r_i,
-    log_r_i,
-    pr_i,
-    w_i,
-    w_center_i,
-    q_i,
-    ion_motion,
-    calculate_ion_sums,
-    sum_1_e,
-    sum_2_e,
-    sum_3_e,
-    sum_1_i,
-    sum_2_i,
-    sum_3_i,
-    psi_e,
-    dr_psi_e,
-    dxi_psi_e,
-    psi_i,
-    dr_psi_i,
-    dxi_psi_i,
-    psi,
-    dr_psi,
-    dxi_psi,
-):
+def calculate_psi_and_derivatives_at_particles(species_list, ions_computed):
     """Calculate wakefield potential and derivatives at the plasma particles.
 
     Parameters
     ----------
-    r_e, log_r_e, pr_e, w_e, w_center_e : ndarray
-        Radial position (and log), momentum, weight (and central weight)
-        of the plasma electrons.
-    q_e : float
-        Charge of the plasma electron species.
-    r_i, log_r_i, pr_i, w_i, w_center_i, dr_p_i : ndarray
-        Radial position (and log), momentum, weight (and central weight)
-        of the plasma ions.
-    q_i : float
-        Charge of the plasma ion species.
-    ion_motion : bool
-        Whether the ions can move. If `True`, the potential and its derivatives
-        will also be calculated at the ions.
-    calculate_ion_sums : _type_
-        Whether to calculate sum_1, sum_2 and sum_3 for the ions. When ion
-        motion is disabled, this only needs to be done once.
-    r_neighbor_e, log_r_neighbor_e, r_neighbor_i, log_r_neighbor_i : ndarray
-        The radial location (and its logarithm) of the middle points between
-        each particle and it left and right neighbors. This array is already
-        sorted and should not be indexed with `i_sort`.
-    sum_1_e, sum_2_e, sum_3_e, sum_1_i, sum_2_i, sum_3_i : ndarray
-        Arrays where the values of sum_1, sum_2 and sum_3 at each particle
-        will be stored.
-    psi_e, dr_psi_e, dxi_psi_e, psi_i, dr_psi_i, dxi_psi_i : ndarray
-        Arrays where the value of psi and its derivatives at the plasma
-        electrons and ions will be stored.
-    psi, dr_psi, dxi_psi : _type_
-        Arrays where the value of psi and its derivatives at all
-        plasma particles is stored.
+    species_list: List[PlasmaParticleContainer]
+        Data for all plasma species.
+    ions_computed : bool
+        Whether to skip the computation for non-moving ions.
     """
-
     # Calculate cumulative sums 1 and 2 (Eqs. (29) and (31)).
-    calculate_cumulative_sum_1(q_e, w_e, w_center_e, sum_1_e)
-    calculate_cumulative_sum_2(q_e, log_r_e, w_e, w_center_e, sum_2_e)
-    if ion_motion or not calculate_ion_sums:
-        calculate_cumulative_sum_1(q_i, w_i, w_center_i, sum_1_i)
-        calculate_cumulative_sum_2(q_i, log_r_i, w_i, w_center_i, sum_2_i)
+    for s in species_list:
+        if s.do_push or not ions_computed:
+            calculate_cumulative_sum_1(s.charge, s.w, s.w_center, s.sum_1)
+            calculate_cumulative_sum_2(s.charge, s.log_r, s.w, s.w_center, s.sum_2)
 
     # Calculate the psi and dr_psi background at the neighboring points.
     # For the electrons, compute the psi and dr_psi due to the ions at
     # r_neighbor_e. For the ions, compute the psi and dr_psi due to the
     # electrons at r_neighbor_i.
-    calculate_psi_and_dr_psi_at_particle_centers(
-        r_e, log_r_e, sum_1_e, sum_2_e, psi_e, dr_psi_e
-    )
-    calculate_psi_and_dr_psi_with_interpolation(
-        r_e, r_i, log_r_i, sum_1_i, sum_2_i, psi_e, dr_psi_e, add=True
-    )
-    if ion_motion:
-        calculate_psi_and_dr_psi_at_particle_centers(
-            r_i, log_r_i, sum_1_i, sum_2_i, psi_i, dr_psi_i
-        )
-        calculate_psi_and_dr_psi_with_interpolation(
-            r_i, r_e, log_r_e, sum_1_e, sum_2_e, psi_i, dr_psi_i, add=True
-        )
+    for idx1, s1 in enumerate(species_list):
+        if s1.do_push:
+            calculate_psi_and_dr_psi_at_particle_centers(
+                s1.r, s1.log_r, s1.sum_1, s1.sum_2, s1.psi, s1.dr_psi
+            )
+            for idx2, s2 in enumerate(species_list):
+                if idx1 != idx2 and s1.do_push:
+                    calculate_psi_and_dr_psi_with_interpolation(
+                        s1.r,
+                        s2.r,
+                        s2.log_r,
+                        s2.sum_1,
+                        s2.sum_2,
+                        s1.psi,
+                        s1.dr_psi,
+                        add=True,
+                    )
 
     # Check that the values of psi are within a reasonable range (prevents
     # issues at the peak of a blowout wake, for example).
-    check_psi(psi)
-    check_psi_derivative(dr_psi)
+    for s in species_list:
+        check_psi(s.psi)
+        check_psi_derivative(s.dr_psi)
 
     # Calculate cumulative sum 3 (Eq. (32)).
-    calculate_cumulative_sum_3(q_e, r_e, pr_e, w_e, w_center_e, psi_e, sum_3_e)
-    if ion_motion or not calculate_ion_sums:
-        calculate_cumulative_sum_3(q_i, r_i, pr_i, w_i, w_center_i, psi_i, sum_3_i)
+    for s in species_list:
+        if s.do_push or not ions_computed:
+            calculate_cumulative_sum_3(
+                s.charge, s.r, s.pr, s.w, s.w_center, s.psi, s.sum_3
+            )
 
     # Calculate the dxi_psi background at the neighboring points.
     # For the electrons, compute the psi and dr_psi due to the ions at
     # r_neighbor_e. For the ions, compute the psi and dr_psi due to the
     # electrons at r_neighbor_i.
-    calculate_dxi_psi_at_particle_centers(r_e, sum_3_e, dxi_psi_e)
-    if ion_motion:
-        calculate_dxi_psi_with_interpolation(r_e, r_i, sum_3_i, dxi_psi_e, add=True)
-        calculate_dxi_psi_at_particle_centers(r_i, sum_3_i, dxi_psi_i)
-        calculate_dxi_psi_with_interpolation(r_i, r_e, sum_3_e, dxi_psi_i, add=True)
+    for idx1, s1 in enumerate(species_list):
+        if s1.do_push:
+            calculate_dxi_psi_at_particle_centers(s1.r, s1.sum_3, s1.dxi_psi)
+            for idx2, s2 in enumerate(species_list):
+                if idx1 != idx2 and s2.do_push:
+                    calculate_dxi_psi_with_interpolation(
+                        s1.r, s2.r, s2.sum_3, s1.dxi_psi, add=True
+                    )
 
     # Check that the values of dxi_psi are within a reasonable range (prevents
     # issues at the peak of a blowout wake, for example).
-    check_psi_derivative(dxi_psi)
+    for s in species_list:
+        check_psi_derivative(s.dxi_psi)
 
 
 @njit_serial(fastmath=True)

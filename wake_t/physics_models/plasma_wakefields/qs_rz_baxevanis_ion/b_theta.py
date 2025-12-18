@@ -8,31 +8,7 @@ from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial()
-def calculate_b_theta_at_particles(
-    r_e,
-    pr_e,
-    w_e,
-    w_center_e,
-    gamma_e,
-    q_e,
-    r_i,
-    ion_motion,
-    psi_e,
-    dr_psi_e,
-    dxi_psi_e,
-    b_t_0_e,
-    nabla_a2_e,
-    A,
-    B,
-    C,
-    K,
-    U,
-    a_0,
-    a,
-    b,
-    b_t_e,
-    b_t_i,
-):
+def calculate_b_theta_at_particles(species_list):
     """Calculate the azimuthal magnetic field at the plasma particles.
 
     To simplify the algorithm, this method considers only the magnetic field
@@ -81,69 +57,56 @@ def calculate_b_theta_at_particles(
 
     Parameters
     ----------
-    r_e, pr_e, w_e, w_center_e, gamma_e : ndarray
-        Radial position, momentum, weight and Lorenz factor of the plasma
-        electrons.
-    q_e : float
-        Charge of the plasma electron species.
-    r_i : ndarray
-        Radial position of the plasma ions.
-    i_sort_e, i_sort_i : ndarray
-        Sorted indices of the electrons and ions (from lower to higher radii).
-    ion_motion : bool
-        Whether the ions can move. If `True`, the magnetic field
-        will also be calculated at the ions.
-    r_neighbor_e : ndarray
-        The radial location of the middle points between
-        each electron and its left and right neighbors. This array is already
-        sorted and should not be indexed with `i_sort_e`.
-    psi_e, dr_psi_e, dxi_psi_e : ndarray
-        Value of psi and its derivatives at the location of the plasma
-        electrons.
-    b_t_0_e, nabla_a2_e : ndarray
-        Value of the source terms (magnetic field from bunches and
-        ponderomotive force of a laser) at the location of the plasma
-        electrons.
-    A, B, C : ndarray
-        Arrays where the A_i, B_i, C_i terms in Eq. (26) will be stored.
-    K, U : ndarray
-        Auxiliary arrays where terms for solving the system in Eq. (27) will
-        be stored.
-    a_0, a, b : ndarray
-        Arrays where the a_i and b_i coefficients coming out of solving the
-        system in Eq. (27) will be stored.
-    b_t_e, b_t_i : ndarray
-        Arrays where azimuthal magnetic field at the plasma electrons and ions
-        will be stored.
+    species_list: List[PlasmaParticleContainer]
+        Data for all plasma species.
     """
     # Only the magnetic field from the electrons is computed, so the equations
     # below assume that q_i/m_i = 1.
 
     # Calculate the A_i, B_i, C_i coefficients in Eq. (26).
-    calculate_ABC(
-        r_e,
-        pr_e,
-        gamma_e,
-        psi_e,
-        dr_psi_e,
-        dxi_psi_e,
-        b_t_0_e,
-        nabla_a2_e,
-        A,
-        B,
-        C,
-    )
+    for idx1, s in enumerate(species_list):
+        if not s.is_ion:
+            calculate_ABC(
+                s.r,
+                s.pr,
+                s.gamma,
+                s.psi,
+                s.dr_psi,
+                s.dxi_psi,
+                s.b_t_0,
+                s.nabla_a2,
+                s.A,
+                s.B,
+                s.C,
+            )
+            # Calculate the a_i, b_i coefficients in Eq. (27).
+            calculate_KU(s.r, s.charge, s.w, s.w_center, s.A, s.K, s.U)
+            calculate_ai_bi_from_axis(
+                s.r,
+                s.charge,
+                s.w,
+                s.w_center,
+                s.A,
+                s.B,
+                s.C,
+                s.K,
+                s.U,
+                s.a_0,
+                s.a_i,
+                s.b_i,
+            )
+            # Calculate b_theta at plasma particles.
+            calculate_b_theta_at_particle_centers(s.a_i, s.b_i, s.r, s.b_t)
+            check_b_theta(s.b_t)
 
-    # Calculate the a_i, b_i coefficients in Eq. (27).
-    calculate_KU(r_e, q_e, w_e, w_center_e, A, K, U)
-    calculate_ai_bi_from_axis(r_e, q_e, w_e, w_center_e, A, B, C, K, U, a_0, a, b)
+            for idx2, s2 in enumerate(species_list):
+                if idx1 != idx2 and s2.is_ion and s2.do_push:
+                    calculate_b_theta_with_interpolation(
+                        s2.r, s.a_0[0], s.a_i, s.b_i, s.r, s2.b_t
+                    )
+                    check_b_theta(s2.b_t)
 
-    # Calculate b_theta at plasma particles.
-    calculate_b_theta_at_particle_centers(a, b, r_e, b_t_e)
-    check_b_theta(b_t_e)
-    if ion_motion:
-        calculate_b_theta_with_interpolation(r_i, a_0[0], a, b, r_e, b_t_i)
-        check_b_theta(b_t_i)
+            break
 
 
 @njit_serial(error_model="numpy")

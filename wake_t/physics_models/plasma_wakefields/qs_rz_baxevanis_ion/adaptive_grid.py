@@ -156,13 +156,13 @@ class AdaptiveGrid:
             s_d,
             self.psi_grid,
             self.b_t,
-            pp_hist["r_hist"],
-            pp_hist["log_r_hist"],
-            pp_hist["sum_1_hist"],
-            pp_hist["sum_2_hist"],
-            pp_hist["a_0_hist"],
-            pp_hist["a_i_hist"],
-            pp_hist["b_i_hist"],
+            tuple(h["r_hist"] for h in pp_hist),
+            tuple(h["log_r_hist"] for h in pp_hist),
+            tuple(h["sum_1_hist"] for h in pp_hist),
+            tuple(h["sum_2_hist"] for h in pp_hist),
+            tuple(h["a_0_hist"] for h in pp_hist),
+            tuple(h["a_i_hist"] for h in pp_hist),
+            tuple(h["b_i_hist"] for h in pp_hist),
         )
 
         E_0 = ge.plasma_cold_non_relativisct_wave_breaking_field(n_p * 1e-6)
@@ -370,33 +370,32 @@ def calculate_fields_on_grid(
     Compiling this method in numba avoids significant overhead.
     """
     n_points = i_grid.shape[0]
-    n_elec = int(r_hist.shape[-1] / 2)
     for i in range(n_points):
         j = i_grid[i]
         psi = psi_grid[i + 2, 2:-2]
         b_theta = bt_grid[i + 2, 2:-2]
-        calculate_psi_with_interpolation(
-            r_eval=r_grid / s_d,
-            r=r_hist[j, :n_elec],
-            log_r=log_r_hist[j, :n_elec],
-            sum_1_arr=sum_1_hist[j, : n_elec + 1],
-            sum_2_arr=sum_2_hist[j, : n_elec + 1],
-            psi=psi,
-        )
-        calculate_psi_with_interpolation(
-            r_eval=r_grid / s_d,
-            r=r_hist[j, n_elec:],
-            log_r=log_r_hist[j, n_elec:],
-            sum_1_arr=sum_1_hist[j, n_elec + 1 :],
-            sum_2_arr=sum_2_hist[j, n_elec + 1 :],
-            psi=psi,
-            add=True,
-        )
-        calculate_b_theta_with_interpolation(
-            r_fld=r_grid / s_d,
-            a_0=a_0_hist[j],
-            a=a_i_hist[j],
-            b=b_i_hist[j],
-            r=r_hist[j, :n_elec],
-            b_theta=b_theta,
-        )
+
+        add = False
+        num_species = len(r_hist)
+        for si in range(num_species):
+            calculate_psi_with_interpolation(
+                r_eval=r_grid / s_d,
+                r=r_hist[si][j],
+                log_r=log_r_hist[si][j],
+                sum_1_arr=sum_1_hist[si][j],
+                sum_2_arr=sum_2_hist[si][j],
+                psi=psi,
+                add=add,
+            )
+            add = True
+
+        for si in range(num_species):
+            if len(a_0_hist[si]) > 0:  # test for electrons
+                calculate_b_theta_with_interpolation(
+                    r_fld=r_grid / s_d,
+                    a_0=a_0_hist[si][j],
+                    a=a_i_hist[si][j],
+                    b=b_i_hist[si][j],
+                    r=r_hist[si][j],
+                    b_theta=b_theta,
+                )

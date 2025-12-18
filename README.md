@@ -1,4 +1,4 @@
-# Wake-T: A fast tracking code for plasma accelerators.
+# Wake-T: A fast tracking code for plasma accelerators
 [![tests badge](https://github.com/AngelFP/Wake-T/actions/workflows/test-package.yml/badge.svg)](https://github.com/AngelFP/Wake-T/actions)
 [![Documentation Status](https://readthedocs.org/projects/wake-t/badge/?version=latest)](https://wake-t.readthedocs.io/en/latest/?badge=latest)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/ea4fbbfd03a94996ba72b7060dc4bf4b)](https://app.codacy.com/gh/Wake-T/Wake-T/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)

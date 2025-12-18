@@ -159,7 +159,7 @@ def check_gamma(gamma, pz, pr, max_gamma):
 
 
 @njit_serial()
-def sort_particle_arrays(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
+def sort_particle_arrays(s, indices):
     """Sort all the particle arrays with a given sorting order.
 
     Implementing it like this looks very ugly, but it is much faster than
@@ -167,6 +167,20 @@ def sort_particle_arrays(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
     than implementing a `sort_array` function that is called on each array.
     This is probably because of the overhead from calling numba functions.
     """
+
+    a1, a2, a3, a4, a5, a6, a7, a8, a9, a10 = (
+        s.r,
+        s.pr,
+        s.pz,
+        s.gamma,
+        s.w,
+        s.w_center,
+        s.r_to_x,
+        s.id,
+        s.dr,
+        s.dpr,
+    )
+
     a1_orig = np.copy(a1)
     a2_orig = np.copy(a2)
     a3_orig = np.copy(a3)
@@ -177,7 +191,6 @@ def sort_particle_arrays(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
     a8_orig = np.copy(a8)
     a9_orig = np.copy(a9)
     a10_orig = np.copy(a10)
-    a11_orig = np.copy(a11)
     n_part = indices.shape[0]
     for i in range(n_part):
         i_sort = indices[i]
@@ -190,6 +203,5 @@ def sort_particle_arrays(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, indices):
             a6[i] = a6_orig[i_sort]
             a7[i] = a7_orig[i_sort]
             a8[i] = a8_orig[i_sort]
-            a9[i] = a9_orig[i_sort]
+            a9[:, i] = a9_orig[:, i_sort]
             a10[:, i] = a10_orig[:, i_sort]
-            a11[:, i] = a11_orig[:, i_sort]
