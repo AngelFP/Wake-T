@@ -9,6 +9,7 @@ for the full details about this model.
 import numpy as np
 import scipy.constants as ct
 import aptools.plasma_accel.general_equations as ge
+from .ionization import Ionization
 
 from .plasma_particles import (
     pp_initialize,
@@ -97,6 +98,7 @@ def evolve_one_step(
                 bunch_source_metadata,
                 slice_i,
             )
+        Ionization(pp_species_list)
 
         pp_calculate_fields(pp_species_list, ions_computed, max_gamma)
 
@@ -277,14 +279,16 @@ def calculate_wakefields(
     # Set parameters for electron and ion species in normalized units
     init_list = [
         {
-            "charge": free_electrons_per_ion,
-            "mass": free_electrons_per_ion,
-            "is_ion": False,
-        },
-        {
             "charge": -free_electrons_per_ion,
             "mass": ion_mass / ct.m_e,
             "is_ion": True,
+            "empty": False,
+        },
+        {
+            "charge": free_electrons_per_ion,
+            "mass": free_electrons_per_ion,
+            "is_ion": False,
+            "empty": True,
         },
     ]
 

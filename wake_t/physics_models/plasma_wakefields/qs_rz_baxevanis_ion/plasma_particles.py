@@ -2,6 +2,7 @@
 
 import numpy as np
 import numba
+from numba import types, typed
 
 from .psi_and_derivatives import (
     calculate_psi_with_interpolation,
@@ -102,13 +103,34 @@ def pp_initialize(
         s.is_ion = bool(init["is_ion"])
         s.charge = float(init["charge"])
         s.mass = float(init["mass"])
+        s.empty = bool(init["empty"])
 
         s.num_particles = num_per_species
         s.do_push = not s.is_ion or ion_motion
         s.store_history = store_history
 
+        if s.empty:
+            s.num_particles = 0
+            # Make empty arrays to avoid issues later on.
+            # r = typed.List.empty_list(types.float64)
+            # dr_p = typed.List.empty_list(types.float64)
+            # pr = typed.List.empty_list(types.float64)
+            # pz = typed.List.empty_list(types.float64)
+            # gamma = typed.List.empty_list(types.float64)
+            # w = typed.List.empty_list(types.float64)
+            # w_center = typed.List.empty_list(types.float64)
+            r = np.zeros(0)
+            dr_p = np.zeros(0)
+            pr = np.zeros(0)
+            pz = np.zeros(0)
+            gamma = np.zeros(0)
+            w = np.zeros(0)
+            w_center = np.zeros(0)
+            
+
         # Make copy to avoid multiple species sharing the same array
         s.r = np.copy(r)
+        s.dr_p = np.copy(dr_p)
         s.pr = np.copy(pr)
         s.pz = np.copy(pz)
         s.gamma = np.copy(gamma)
@@ -218,6 +240,8 @@ def pp_gather_bunch_sources(
                     gather_bunch_sources(
                         array[xi_index], r_min, r_max, dr, s.r, s.b_t_0
                     )
+
+
 
 
 @njit_serial

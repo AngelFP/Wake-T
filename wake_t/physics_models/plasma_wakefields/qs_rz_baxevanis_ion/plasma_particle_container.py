@@ -6,6 +6,7 @@ import numba
 class PlasmaParticleContainerPy:
     # Particle properties
     r: numba.float64[::1]  # radial position
+    dr_p: numba.float64[::1]
     log_r: numba.float64[::1]  # logarithm of radial position
     pr: numba.float64[::1]  # momentum in r
     pz: numba.float64[::1]  # momentum in z
@@ -67,11 +68,13 @@ class PlasmaParticleContainerPy:
     is_ion: bool  # is this an ion or electron. Ions don't contribute to b_t and chi
     do_push: bool  # if this particle should be pushed or if it is static
     store_history: bool  # if the full trajectory of the particles should be stored
+    empty: bool  # if the species is empty
 
     def __init__(self, serialized_list=None):
         if serialized_list is not None:
             (
                 self.r,
+                self.dr_p,
                 self.log_r,
                 self.pr,
                 self.pz,
@@ -123,11 +126,13 @@ class PlasmaParticleContainerPy:
                 self.is_ion,
                 self.do_push,
                 self.store_history,
+                self.empty,
             ) = serialized_list
 
     def serialize(self):
         return (
             self.r,
+            self.dr_p,
             self.log_r,
             self.pr,
             self.pz,
@@ -179,6 +184,7 @@ class PlasmaParticleContainerPy:
             self.is_ion,
             self.do_push,
             self.store_history,
+            self.empty,
         )
 
 
