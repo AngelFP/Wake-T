@@ -126,7 +126,6 @@ def pp_initialize(
             gamma = np.zeros(0)
             w = np.zeros(0)
             w_center = np.zeros(0)
-            
 
         # Make copy to avoid multiple species sharing the same array
         s.r = np.copy(r)
@@ -240,8 +239,6 @@ def pp_gather_bunch_sources(
                     gather_bunch_sources(
                         array[xi_index], r_min, r_max, dr, s.r, s.b_t_0
                     )
-
-
 
 
 @njit_serial

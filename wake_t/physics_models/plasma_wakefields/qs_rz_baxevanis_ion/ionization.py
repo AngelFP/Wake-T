@@ -1,6 +1,7 @@
 from wake_t.utilities.numba import njit_serial
 import numpy as np
 
+
 @njit_serial
 def Ionization(species_list):
     for species in species_list:
@@ -18,4 +19,3 @@ def Ionization(species_list):
         electron_species.gamma[idx] = ion_species.gamma[value]
         electron_species.w[idx] = ion_species.w[value]
         electron_species.w_center[idx] = ion_species.w_center[value]
-
