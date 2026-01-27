@@ -111,14 +111,6 @@ def pp_initialize(
 
         if s.empty:
             s.num_particles = 0
-            # Make empty arrays to avoid issues later on.
-            # r = typed.List.empty_list(types.float64)
-            # dr_p = typed.List.empty_list(types.float64)
-            # pr = typed.List.empty_list(types.float64)
-            # pz = typed.List.empty_list(types.float64)
-            # gamma = typed.List.empty_list(types.float64)
-            # w = typed.List.empty_list(types.float64)
-            # w_center = typed.List.empty_list(types.float64)
             r = np.zeros(0)
             dr_p = np.zeros(0)
             pr = np.zeros(0)

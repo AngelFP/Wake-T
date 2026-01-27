@@ -10,6 +10,15 @@ def Ionization(species_list):
             electron_species = species
 
     idx_ion = np.random.randint(0, ion_species.num_particles, 2)
+    new_size = electron_species.num_particles + idx_ion.shape[0]
+    electron_species.r = np.resize(electron_species.r, new_size)
+    electron_species.dr_p = np.resize(electron_species.dr_p, new_size)
+    electron_species.pr = np.resize(electron_species.pr, new_size)
+    electron_species.pz = np.resize(electron_species.pz, new_size)
+    electron_species.gamma = np.resize(electron_species.gamma, new_size)
+    electron_species.w = np.resize(electron_species.w, new_size)
+    electron_species.w_center = np.resize(electron_species.w_center, new_size)
+    
     for idx, value in enumerate(idx_ion):
         electron_species.r[idx] = ion_species.r[value]
         electron_species.dr_p[idx] = ion_species.dr_p[value]
