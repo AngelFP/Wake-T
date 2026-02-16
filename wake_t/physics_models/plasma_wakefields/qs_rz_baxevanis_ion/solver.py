@@ -100,7 +100,17 @@ def evolve_one_step(
             )
         for species in pp_species_list:
             if not species.is_ion:
-                species.r, species.dr_p, species.pr, species.pz, species.gamma, species.w, species.w_center, species.id, species.r_to_x = Ionization(pp_species_list, step)
+                (
+                    species.r,
+                    species.dr_p,
+                    species.pr,
+                    species.pz,
+                    species.gamma,
+                    species.w,
+                    species.w_center,
+                    species.id,
+                    species.r_to_x,
+                ) = Ionization(pp_species_list, step)
 
         pp_calculate_fields(pp_species_list, ions_computed, max_gamma)
 

@@ -118,7 +118,6 @@ def pp_initialize(
             w = np.zeros(0, dtype=np.float64)
             w_center = np.zeros(0, dtype=np.float64)
             idd = np.zeros(0, dtype=np.int32)
-            
 
         # Make copy to avoid multiple species sharing the same array
         s.r = np.copy(r)

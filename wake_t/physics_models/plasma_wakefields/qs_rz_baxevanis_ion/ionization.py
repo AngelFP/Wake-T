@@ -10,7 +10,7 @@ def Ionization(species_list, step):
         else:
             electron_species = species
 
-    idx_ion = np.random.randint(0, ion_species.num_particles,1)
+    idx_ion = np.random.randint(0, ion_species.num_particles, 1)
     new_size = step + 1
     electron_species.r = np.resize(electron_species.r, new_size)
     electron_species.dr_p = np.resize(electron_species.dr_p, new_size)
@@ -22,11 +22,11 @@ def Ionization(species_list, step):
     electron_species.id = np.resize(electron_species.id, new_size)
     electron_species.r_to_x = np.resize(electron_species.r_to_x, new_size)
     electron_species.num_particles = electron_species.r.shape[0]
-    
+
     for idx, value in enumerate(idx_ion):
         electron_species.r[step] = ion_species.r[value]
         electron_species.dr_p[step] = ion_species.dr_p[value]
-        electron_species.pr[step] = ion_species.pr[value] 
+        electron_species.pr[step] = ion_species.pr[value]
         electron_species.pz[step] = ion_species.pz[value]
         electron_species.gamma[step] = ion_species.gamma[value]
         electron_species.w[step] = ion_species.w[value]
@@ -35,4 +35,14 @@ def Ionization(species_list, step):
 
     electron_species.id = np.arange(electron_species.num_particles, dtype=np.int32)
 
-    return electron_species.r, electron_species.dr_p, electron_species.pr, electron_species.pz, electron_species.gamma, electron_species.w, electron_species.w_center, electron_species.id, electron_species.r_to_x
+    return (
+        electron_species.r,
+        electron_species.dr_p,
+        electron_species.pr,
+        electron_species.pz,
+        electron_species.gamma,
+        electron_species.w,
+        electron_species.w_center,
+        electron_species.id,
+        electron_species.r_to_x,
+    )
