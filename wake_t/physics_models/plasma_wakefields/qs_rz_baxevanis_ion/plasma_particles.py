@@ -234,8 +234,6 @@ def pp_gather_bunch_sources(
                     )
 
 
-
-
 @njit_serial
 def pp_calculate_fields(species_list, ions_computed, max_gamma):
     """Calculate the fields at the plasma particles."""

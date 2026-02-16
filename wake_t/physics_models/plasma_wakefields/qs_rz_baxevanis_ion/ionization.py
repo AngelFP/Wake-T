@@ -1,6 +1,7 @@
 from wake_t.utilities.numba import njit_serial
 import numpy as np
 
+
 @njit_serial
 def Ionization(species_list, step):
     for species in species_list:
