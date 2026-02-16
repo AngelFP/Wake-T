@@ -2,7 +2,6 @@
 
 import numpy as np
 import numba
-from numba import types, typed
 
 from .psi_and_derivatives import (
     calculate_psi_with_interpolation,
@@ -111,13 +110,14 @@ def pp_initialize(
 
         if s.empty:
             s.num_particles = 0
-            r = np.zeros(0)
-            dr_p = np.zeros(0)
-            pr = np.zeros(0)
-            pz = np.zeros(0)
-            gamma = np.zeros(0)
-            w = np.zeros(0)
-            w_center = np.zeros(0)
+            r = np.zeros(0, dtype=np.float64)
+            dr_p = np.zeros(0, dtype=np.float64)
+            pr = np.zeros(0, dtype=np.float64)
+            pz = np.zeros(0, dtype=np.float64)
+            gamma = np.zeros(0, dtype=np.float64)
+            w = np.zeros(0, dtype=np.float64)
+            w_center = np.zeros(0, dtype=np.float64)
+            idd = np.zeros(0, dtype=np.int32)
             
 
         # Make copy to avoid multiple species sharing the same array
