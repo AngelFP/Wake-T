@@ -1,6 +1,6 @@
 import os
 
-# APTools save_to_openpmd sets the extendts of constant datasets to 1 which by default is not
+# APTools save_to_openpmd sets the extents of constant datasets to 1 which by default is not
 # allowed anymore in openPMD-API 0.17+
 os.environ["OPENPMD_VERIFY_HOMOGENEOUS_EXTENTS"] = "0"
 
