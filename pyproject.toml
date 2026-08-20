@@ -22,7 +22,7 @@ dependencies = [
     "numba!=0.57.0",
     "scipy",
     "aptools~=0.2.0",
-    "openpmd-api<0.17.0",
+    "openpmd-api",
     "tqdm",
 ]
 dynamic = ["version"]
