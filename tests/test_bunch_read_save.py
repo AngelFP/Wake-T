@@ -1,5 +1,9 @@
 import os
 
+# APTools save_to_openpmd sets the extendts of constant datasets to 1 which by default is not
+# allowed anymore in openPMD-API 0.17+
+os.environ["OPENPMD_VERIFY_HOMOGENEOUS_EXTENTS"] = "0"
+
 import pytest
 from numpy.testing import assert_array_almost_equal
 
