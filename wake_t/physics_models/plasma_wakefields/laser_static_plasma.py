@@ -6,6 +6,8 @@ import scipy.constants as ct
 from wake_t.fields.rz_wakefield import RZWakefield
 from wake_t.physics_models.laser.laser_pulse import LaserPulse
 
+from wake_t.utilities.other import ProfStart, ProfStop
+
 
 class LaserStaticPlasma(RZWakefield):
     """
@@ -132,6 +134,8 @@ class LaserStaticPlasma(RZWakefield):
 
     def _calculate_wakefield(self, bunches):
 
+        ProfStart("laser_static_plasma")
+
         # Use a reference plasma density for internal units to be able to simulate vacuum
         self.n_p = 1e23
 
@@ -153,3 +157,5 @@ class LaserStaticPlasma(RZWakefield):
         # Convert to normalized units
         self.rho[2:-2, 2:-2] = (density_elec / self.n_p) * gamma_elec
         self.chi[2:-2, 2:-2] = density_elec / self.n_p
+
+        ProfStop("laser_static_plasma")

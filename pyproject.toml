@@ -24,6 +24,7 @@ dependencies = [
     "aptools~=0.2.0",
     "openpmd-api",
     "tqdm",
+    "cppimport",
 ]
 dynamic = ["version"]
 

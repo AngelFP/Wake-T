@@ -9,6 +9,8 @@ from wake_t.particles.interpolation import gather_main_fields_cyl_linear
 from .numerical_field import NumericalField
 from wake_t.physics_models.laser.laser_pulse import LaserPulse
 
+from wake_t.utilities.other import ProfStart, ProfStop
+
 
 class RZWakefield(NumericalField):
     """Base class for plasma wakefields in r-z geometry.
@@ -177,6 +179,7 @@ class RZWakefield(NumericalField):
                 self.laser.evolve(self.chi[2:-2, 2:-2], self.n_p)
 
     def _calculate_field(self, bunches):
+        ProfStart("_calculate_field")
         self.n_p = self.density_function(self.t * ct.c, 0.0)
         self.rho[:] = 0.0
         self.chi[:] = 0.0
@@ -186,6 +189,7 @@ class RZWakefield(NumericalField):
         if self.species_rho_diags:
             self.rho_e[:] = 0.0
             self.rho_i[:] = 0.0
+        ProfStop("_calculate_field")
         self._calculate_wakefield(bunches)
 
     def _calculate_wakefield(self, bunches):

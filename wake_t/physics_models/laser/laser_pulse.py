@@ -27,7 +27,6 @@ except ImportError:
 
 
 from .envelope_solver import evolve_envelope
-from .envelope_solver_non_centered import evolve_envelope_non_centered
 from wake_t.fields.interpolation import interpolate_rz_field
 
 from wake_t.utilities.other import ProfStart, ProfStop
@@ -192,21 +191,23 @@ class LaserPulse:
 
         ProfStart("laser.evolve_envelope")
 
-        # Compute evolution.
-        if self.n_steps == 0:
-            evolve_envelope_non_centered(
-                self._a_env, self._a_env_old, chi, k_0, k_p, **self.solver_params
-            )
-        else:
-            evolve_envelope(
-                self._a_env, self._a_env_old, chi, k_0, k_p, **self.solver_params
-            )
+        evolve_envelope(
+            self._a_env,
+            self._a_env_old,
+            chi,
+            k_0,
+            k_p,
+            is_first_step=self.n_steps == 0,
+            **self.solver_params,
+        )
 
         ProfStop("laser.evolve_envelope")
 
+        ProfStart("laser._update_output_envelope")
         # Update arrays and step count.
         self._update_output_envelope()
         self.n_steps += 1
+        ProfStop("laser._update_output_envelope")
 
     def get_group_velocity(self, n_p: float) -> float:
         """

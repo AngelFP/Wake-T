@@ -6,6 +6,7 @@ from .focusing_blowout import FocusingBlowoutField
 from .qs_rz_baxevanis_ion import Quasistatic2DWakefieldIon
 from .laser_static_plasma import LaserStaticPlasma
 from .laser_grid_ionization import LaserGridIonization
+from .laser_grid_ionization_parallel import LaserGridIonizationParallel
 
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "Quasistatic2DWakefieldIon",
     "LaserStaticPlasma",
     "LaserGridIonization",
+    "LaserGridIonizationParallel",
 ]

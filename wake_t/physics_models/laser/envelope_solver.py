@@ -16,7 +16,7 @@ from .utils import unwrap
 
 @njit_serial(fastmath=True)
 def evolve_envelope(
-    a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase=True
+    a, a_old, chi, k0, kp, zmin, zmax, nz, rmax, nr, dt, nt, use_phase, is_first_step
 ):
     """
     Solve the 2D envelope equation
@@ -51,6 +51,8 @@ def evolve_envelope(
     use_phase : bool
         Determines whether to take into account the terms related to the
         longitudinal derivative of the complex phase.
+    is_first_step : bool
+        If a non centered solve should be used for the first substep.
 
     """
     # Preallocate arrays. a_old and a include 2 ghost cells in the z direction.
@@ -72,20 +74,6 @@ def evolve_envelope(
     d_theta1 = 0.0
     d_theta2 = 0.0
 
-    # Calculate C^+ and C^- [Eq. (8)].
-    C_minus = (
-        -2.0 * inv_dr**2.0 * 0.5
-        - 1j * k0_over_kp * inv_dt
-        + 1.5 * inv_dzdt
-        - inv_dt**2.0
-    )
-    C_plus = (
-        -2.0 * inv_dr**2.0 * 0.5
-        + 1j * k0_over_kp * inv_dt
-        - 1.5 * inv_dzdt
-        - inv_dt**2.0
-    )
-
     # Calculate L^+ and L^-. Change wrt Benedetti - 2018: in Wake-T we use
     # cell-centered nodes in the radial direction.
     L_base = 1.0 / (2.0 * (np.arange(nr) + 0.5))
@@ -94,6 +82,24 @@ def evolve_envelope(
 
     # Loop over time iterations.
     for n in range(nt):
+        # Calculate C^+ and C^- [Eq. (8)].
+        if is_first_step and n == 0:
+            C_minus = -2.0 * inv_dr**2.0 * 0.5 - 2j * k0_over_kp * inv_dt + 3 * inv_dzdt
+            C_plus = -2.0 * inv_dr**2.0 * 0.5 + 2j * k0_over_kp * inv_dt - 3 * inv_dzdt
+        else:
+            C_minus = (
+                -2.0 * inv_dr**2.0 * 0.5
+                - 1j * k0_over_kp * inv_dt
+                + 1.5 * inv_dzdt
+                - inv_dt**2.0
+            )
+            C_plus = (
+                -2.0 * inv_dr**2.0 * 0.5
+                + 1j * k0_over_kp * inv_dt
+                - 1.5 * inv_dzdt
+                - inv_dt**2.0
+            )
+
         # a_new_jp1 is equivalent to a_new[j+1] and a_new_jp2 to a_new[j+2].
         a_new_jp1 = np.zeros(nr, dtype=np.complex128)
         a_new_jp2 = np.zeros(nr, dtype=np.complex128)
@@ -113,31 +119,61 @@ def evolve_envelope(
             D_jkn = (1.5 * d_theta1 - 0.5 * d_theta2) * inv_dz
 
             # Calculate right-hand side of Eq (7).
-            for k in range(nr):
-                rhs_k = (
-                    -2 * inv_dt**2 * a[j, k]
-                    - ((C_minus - chi[j, k] * 0.5 - 1j * inv_dt * D_jkn) * a_old[j, k])
-                    - (
-                        2
-                        * np.exp(-1j * d_theta1)
-                        * inv_dzdt
-                        * (a_new_jp1[k] - a_old[j + 1, k])
+            if is_first_step and n == 0:
+                for k in range(nr):
+                    rhs_k = (
+                        -(C_minus - chi[j, k] * 0.5 - 2j * inv_dt * D_jkn) * a[j, k]
+                        - (
+                            4
+                            * np.exp(-1j * d_theta1)
+                            * inv_dzdt
+                            * (a_new_jp1[k] - a[j + 1, k])
+                        )
+                        + (
+                            1
+                            * np.exp(-1j * (d_theta2 + d_theta1))
+                            * inv_dzdt
+                            * (a_new_jp2[k] - a[j + 2, k])
+                        )
                     )
-                    + (
-                        0.5
-                        * np.exp(-1j * (d_theta2 + d_theta1))
-                        * inv_dzdt
-                        * (a_new_jp2[k] - a_old[j + 2, k])
+                    if k > 0:
+                        rhs_k -= L_minus_over_2[k] * a[j, k - 1]
+                    if k + 1 < nr:
+                        rhs_k -= L_plus_over_2[k] * a[j, k + 1]
+                    rhs[k] = rhs_k
+            else:
+                for k in range(nr):
+                    rhs_k = (
+                        -2 * inv_dt**2 * a[j, k]
+                        - (
+                            (C_minus - chi[j, k] * 0.5 - 1j * inv_dt * D_jkn)
+                            * a_old[j, k]
+                        )
+                        - (
+                            2
+                            * np.exp(-1j * d_theta1)
+                            * inv_dzdt
+                            * (a_new_jp1[k] - a_old[j + 1, k])
+                        )
+                        + (
+                            0.5
+                            * np.exp(-1j * (d_theta2 + d_theta1))
+                            * inv_dzdt
+                            * (a_new_jp2[k] - a_old[j + 2, k])
+                        )
                     )
-                )
-                if k > 0:
-                    rhs_k -= L_minus_over_2[k] * a_old[j, k - 1]
-                if k + 1 < nr:
-                    rhs_k -= L_plus_over_2[k] * a_old[j, k + 1]
-                rhs[k] = rhs_k
+                    if k > 0:
+                        rhs_k -= L_minus_over_2[k] * a_old[j, k - 1]
+                    if k + 1 < nr:
+                        rhs_k -= L_plus_over_2[k] * a_old[j, k + 1]
+                    rhs[k] = rhs_k
 
             # Calculate diagonals.
-            d_main = C_plus - chi[j] * 0.5 + 1j * inv_dt * D_jkn
+            if is_first_step and n == 0:
+                d_main = C_plus - chi[j] * 0.5 + 2j * inv_dt * D_jkn
+            else:
+                d_main = C_plus - chi[j] * 0.5 + 1j * inv_dt * D_jkn
+
             d_upper = L_plus_over_2[: nr - 1]
             d_lower = L_minus_over_2[1:nr]
 

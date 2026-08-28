@@ -1,103 +1,22 @@
 from typing import Dict, List, Optional, Callable, Union
 import math
-
 import numpy as np
 import scipy.constants as ct
 
 from wake_t.fields.rz_wakefield import RZWakefield
 from wake_t.physics_models.laser.laser_pulse import LaserPulse
-from wake_t.utilities.numba import njit_parallel, prange
+from wake_t.utilities.numba import num_threads
 from wake_t.utilities.other import ProfStart, ProfStop
 
+import os
+import cppimport
 
-@njit_parallel
-def do_grid_ionization(
-    num_ion_species,
-    elec_density,
-    ion_densities,
-    chi_array,
-    a_env,
-    ion_start_index,
-    ion_atomic_number,
-    ion_mass,
-    omega0,
-    adk_prefactors,
-    is_linear_pol,
-    n_xi,
-    n_r,
-    d_zeta_inv,
-):
-    for i_s in range(num_ion_species):
-        ion_density = ion_densities[
-            ion_start_index[i_s] : (ion_start_index[i_s] + ion_atomic_number[i_s] + 1),
-            2:-1,
-            2:-2,
-        ]
-        chi_factor_ion = ct.m_e / ion_mass[i_s]
-        is_last_plasma = i_s + 1 == num_ion_species
-        max_ion_lev = ion_atomic_number[i_s]
-
-        for i_r in prange(n_r):
-            for i_zeta in range(n_xi - 1, -1, -1):
-                Et = 1j * a_env[i_zeta, i_r] * omega0
-                if i_zeta + 1 < n_xi:
-                    Et += (
-                        (a_env[i_zeta + 1, i_r] - a_env[i_zeta, i_r])
-                        * ct.c
-                        * d_zeta_inv
-                    )
-                Ep = np.sqrt(np.abs(Et * Et))
-                Ep *= ct.m_e * ct.c / ct.e
-
-                chi = 0
-
-                for ion_lev in range(max_ion_lev):
-                    p = 0
-                    if Ep > 1e-30:
-                        w_dtau_dc = (
-                            adk_prefactors[i_s, ion_lev, 1]
-                            * np.pow(Ep, adk_prefactors[i_s, ion_lev, 0])
-                            * np.exp(adk_prefactors[i_s, ion_lev, 2] / Ep)
-                        )
-
-                        w_dtau_ac = w_dtau_dc
-                        if is_linear_pol:
-                            w_dtau_ac *= np.sqrt(Ep * adk_prefactors[i_s, ion_lev, 3])
-
-                        p = 1 - np.exp(-w_dtau_ac)
-
-                    old_weight = (
-                        ion_density[ion_lev, i_zeta, i_r]
-                        + ion_density[ion_lev, i_zeta + 1, i_r]
-                    )
-                    transferred_weight = old_weight * p
-                    new_weight = old_weight - transferred_weight
-
-                    # ion contribution
-                    chi += new_weight * chi_factor_ion * ion_lev * ion_lev
-
-                    ion_density[ion_lev, i_zeta, i_r] = new_weight
-                    ion_density[ion_lev + 1, i_zeta, i_r] += transferred_weight
-                    elec_density[i_zeta, i_r] += transferred_weight
-
-                ion_density[max_ion_lev, i_zeta, i_r] += ion_density[
-                    max_ion_lev, i_zeta + 1, i_r
-                ]
-                chi += (
-                    ion_density[max_ion_lev, i_zeta, i_r]
-                    * chi_factor_ion
-                    * max_ion_lev
-                    * max_ion_lev
-                )
-
-                if is_last_plasma:
-                    elec_density[i_zeta, i_r] += elec_density[i_zeta + 1, i_r]
-                    chi += elec_density[i_zeta, i_r]
-
-                chi_array[i_zeta + 2, i_r + 2] += chi
+cppmodule = cppimport.imp_from_filepath(
+    os.path.join(os.path.dirname(__file__), "parallel_solver.cpp")
+)
 
 
-class LaserGridIonization(RZWakefield):
+class LaserGridIonizationParallel(RZWakefield):
     """
     This model can be used to propagate laser pulses through a neutral gas or
     plasma that gets ionized from the laser. Specifically, it can be used
@@ -422,23 +341,22 @@ class LaserGridIonization(RZWakefield):
 
         omega0 = 2 * ct.pi * ct.c / self.laser.l_0
 
-        elec_density = self.elec_density[2:-1, 2:-2]
-
-        do_grid_ionization(
-            len(self.ion_species),
-            elec_density,
-            self.ion_densities,
-            self.chi,
+        cppmodule.calculate_grid_ionization(
             a_env,
-            self.ion_start_index,
-            self.ion_atomic_number,
+            self.chi[2:-2, 2:-2],
+            self.n_xi,
+            self.n_r,
+            len(self.ion_species),
+            self.ion_densities[:, 2:-1, 2:-2],
+            self.elec_density[2:-1, 2:-2],
+            self.ion_start_index.astype(np.int32),
+            self.ion_atomic_number.astype(np.int32),
             self.ion_mass,
             omega0,
             self.adk_prefactors,
-            is_linear_pol,
-            self.n_xi,
-            self.n_r,
+            self.laser.polarization == "linear",
             1 / np.abs(self.xi_fld[1] - self.xi_fld[0]),
+            num_threads,
         )
 
         if self.species_rho_diags:
@@ -455,3 +373,82 @@ class LaserGridIonization(RZWakefield):
                     )
 
         ProfStop("LaserGridIonization")
+
+    def _evolve_properties(self, bunches):
+        ProfStart("EvolveLaserParallel")
+        if self.laser is not None:
+            if self.laser_evolution:
+                k_0 = 2 * np.pi / self.laser.l_0
+                k_p = np.sqrt(ct.e**2 * self.n_p / (ct.m_e * ct.epsilon_0)) / ct.c
+
+                if self.laser.use_subgrid:
+                    raise ValueError(
+                        "Cannot use laser subgrid with parallel laser solver"
+                    )
+
+                omega0 = 2 * ct.pi * ct.c / self.laser.l_0
+
+                substep_pos = ct.c * (
+                    self.t
+                    - self.dt_update
+                    + np.arange(self.laser.solver_params["nt"])
+                    * self.laser.solver_params["dt"]
+                )
+                r, z = np.meshgrid(self.r_fld, substep_pos)
+
+                initial_elec_density = self.density_function(z, r) / self.n_p
+                if self.r_max_plasma is not None:
+                    initial_elec_density = np.where(
+                        self.r_fld > self.r_max_plasma, 0, initial_elec_density
+                    )
+
+                initial_ion_densities = np.zeros(
+                    (
+                        np.sum(self.ion_atomic_number + 1),
+                        self.laser.solver_params["nt"],
+                        self.n_r,
+                    )
+                )
+                for i, density in enumerate(self.initial_ion_densities):
+                    density_ion = density(z, r) / self.n_p
+                    if self.r_max_plasma is not None:
+                        density_ion = np.where(
+                            self.r_fld > self.r_max_plasma, 0, density_ion
+                        )
+                    initial_ion_densities[self.ion_start_index[i], :, :] = density_ion
+
+                cppmodule.parallel_solver(
+                    self.laser._a_env,
+                    self.laser._a_env_old,
+                    self.chi[2:-2, 2:-2],
+                    k_0,
+                    k_p,
+                    self.laser.solver_params["zmin"],
+                    self.laser.solver_params["zmax"],
+                    self.laser.solver_params["nz"],
+                    self.laser.solver_params["rmax"],
+                    self.laser.solver_params["nr"],
+                    self.laser.solver_params["dt"],
+                    self.laser.solver_params["nt"],
+                    self.laser.solver_params["use_phase"],
+                    self.laser.n_steps == 0,
+                    len(self.ion_species),
+                    self.ion_densities[:, 2:-1, 2:-2],
+                    initial_ion_densities,
+                    self.elec_density[2:-1, 2:-2],
+                    initial_elec_density,
+                    self.ion_start_index.astype(np.int32),
+                    self.ion_atomic_number.astype(np.int32),
+                    self.ion_mass,
+                    omega0,
+                    self.adk_prefactors,
+                    self.laser.polarization == "linear",
+                    1 / np.abs(self.xi_fld[1] - self.xi_fld[0]),
+                    num_threads,
+                )
+
+                # Update arrays and step count.
+                self.laser._update_output_envelope()
+                self.laser.n_steps += 1
+
+        ProfStop("EvolveLaserParallel")
