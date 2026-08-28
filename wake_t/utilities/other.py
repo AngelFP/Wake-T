@@ -59,7 +59,7 @@ class ProfileRange:
         return (
             self.name,
             f"{self.num_calls}",
-            f"{1000 * self.time_counter / self.num_calls:.04g} ms",
+            f"{1000 * self.time_counter / max(self.num_calls, 1):.04g} ms",
             f"{1000 * self.first_time:.04g} ms",
             f"{self.time_counter:.04g} s",
             f"{self.time_counter / total_time:.02%}",
