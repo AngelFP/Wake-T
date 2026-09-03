@@ -8,6 +8,21 @@ from wake_t.utilities.numba import njit_serial
 
 
 @njit_serial()
+def calculate_bunch_source_slice(q_bunch, n_r, i_xi, b_t_bunch):
+    """
+    Compute b_t_bunch for a single xi slice i_xi (0..n_xi-1)
+    using only q_bunch[2+i_xi, :].
+    """
+    i = i_xi
+    cumsum = 0.0
+    for j in range(n_r + 2):
+        q_ij = q_bunch[2 + i, 2 + j]
+        cumsum += q_ij
+        b_t_bunch[2 + i, 2 + j] = (cumsum - 0.5 * q_ij) * 1.0 / (0.5 + j)
+    b_t_bunch[2 + i, 2] -= 0.25 * q_bunch[2 + i, 2] * 2.0
+
+
+@njit_serial()
 def calculate_bunch_source(q_bunch, n_r, n_xi, b_t_bunch):
     """
     Calculate the bunch source term (azimuthal magnetic field) from the

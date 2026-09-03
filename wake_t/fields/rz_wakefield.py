@@ -501,7 +501,16 @@ class RZWakefield(NumericalField):
                     add_diag(
                         options, "n_electrons", [self.elec_density], factor=self.n_p
                     )
-
+            if "q_bunch" in self.__dict__:
+                available_fields.append("charge_profile")
+                if "charge_profile" in fields or "all" in fields:
+                    s_d = ct.c / np.sqrt(ct.e**2 * self.n_p / (ct.m_e * ct.epsilon_0))
+                    # Inverse of the normalization applied when depositing the
+                    # beam charge onto the grid (q_bunch is stored normalized).
+                    charge_norm = 2 * np.pi * ct.e * self.dr * self.dxi * s_d * self.n_p
+                    add_diag(
+                        options, "charge_profile", [self.q_bunch], factor=charge_norm
+                    )
             for f in fields:
                 if f not in available_fields:
                     raise ValueError(
